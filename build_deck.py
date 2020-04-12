@@ -4,36 +4,57 @@ import os.path
 import math
 import json
 import re
+import spanish_dictionary
 import spanish_sentences
 
 
+# check that we don't have any unknown pos types
+# squash nouns into generic "noun" lookup
+# squash verbs into generic "verb" lookup
 pos_types = {
-    'phrase': 'phrase',
     'adj': 'adj',
-    'adj, adv': 'adj',
-    'adj, pron': 'adj',
     'adv': 'adv',
-    'art': 'det',
+    'art': 'art',
     'conj': 'conj',
-    'interj': 'intj',
-    'nc': 'noun',
-    'nf': 'noun',
-    'nf-el': 'noun',
-    'nm': 'noun',
-    'nmf': 'noun',
-    'nm/f': 'noun',
+    'interj': 'interj',
+
+    "m": "noun",
+    "f": "noun",
+    "mf": "noun",
+    "f-el": "noun",
+    "m-f": "noun",
+    "m/f": "noun",
+
     'num': 'num',
-    'prep': 'adp',
+    'prep': 'prep',
     'pron': 'pron',
     'v': 'verb',
+
+    'phrase': 'phrase'
 }
+
+noun_articles = {
+    "m": "el",
+    "f": "la",
+    "mf": "el/la",
+    "f-el": "el",
+    "m-f": "el",
+    "m/f": "el"
+}
+pos_nouns = list(noun_articles.keys())
+
 
 
 def format_sentences(sentences):
-    return "\n".join( '<br><span class="spa">%s</span><br><span class="eng">%s</span>' % pair[:2] for pair in sentences )
+    return "<br>\n".join( '<span class="spa">%s</span><br><span class="eng">%s</span>' % pair[:2] for pair in sentences )
 
-def get_sentences(lookup, pos, count):
-    results = spanish_sentences.get_sentences(lookup, pos, count)
+def get_sentences(item, count):
+
+    # if there's already a value, use that
+    if item['sentences'] != '':
+        return item['sentences']
+
+    results = spanish_sentences.get_sentences(row['spanish'], pos_types[row['pos']], count)
 
     if len(results['sentences']):
         return format_sentences(results['sentences'])
@@ -83,7 +104,7 @@ def new_to_json(self, now_ts, deck_id):
 old_to_json = genanki.Model.to_json
 genanki.Model.to_json = new_to_json
 
-with open('spanish_5000.json') as jsonfile:
+with open('deck.json') as jsonfile:
     data = json.load(jsonfile)
 
 model_guid = list(data['model'].keys())[0]
@@ -110,23 +131,54 @@ def format_image(filename):
     return '<img src="%s" />'%filename
 
 def is_noun(pos):
-    return pos in [ "nf", "nm", "nc", "nm/f", "nmf", "nf-el" ]
+    return pos in pos_nouns
 
 def get_article(pos):
-    if pos in [ "nf" ]:
-        return "la"
-    elif pos in [ "nm", "nc", "nm/f", "nmf", "nf-el" ]:
-        return "el"
-    return ""
+    return noun_articles[pos]
 
 
 def format_spanish(item):
     return "%s (%s)" % (item['spanish'], item['pos'])
 
-def format_english(item):
+def get_definition(word, pos):
+    item = spanish_dictionary.lookup(word, pos)
+
+    result = ""
+    for pos in item:
+        pos_tag = ""
+        if len(item.keys()) > 1:
+            pos_tag = '<span class="pos-%s">{%s} </span>'%(pos,pos)
+
+        for tag in item[pos]:
+            if result != "":
+                result += "<br>\n"
+
+            result += pos_tag
+
+            defs = spanish_dictionary.get_best_defs(item[pos][tag],4)
+            usage = spanish_dictionary.defs_to_string(defs, pos)
+
+            if tag != "x":
+                result += '<span class="usage-tag">[%s]: </span>'%tag
+
+            result += '<span class="usage">%s</span>'%usage
+    return result
+
+
+def get_english(item):
+    #english = item['english']
+
+    #if english == "":
+    #    english = get_definition(item['spanish'], pos_types[item['pos']])
+
+    english = get_definition(item['spanish'], pos_types[item['pos']])
+    if english == "":
+        english = item['english']
+
     if item['related'] != "":
-        return "%s [also %s]" % (item['english'], item['related'])
-    return item['english']
+        english += " [also %s]" % item['related']
+
+    return english
 
 
 my_deck = genanki.Deck(int(deck_guid),'Spanish top 5000-revised', "5000 common Spanish words")
@@ -136,7 +188,7 @@ notes = []
 
 fieldnames = [ "Spanish", "Picture", "English", "Audio", "Ranking", "tag", "Part of speech", "Spanish word with article", "Simple example sentences" ]
 
-with open('spanish_5000.csv', newline='') as csvfile, open('spanish_5000_rebuild.csv', 'w', newline='') as outfile:
+with open('notes.csv', newline='') as csvfile, open('notes_rebuild.csv', 'w', newline='') as outfile:
     csvreader = csv.DictReader(csvfile)
     csvwriter = csv.DictWriter(outfile, fieldnames=fieldnames)
     csvwriter.writeheader()
@@ -148,17 +200,20 @@ with open('spanish_5000.csv', newline='') as csvfile, open('spanish_5000_rebuild
         item = {
             'Spanish': format_spanish(row),
             'Picture': format_image(image),
-            'English': format_english(row),
+            'English': get_english(row),
             'Audio':   format_sound(sound),
             'Ranking': row['rank'],
             'tag':     '',
             'Part of speech': row['pos'],
             'Spanish word with article': row['spanish'] if not is_noun(row['pos']) else get_article(row['pos']) + " " + row['spanish'],
-            'Simple example sentences': get_sentences(row['spanish'], row['pos'], 3)
+            'Simple example sentences': get_sentences(row, 3)
         }
 
+        # guid should be None if empty so generator will create one
+        guid = row['guid'] if row['guid'] != "" else None
         # manually fix this id since libreoffice overwrites the value with #NAME because it hates things that start with =
-        guid = row['guid'] if row['guid'] != '#NAME?' else '=mm:yng9n'
+        if guid == '#NAME?':
+            guid = '=mm:yng9n'
 
         tags = [ row['pos'],str(math.ceil(int(row['rank']) / 500)*500) ]
         if row['tags'] != "":
@@ -177,6 +232,10 @@ with open('spanish_5000.csv', newline='') as csvfile, open('spanish_5000_rebuild
             item['Picture'] = ""
             print("Skipping missing pic",sound)
 
+        for key in [ "Spanish", "English", "Part of speech" ]:
+            if item[key] == "":
+                print("Missing %s from %s %s" % (key, row['rank'], row['spanish']))
+
         row = []
         for field in fieldnames:
             row.append(item[field])
@@ -186,4 +245,4 @@ with open('spanish_5000.csv', newline='') as csvfile, open('spanish_5000_rebuild
 
 my_package = genanki.Package(my_deck)
 my_package.media_files = media
-my_package.write_to_file('spanish_top_5000_revised.apkg')
+my_package.write_to_file('deck.apkg')

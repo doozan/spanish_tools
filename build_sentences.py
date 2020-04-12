@@ -1,10 +1,17 @@
-import basewords
+import argparse
+#import basewords
 import sys
 from os import path
+import spanish_lemmas
 
 
-_origfile=sys.argv[1]
-_tagfile=sys.argv[2]
+parser = argparse.ArgumentParser(description='Generate a list of tagged/lemmatized sentences')
+parser.add_argument('infile', help="File with clean sentences")
+parser.add_argument('tagfile', help="File with tagged sentences")
+args = parser.parse_args()
+
+_origfile=args.infile
+_tagfile=args.tagfile
 if not path.isfile(_origfile):
     print("Cannot open orig file %s"%_origfile, file=sys.stderr)
     exit(1)
@@ -13,29 +20,27 @@ if not path.isfile(_tagfile):
     print("Cannot open tag file %s"%_tagfile, file=sys.stderr)
     exit(1)
 
+
+pos_class_tags = {
+    "N": "NOUN",
+    "A": "ADJ",
+    "V": "VERB",
+    "R": "ADV"
+}
+
 def get_tagged_word(item):
     word, tag = item.split('/',2)
 
-    word = word.strip()
+    word = word.strip().lower()
     tagclass = tag[0]
-
-    # Noun
-    if tagclass == "N":
-        return "NOUN:" + basewords.get_single_noun(word)
-
-    # Adjective
-    elif tagclass == "A":
-        return "ADJ:" + basewords.get_base_adjective(word)
-
-    # Verb
-    elif tagclass == "V":
-        verbs = basewords.reverse_conjugate(word)
-        if isinstance(verbs, list) and len(verbs) > 0:
-            return "VERB:" + verbs[0]
-
-    # Adverb
-    elif tagclass == "R":
-        return "ADV:" + word
+    if tagclass in pos_class_tags:
+        pos = pos_class_tags[tagclass]
+        lemma = spanish_lemmas.get_lemma(word, pos)
+        #print(word,pos," > ",lemma)
+        if not lemma:
+#            print("No lemma: ", word)
+            lemma = word
+        return pos_class_tags[tagclass] + ":" + lemma
 
 
 with open(_origfile) as origfile, open(_tagfile) as tagfile:
@@ -47,6 +52,7 @@ with open(_origfile) as origfile, open(_tagfile) as tagfile:
         tagline = next(tagfile).strip()
         tokens = tagline.split(' ')
 
+        # ignore sentences with less than 5 or more than 15 spanish words
         if len(tokens) < 5 or len(tokens) > 15:
             continue
 
@@ -56,9 +62,11 @@ with open(_origfile) as origfile, open(_tagfile) as tagfile:
             if res:
                 tags.append(res)
 
+        # ignore simple sentences
         if len(tags) < 2:
             continue
 
+        # ignore duplicates
         uniqueid = ";".join(sorted(tags))
         if uniqueid in seen:
             continue

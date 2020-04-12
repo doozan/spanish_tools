@@ -1,15 +1,21 @@
-wget https://codeload.github.com/datquocnguyen/RDRPOSTagger/zip/master
-cd  pSCRDRtagger
+# Build the tagged sentences
+
+wget https://github.com/datquocnguyen/RDRPOSTagger/archive/master.zip -O RDRPOSTagger.zip
+unzip RDRPOSTagger.zip
+TAGGERDIR=$(pwd)"/RDRPOSTagger-master/pSCRDRtagger"
 
 wget http://www.manythings.org/anki/spa-eng.zip
 unzip spa-eng.zip
 cut -f 2 spa.txt | sed -e "s/[[:punct:]]\+//g" > spa-clean.txt
 
-python3 RDRPOSTagger.py tag ../Models/MORPH/Spanish.RDR ../Models/MORPH/Spanish.DICT spa-clean.txt
+WDIR=$(pwd) && cd $TAGGERDIR && python3 RDRPOSTagger.py tag ../Models/MORPH/Spanish.RDR ../Models/MORPH/Spanish.DICT $WDIR/spa-clean.txt && cd $WDIR
 
-mv spa.txt spa-clean.txt $WORKDIR
-cd $WORKDIR
 python3 build_sentences.py spa.txt spa-clean.txt.TAGGED > spanish_sentences/spa-tagged.txt
+
+
+# Get the lemma data
+cd spanish_lemmas
+https://github.com/ChatScript/ChatScript/blob/master/DICT/SPANISH/
 
 
 # Get the anki resources
