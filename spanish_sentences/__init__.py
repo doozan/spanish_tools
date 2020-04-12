@@ -1,9 +1,9 @@
-import random
+#import random
 import sys
 import math
 import re
-import csv
-from os import path
+import os
+import spanish_lemmas
 
 grepdb = []
 worddb = []
@@ -11,9 +11,9 @@ sentencedb = []
 tagdb = {}
 worddb = {}
 
-_tagfile = path.join(path.dirname(__file__), 'spa-tagged.txt')
+_tagfile = os.path.join(os.path.dirname(__file__), 'spa-tagged.txt')
 
-if not path.isfile(_tagfile):
+if not os.path.isfile(_tagfile):
     print("Cannot find tagged data, run build_sentences.py first")
     exit(1)
 
@@ -22,15 +22,21 @@ def strip_sentence(string):
     stripped = re.sub('[^ a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+', '', string).lower()
     return re.sub(' +', ' ', stripped)
 
+
+# tags usually look like noun:word
+# but can also look look noun:word1|word1|word2
+
 def add_tag_to_db(tag,index):
     pos,word = tag.split(":")
-    if word not in tagdb:
-        tagdb[word] = {}
 
-    if pos not in tagdb[word]:
-        tagdb[word][pos] = [index]
-    else:
-        tagdb[word][pos].append(index)
+    for word in set(word.split("|")):
+        if word not in tagdb:
+            tagdb[word] = {}
+
+        if pos not in tagdb[word]:
+            tagdb[word][pos] = [index]
+        else:
+            tagdb[word][pos].append(index)
 
 def init_sentences():
     index=0
@@ -68,30 +74,51 @@ def get_sentences_from_phrase(phrase, count):
 def get_sentences_from_word(word, count):
 
     index = []
-    if word in tagdb:
-        for pos in tagdb[word]:
-            index += tagdb[word][pos]
-
     if word in worddb:
-        index += worddb[word]
+        index = worddb[word]
+
+    else:
+        results = get_sentences_from_tag(word, "", count)
+        if results:
+            return results
+
+        lemma = spanish_lemmas.get_lemma(word, "")
+        if lemma and lemma in worddb:
+            index = worddb[lemma]
 
     if len(index):
         return get_sentences_from_index(index, count)
     return []
 
 def get_sentences_from_tag(word, pos, count):
-    if word not in tagdb:
+
+    found_word = ""
+    if word in tagdb:
+        found_word = word
+    else:
+        lemma = spanish_lemmas.get_lemma(word, pos)
+        if lemma and lemma in tagdb:
+            found_word = lemma
+        else:
+            return []
+
+    results = set()
+    if not pos:
+        for item in tagdb[found_word]:
+            results.update(tagdb[found_word][item])
+    elif pos in tagdb[found_word]:
+        results = tagdb[found_word][pos]
+    else:
         return []
 
-    if pos not in tagdb[word]:
-        return []
-
-    return get_sentences_from_index(tagdb[word][pos], count)
+    return get_sentences_from_index(list(results), count)
 
 
 def get_sentences_from_index(available,count):
     sentences = []
     ids = []
+
+    available = sorted(available)
 
     results = len(available)
     if results <= count:

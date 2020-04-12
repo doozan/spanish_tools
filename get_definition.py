@@ -1,5 +1,11 @@
 import sys
 import spanish_dictionary
+import argparse
+
+parser = argparse.ArgumentParser(description='Get definition of word')
+parser.add_argument('word', help="Word to search for")
+parser.add_argument('pos', nargs="?", default="", help="part of speech")
+args = parser.parse_args()
 
 def pretty_print(word, item):
     for pos in item:
@@ -17,11 +23,5 @@ def pretty_print(word, item):
     print("==========================")
 
 
-if len(sys.argv) == 2:
-    result = spanish_dictionary.lookup(sys.argv[1])
-    pretty_print(sys.argv[1], result)
-elif len(sys.argv) == 3:
-    result = spanish_dictionary.lookup(sys.argv[1], sys.argv[2])
-    pretty_print(sys.argv[1], result)
-else:
-    print("Usage: %s <query> [pos]" % sys.argv[0])
+result = spanish_dictionary.lookup(args.word, args.pos)
+pretty_print(args.word, result)

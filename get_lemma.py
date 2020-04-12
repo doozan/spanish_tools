@@ -1,7 +1,10 @@
 import sys
 import spanish_lemmas
+import argparse
 
-if len(sys.argv) == 3:
-    print(spanish_lemmas.get_lemma(sys.argv[1], sys.argv[2]))
-else:
-    print("Usage: %s <word> <pos>" % sys.argv[0])
+parser = argparse.ArgumentParser(description='Get lemma from word and pos')
+parser.add_argument('word', help="Word to get lemma for")
+parser.add_argument('pos', nargs="?", default="", help="part of speech")
+args = parser.parse_args()
+
+print(spanish_lemmas.get_lemma(args.word, args.pos.upper()))
