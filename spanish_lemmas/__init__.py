@@ -69,3 +69,7 @@ def get_lemma(item,pos):
             keys = list(lemmadb[item].keys())
             if len(keys):
                 return lemmadb[item][keys[0]]
+
+def get_lemmas(item):
+    if item in lemmadb:
+        return lemmadb[item]
