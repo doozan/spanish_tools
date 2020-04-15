@@ -59,7 +59,7 @@ def init_sentences():
                 add_tag_to_db(tag,index)
             index+=1
 
-def get_sentences_from_phrase(phrase, count):
+def get_ids_from_phrase(phrase):
     pattern = r"\b" + phrase.strip().lower() + r"\b"
 
     matches = []
@@ -69,56 +69,73 @@ def get_sentences_from_phrase(phrase, count):
             matches.append(index)
         index+=1
 
-    return get_sentences_from_index(matches, count)
+    return matches
 
-def get_sentences_from_word(word, count):
+
+
+fuzzy_pos_search = {
+    "VERB": [ "VERB", "ADJ", "ADV", "NOUN" ],
+    "ADJ":  [ "ADJ", "ADV" ],
+    "ADV":  [ "ADV", "ADJ" ]
+}
+
+def get_ids_fuzzy(word, pos):
+
+    ids = []
+    search_pos = []
+    if pos in fuzzy_pos_search:
+        search_pos = fuzzy_pos_search[pos]
+    else:
+        search_pos = [ pos ]
+
+    for p in search_pos:
+        lemma = spanish_lemmas.get_lemma(word, p)
+        ids += get_ids_from_tag(lemma, p)
+        if lemma and lemma in worddb:
+           ids += worddb[lemma]
+
+    return sorted(set(ids))
+
+def get_ids_from_word(word):
 
     index = []
     if word in worddb:
         index = worddb[word]
 
-    else:
-        results = get_sentences_from_tag(word, "", count)
-        if results:
-            return results
+    return index
 
-        lemma = spanish_lemmas.get_lemma(word, "")
-        if lemma and lemma in worddb:
-            index = worddb[lemma]
 
-    if len(index):
-        return get_sentences_from_index(index, count)
-    return []
 
-def get_sentences_from_tag(word, pos, count):
+# if pos is set it return only results matching that word,pos
+# if it's not set, return all results matching the keyword
+def get_ids_from_tag(word, pos):
 
-    found_word = ""
+    lemma = ""
     if word in tagdb:
-        found_word = word
+        lemma = word
     else:
         lemma = spanish_lemmas.get_lemma(word, pos)
-        if lemma and lemma in tagdb:
-            found_word = lemma
-        else:
+        if not lemma or not lemma in tagdb:
             return []
 
     results = set()
     if not pos:
-        for item in tagdb[found_word]:
-            results.update(tagdb[found_word][item])
-    elif pos in tagdb[found_word]:
-        results = tagdb[found_word][pos]
+        for item in tagdb[lemma]:
+            results.update(tagdb[lemma][item])
+    elif pos in tagdb[lemma]:
+        results = tagdb[lemma][pos]
     else:
         return []
 
-    return get_sentences_from_index(list(results), count)
+    return list(results)
 
 
-def get_sentences_from_index(available,count):
+def get_sentences_from_ids(available, count):
     sentences = []
     ids = []
 
-    available = sorted(available)
+    # strip duplicates and sort
+    available = sorted(list(set(available)))
 
     results = len(available)
     if results <= count:
@@ -144,31 +161,40 @@ def get_sentences_from_index(available,count):
     return(sentences)
 
 def clean_word(word):
-    word = re.sub("^el ", "", word)
-    word = re.sub("^la(s) ", "", word)
-    word = re.sub(";.*", "", word)
-    word = re.sub(",.*", "", word)
-    if " " in word:
-        word = re.sub("^.{1,3} ", "", word)
-        word = re.sub(" .{1,3}$", "", word)
-    return word
+    return word.strip()
+
+#    word = re.sub("^el ", "", word)
+#    word = re.sub("^la(s) ", "", word)
+#    word = re.sub(";.*", "", word)
+#    word = re.sub(",.*", "", word)
+#    if " " in word:
+#        word = re.sub("^.{1,3} ", "", word)
+#        word = re.sub(" .{1,3}$", "", word)
+#    return word
 
 
 def get_sentences(lookup, pos, count):
-    results = []
+    ids = []
+    lookup = lookup.lower()
+    pos = pos.lower()
     source = "exact"
 
-    if pos in [ "phrase" ]:
-        results = get_sentences_from_phrase(lookup, count)
+    if pos in [ "phrase" ] or " " in lookup:
+        ids = get_ids_from_phrase(lookup)
     else:
         word = clean_word(lookup)
-        results = get_sentences_from_tag(word, pos, count)
+        ids = get_ids_from_tag(word, pos)
 
-        if not len(results):
-            source = "fuzzy"
-            results = get_sentences_from_word(word, count)
+        if not len(ids):
+            source = "literal"
+            ids = get_ids_from_word(word)
 
-    return { "sentences": results, "matched": source }
+            if not len(ids):
+                source = "fuzzy"
+                ids = get_ids_fuzzy(word, pos)
+
+    sentences = get_sentences_from_ids(ids, count)
+    return { "sentences": sentences, "matched": source }
 
 
 
