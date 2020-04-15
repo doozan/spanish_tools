@@ -22,10 +22,15 @@ if not path.isfile(_tagfile):
 
 
 pos_class_tags = {
-    "N": "NOUN",
     "A": "ADJ",
+    "C": "CONJ",
+    "D": "DET",
+    "N": "NOUN",
+    "P": "PRON",
+    "R": "ADV",
+    "S": "ADP",
     "V": "VERB",
-    "R": "ADV"
+    "Z": "NUM"
 }
 
 def get_tagged_word(item):
