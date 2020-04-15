@@ -58,8 +58,15 @@ def is_verb(pos):
     return pos.startswith("v")
 
 def is_noun(pos):
-    if pos in ["n", "f", "fp", "fs", "m", "mf", "mp", "ms"]:
+    if pos in ["n", "f", "fp", "fs", "m", "mf", "mp", "ms", "m-f", "f-el"]:
         return True
+
+def common_pos(pos):
+    if is_verb(pos):
+        return "VERB"
+    if is_noun(pos):
+        return "NOUN"
+    return pos.upper()
 
 def strip_eng_verb(eng):
     if eng.startswith("to "):
@@ -72,6 +79,9 @@ def should_ignore(item):
 
     return False
 
+
+el_f_nouns = [ 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia', 'area',
+        'arma', 'arpa', 'asma', 'aula', 'habla', 'habla', 'hacha', 'hambre', 'águila']
 
 def do_analysis(word, items):
 
@@ -118,6 +128,8 @@ def do_analysis(word, items):
                 usage['m-f'][newtag] = usage['f'][tag]
             del usage['f']
 
+    elif "f" in usage and word in el_f_nouns:
+        usage["f-el"] = usage.pop("f")
 
     return usage
 
@@ -206,8 +218,6 @@ def defs_to_string(defs, pos):
     return usage
 
 def lookup(word, pos=""):
-    query = word + " {"
-
     results = []
 
     if word not in allwords:
@@ -229,7 +239,7 @@ def lookup(word, pos=""):
                    filtered.append(item)
         if not len(filtered):
             removed = [ item['esp']['pos'] for item in results ]
-            print("%s: %s not in %s" % (word,pos, removed))
+            #print("%s: %s not in %s" % (word,pos, removed))
     else:
         filtered = results
 
