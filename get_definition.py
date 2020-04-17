@@ -3,6 +3,7 @@ import spanish_dictionary
 import argparse
 
 parser = argparse.ArgumentParser(description='Get definition of word')
+parser.add_argument('--syn', action='store_true', help="Show synonyms instead of definitions")
 parser.add_argument('word', help="Word to search for")
 parser.add_argument('pos', nargs="?", default="", help="part of speech")
 args = parser.parse_args()
@@ -23,5 +24,8 @@ def pretty_print(word, item):
     print("==========================")
 
 
-result = spanish_dictionary.lookup(args.word, args.pos)
-pretty_print(args.word, result)
+if (args.syn):
+    print("See also: %s" % ", ".join(spanish_dictionary.get_synonyms(args.word)))
+else:
+    result = spanish_dictionary.lookup(args.word, args.pos)
+    pretty_print(args.word, result)

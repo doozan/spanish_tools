@@ -1,11 +1,48 @@
 import genanki
 import csv
-import os.path
+import os
+import sys
 import math
 import json
 import re
 import spanish_dictionary
 import spanish_sentences
+import spanish_speech
+import argparse
+
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+def fail(*args, **kwargs):
+    eprint(*args, **kwargs)
+    exit(1)
+
+parser = argparse.ArgumentParser(description='Compile anki deck')
+parser.add_argument('deckname', help="Name of deck to build")
+parser.add_argument('--mediadir', help="Directory containing deck media resources (default: DECKNAME.media)")
+parser.add_argument('--wordlist', help="Wordlist to use (default: DECKNAME.csv)")
+parser.add_argument('--json',  help="JSON file with deck info (default: DECKNAME.json)")
+args = parser.parse_args()
+
+if not args.mediadir:
+    args.mediadir = args.deckname + ".media"
+
+if not args.wordlist:
+    args.wordlist = args.deckname + ".csv"
+
+if not args.json:
+    args.json = args.deckname + ".json"
+
+if not os.path.isdir(args.mediadir):
+    fail("Deck directory does not exist: %s"%args.mediadir)
+
+if not os.path.isfile(args.wordlist):
+    fail("Wordlist file does not exist: %s"%args.wordlist)
+
+if not os.path.isfile(args.json):
+    fail("Deck JSON does not exist: %s"%args.json)
 
 
 # check that we don't have any unknown pos types
@@ -35,7 +72,9 @@ pos_types = {
 
 noun_articles = {
     "m": "el",
+    "mp": "los",
     "f": "la",
+    "fp": "las",
     "mf": "el/la",
     "f-el": "el",
     "m-f": "el",
@@ -48,13 +87,9 @@ pos_nouns = list(noun_articles.keys())
 def format_sentences(sentences):
     return "<br>\n".join( '<span class="spa">%s</span><br><span class="eng">%s</span>' % pair[:2] for pair in sentences )
 
-def get_sentences(item, count):
+def get_sentences(word, pos, count):
 
-    # if there's already a value, use that
-    if item['sentences'] != '':
-        return item['sentences']
-
-    results = spanish_sentences.get_sentences(row['spanish'], pos_types[row['pos']], count)
+    results = spanish_sentences.get_sentences(word, pos, count)
 
     if len(results['sentences']):
         return format_sentences(results['sentences'])
@@ -62,72 +97,57 @@ def get_sentences(item, count):
     return ""
 
 
-# genanki 0.8.0
-# override the genanki function so we can set sortf
+
+#class MyNote(genanki.Note):
+#    def __init__(self, model=None, fields=None, sort_field=None, tags=None, guid=None):
+#        super(MyNote, self).__init__(model, fields, sort_field, tags, guid)
+#        try:
+#            self.guid = guid
+#        except AttributeError:
+#            # guid was defined as a property
+#            pass
 #
-def new_to_json(self, now_ts, deck_id):
-    for ord_, tmpl in enumerate(self.templates):
-      tmpl['ord'] = ord_
-      tmpl.setdefault('bafmt', '')
-      tmpl.setdefault('bqfmt', '')
-      tmpl.setdefault('did', None)  # TODO None works just fine here, but should it be deck_id?
+#    @property
+#    def guid(self):
+#        if self._guid is None:
+#            return genanki.guid_for(self.fields[1], self.fields[2])
+#        return self._guid
+#
+#    @guid.setter
+#    def guid(self, val):
+#        self._guid = val
 
-    for ord_, field in enumerate(self.fields):
-      field['ord'] = ord_
-      field.setdefault('font', 'Liberation Sans')
-      field.setdefault('media', [])
-      field.setdefault('rtl', False)
-      field.setdefault('size', 20)
-      field.setdefault('sticky', False)
+#    @property
+#    def guid(self):
+#        if super(MyNote, self)._guid is None:
+#            return genanki.guid_for(self.fields[0], self.fields[6])
 
-    return {
-      "css": self.css,
-      "did": deck_id,
-      "flds": self.fields,
-      "id": str(self.model_id),
-      "latexPost": "\\end{document}",
-      "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage{amssymb,amsmath}\n"
-                  "\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
-      "mod": now_ts,
-      "name": self.name,
-      "req": self._req,
-      #"sortf": 0,
-      "sortf": 4,
-      "tags": [],
-      "tmpls": self.templates,
-      "type": self.model_type,
-      "usn": -1,
-      "vers": []
-    }
 
-# override the json generator so we can explicitly set the sortf field
-old_to_json = genanki.Model.to_json
-genanki.Model.to_json = new_to_json
 
-with open('deck.json') as jsonfile:
+with open(args.json) as jsonfile:
     data = json.load(jsonfile)
 
 model_guid = list(data['model'].keys())[0]
 model_name = data['model'][model_guid]['name']
 deck_guid = [ item for item in data['deck'] if item != '1' ][0]
 
-custom_css = """
-.spa { font-weight: bold; }
-.eng { font-style: italic; font-size: .8em }"""
-
 # Create a template for anki card
 card_model = genanki.Model(model_guid,
   model_name,
   fields=data['model'][model_guid]['flds'],
   templates=data['model'][model_guid]['tmpls'],
-  css=data['model'][model_guid]['css'] + custom_css
+  css=data['model'][model_guid]['css']
 )
 
 
 def format_sound(filename):
+    if not filename:
+        return ""
     return "[sound:%s]"%filename
 
 def format_image(filename):
+    if not filename:
+        return ""
     return '<img src="%s" />'%filename
 
 def is_noun(pos):
@@ -137,17 +157,16 @@ def get_article(pos):
     return noun_articles[pos]
 
 
-def format_spanish(item):
-    return "%s (%s)" % (item['spanish'], item['pos'])
+#def format_spanish(item):
+#    return "%s (%s)" % (item['spanish'], item['pos'])
 
-def get_definition(word, pos):
-    item = spanish_dictionary.lookup(word, pos)
+def format_def(item):
 
     result = ""
     for pos in item:
         pos_tag = ""
         if len(item.keys()) > 1:
-            pos_tag = '<span class="pos-%s">{%s} </span>'%(pos,pos)
+            pos_tag = '<span class="pos pos-%s">{%s} </span>'%(pos,pos)
 
         for tag in item[pos]:
             if result != "":
@@ -159,26 +178,32 @@ def get_definition(word, pos):
             usage = spanish_dictionary.defs_to_string(defs, pos)
 
             if tag != "x":
-                result += '<span class="usage-tag">[%s]: </span>'%tag
+                result += '<span class="usage-type usage-tag">[%s]: </span>'%tag
 
             result += '<span class="usage">%s</span>'%usage
+
     return result
 
 
-def get_english(item):
-    #english = item['english']
+seen = {}
+def validate_note(item):
 
-    #if english == "":
-    #    english = get_definition(item['spanish'], pos_types[item['pos']])
+    if item['guid'] in seen:
+       eprint("Duplicate %s from %s" % (key, item))
+    else:
+        seen[item['guid']] = 1
 
-    english = get_definition(item['spanish'], pos_types[item['pos']])
-    if english == "":
-        english = item['english']
+    for key in [ "Spanish", "English", "Part of Speech", "Audio" ]:
+        if item[key] == "":
+            eprint("Missing %s from %s" % (key, item))
+            return False
 
-    if item['related'] != "":
-        english += " [also %s]" % item['related']
+    return True
 
-    return english
+allwords = {}
+def get_synonyms(word, pos):
+    items = spanish_dictionary.get_synonyms(word)
+    return [ k for k in items if pos+":"+k in allwords ]
 
 
 my_deck = genanki.Deck(int(deck_guid),'Spanish top 5000-revised', "5000 common Spanish words")
@@ -186,63 +211,87 @@ my_deck = genanki.Deck(int(deck_guid),'Spanish top 5000-revised', "5000 common S
 media = []
 notes = []
 
-fieldnames = [ "Spanish", "Picture", "English", "Audio", "Ranking", "tag", "Part of speech", "Spanish word with article", "Simple example sentences" ]
-
-with open('notes.csv', newline='') as csvfile, open('notes_rebuild.csv', 'w', newline='') as outfile:
+# read through the file once to build a list of words for the repeat/synonym checking
+with open(args.wordlist, newline='') as csvfile: #, open('notes_rebuild.csv', 'w', newline='') as outfile:
     csvreader = csv.DictReader(csvfile)
-    csvwriter = csv.DictWriter(outfile, fieldnames=fieldnames)
-    csvwriter.writeheader()
+    allwords = set( row['pos'].lower()+":"+row['spanish'] for row in csvreader )
+
+with open(args.wordlist, newline='') as csvfile: #, open('notes_rebuild.csv', 'w', newline='') as outfile:
+    csvreader = csv.DictReader(csvfile)
+#    csvwriter = csv.DictWriter(outfile, fieldnames=fieldnames)
+#   csvwriter.writeheader()
 
     for row in csvreader:
-        image = row['image'] if row['image'] != "" else row['rank'] + ".jpg"
-        sound = row['sound'] if row['sound'] != "" else row['rank'] + ".mp3"
+#        print(row)
+#        image = row['oldrank'] + ".jpg"
+        #sound = row['sound'] if row['sound'] != "" else row['rank'] + ".mp3"
+
+        spanish = row['spanish']
+        english = ""
+        noun_type = ""
+        pos = row['pos'].lower()
+        usage = spanish_dictionary.lookup(spanish, pos)
+        syns = get_synonyms(spanish, pos)
+        if usage and len(usage):
+            english = format_def(usage)
+            if pos == "noun":
+                noun_type = list(usage.keys())[0]
+        else:
+            print("No english", spanish, pos)
+            print(row)
+            exit()
+
+
+
+        speech_res = spanish_speech.get_speech(spanish,pos,noun_type,args.mediadir)
+        sound = speech_res['filename']
+
 
         item = {
-            'Spanish': format_spanish(row),
-            'Picture': format_image(image),
-            'English': get_english(row),
+#            'Picture': format_image(image),
+            'Rank': row['rank'],
+            'Spanish': get_article(noun_type) + " " + spanish if pos == "noun" else spanish,
+            'Part of Speech': noun_type if pos == "noun" else pos,
+            'Synonyms': ", ".join(syns),
+            'English': english,
+            'Sentences': get_sentences(spanish, pos, 3),
             'Audio':   format_sound(sound),
-            'Ranking': row['rank'],
-            'tag':     '',
-            'Part of speech': row['pos'],
-            'Spanish word with article': row['spanish'] if not is_noun(row['pos']) else get_article(row['pos']) + " " + row['spanish'],
-            'Simple example sentences': get_sentences(row, 3)
         }
 
-        # guid should be None if empty so generator will create one
-        guid = row['guid'] if row['guid'] != "" else None
-        # manually fix this id since libreoffice overwrites the value with #NAME because it hates things that start with =
-        if guid == '#NAME?':
-            guid = '=mm:yng9n'
+        item['guid'] = row['guid'] if row['guid'] != "" else genanki.guid_for(item['Spanish'], item['Part of Speech'])
 
-        tags = [ row['pos'],str(math.ceil(int(row['rank']) / 500)*500) ]
-        if row['tags'] != "":
+#        tags = [ row['pos'],str(math.ceil(int(row['rank']) / 500)*500) ]
+        tags = [ noun_type if pos == "noun" else pos ]
+        tags.append("NEW")
+        if "tags" in row and row['tags'] != "":
             for tag in row['tags'].split(" "):
                 tags.append(tag)
 
-        if os.path.isfile(image):
-            media.append(image)
-        else:
-            item['Picture'] = ""
-            print("Skipping missing pic",image,row['rank'],row['spanish'])
+#        item['Picture'] = ""
+#        FILE=os.path.join(args.mediadir, image)
+#        if os.path.isfile(FILE):
+#            media.append(FILE)
+#        else:
+#            item['Picture'] = ""
+#            print("Skipping missing pic",image,row['rank'],row['spanish'], file=sys.stderr)
 
-        if os.path.isfile(sound):
-            media.append(sound)
+        FILE=os.path.join(args.mediadir, sound)
+        if os.path.isfile(FILE):
+            media.append(FILE)
         else:
-            item['Picture'] = ""
-            print("Skipping missing pic",sound)
+            item['Sound'] = ""
 
-        for key in [ "Spanish", "English", "Part of speech" ]:
-            if item[key] == "":
-                print("Missing %s from %s %s" % (key, row['rank'], row['spanish']))
+        if not validate_note(item):
+            exit()
 
         row = []
-        for field in fieldnames:
+        _fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Audio" ]
+        for field in _fields:
             row.append(item[field])
 
-        my_deck.add_note( genanki.Note( model = card_model, sort_field=row[4], fields = row, guid = guid, tags = tags ) )
-        csvwriter.writerow(item)
+        my_deck.add_note( genanki.Note( model = card_model, sort_field=row[4], fields = row, guid = item['guid'], tags = tags ) )
+        #csvwriter.writerow(item)
 
 my_package = genanki.Package(my_deck)
 my_package.media_files = media
-my_package.write_to_file('deck.apkg')
+my_package.write_to_file(args.deckname + '.apkg')
