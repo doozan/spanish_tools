@@ -1,31 +1,64 @@
 import re
-from os import path
+import os
 
-FILE=path.join(path.dirname(__file__), 'es-en.txt')
 allwords = {}
+allsyns = {}
 
-# TODO: check file exists and print error message
-with open(FILE) as infile:
-    for line in infile:
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
-        word = re.match("^([^{]+)", line).group(1)
-        word = word.strip()
-        if word not in allwords:
-            allwords[word] = [line]
-        else:
-            allwords[word].append(line)
+def fail(*args, **kwargs):
+    eprint(*args, **kwargs)
+    exit(1)
 
-# TODO: check file exists and print error message
-FILE=path.join(path.dirname(__file__), 'custom.txt')
-with open(FILE) as infile:
-    for line in infile:
+def _init():
+    FILE=os.path.join(os.path.dirname(__file__), 'es-en.txt')
+    # TODO: check file exists and print error message
+    with open(FILE) as infile:
+        for line in infile:
 
-        word = re.match("^([^{]+)", line).group(1)
-        word = word.strip()
-        if word not in allwords:
-            allwords[word] = [line]
-        else:
-            allwords[word].append(line)
+            word = re.match("^([^{]+)", line).group(1)
+            word = word.strip()
+            if word not in allwords:
+                allwords[word] = [line]
+            else:
+                allwords[word].append(line)
+
+    # TODO: check file exists and print error message
+    FILE=os.path.join(os.path.dirname(__file__), 'custom.txt')
+    with open(FILE) as infile:
+        for line in infile:
+            if line.startswith("#"):
+                continue
+
+            word = re.match("^([^{]+)", line).group(1)
+            word = word.strip()
+
+            if word.startswith("-"):
+                word = word[1:]
+                delete_entries(word, line[1:])
+                continue
+
+            if word not in allwords:
+                allwords[word] = [line]
+            else:
+                allwords[word].append(line)
+
+    FILE=os.path.join(os.path.dirname(__file__), 'syns.txt')
+    with open(FILE) as infile:
+        for line in infile:
+            word, syns = line.split(':')
+            syns = syns.strip()
+            allsyns[word] = syns # syns.split('/')
+
+
+def delete_entries(word, line):
+    if word not in allwords:
+        return
+
+    line = line.strip()
+    allwords[word] = [ v for v in allwords[word] if not v.startswith(line) ]
+
 
 def parse_spanish(data):
 
@@ -115,24 +148,26 @@ def do_analysis(word, items):
                 is_new_def = False
 
 
-    if "m" in usage and "f" in usage:
+    if len( {"m","f","mf"} & usage.keys() ) > 1:
+#    if "m" in usage and "f" in usage:
         usage['m-f'] = {}
-        if 'm' in usage:
-            for tag in usage["m"].keys():
-                newtag = 'm ' + tag if tag != 'x' else 'm'
-                usage['m-f'][newtag] = usage['m'][tag]
-            del usage['m']
-        if 'f' in usage:
-            for tag in usage["f"].keys():
-                newtag = 'f ' + tag if tag != 'x' else 'f'
-                usage['m-f'][newtag] = usage['f'][tag]
-            del usage['f']
+        for oldtag in ['m', 'f', 'mf']:
+            if oldtag in usage:
+                for tag in usage[oldtag].keys():
+                    newtag = oldtag + ' ' + tag if tag != 'x' else oldtag
+                    usage['m-f'][newtag] = usage[oldtag][tag]
+                del usage[oldtag]
 
     elif "f" in usage and word in el_f_nouns:
         usage["f-el"] = usage.pop("f")
 
     return usage
 
+def get_synonyms(word):
+    if word in allsyns and allsyns[word]:
+        return allsyns[word].split('/')
+    else:
+        return []
 
 
 # "primary" defs start with a ';' and synonyms follow
@@ -245,3 +280,6 @@ def lookup(word, pos=""):
 
     analysis = do_analysis(word, filtered)
     return analysis
+
+
+_init()
