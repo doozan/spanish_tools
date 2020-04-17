@@ -116,6 +116,32 @@ def should_ignore(item):
 el_f_nouns = [ 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia', 'area',
         'arma', 'arpa', 'asma', 'aula', 'habla', 'habla', 'hacha', 'hambre', 'águila']
 
+
+# splits a list by comma, but with awareness of ()
+# split_defs("one, two (2, II), three") will result in
+# [ "one", "two (2, II)", "three" ]
+def split_def(data):
+    splits=[]
+    nested=0
+
+    last_split=0
+
+    for idx in range(0,len(data)):
+        c = data[idx]
+        if c == "(" or c == "[":
+            nested += 1
+        elif c == ")" or c == "]":
+            nested = nested-1 if nested else 0
+        elif c == "," and not nested:
+            splits.append(data[last_split:idx].strip())
+            last_split=idx+1
+
+    if idx>last_split:
+        splits.append(data[last_split:idx+1].strip())
+
+    return splits
+
+
 def do_analysis(word, items):
 
     usage = {}
@@ -137,7 +163,7 @@ def do_analysis(word, items):
         # Definitions are separated by commas and semicolons
         for defs in item['eng'].split("; "):
             is_new_def=True
-            for eng in defs.split(", "):
+            for eng in split_def(defs):
                 if is_verb(pos):
                     eng = strip_eng_verb(eng)
                 if is_new_def:
