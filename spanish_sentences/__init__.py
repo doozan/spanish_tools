@@ -22,6 +22,15 @@ def strip_sentence(string):
     stripped = re.sub('[^ a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+', '', string).lower()
     return re.sub(' +', ' ', stripped)
 
+def get_interjections(string):
+
+    pattern = r"""(?x)(?=          # use lookahead as the separators may overlap (word1. word2, blah blah) should match word1 and word2 using "." as a separator
+        (?:^|[:;,.¡!¿]\ ?)         # Punctuation (followed by an optional space) or the start of the line
+        ([a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+)  # the interjection
+        (?:[;,.!?]|$)              # punctuation or the end of the line
+    )"""
+    return re.findall(pattern, string, re.IGNORECASE)
+
 
 # tags usually look like noun:word
 # but can also look look noun:word1|word1|word2
@@ -38,6 +47,12 @@ def add_tag_to_db(tag,index):
         else:
             tagdb[word][pos].append(index)
 
+
+
+def tag_interjections(sentence, index):
+    for word in get_interjections(sentence):
+        add_tag_to_db("interj:"+word, index)
+
 def init_sentences():
     index=0
     with open(_tagfile) as infile:
@@ -46,6 +61,7 @@ def init_sentences():
             stripped = strip_sentence(spanish).strip()
             tagged = tagged.strip()
 
+            tag_interjections(spanish, index)
             sentencedb.append( (spanish, english) )
             grepdb.append(stripped)
 
@@ -83,6 +99,10 @@ def get_ids_fuzzy(word, pos):
 
     ids = []
     search_pos = []
+
+    if pos == "INTERJ":
+        return []
+
     if pos in fuzzy_pos_search:
         search_pos = fuzzy_pos_search[pos]
     else:
@@ -175,7 +195,7 @@ def clean_word(word):
 
 def get_sentences(lookup, pos, count):
     ids = []
-    lookup = lookup.lower()
+    lookup = lookup.strip().lower()
     pos = pos.lower()
     source = "exact"
 
@@ -187,7 +207,8 @@ def get_sentences(lookup, pos, count):
 
         if not len(ids):
             source = "literal"
-            ids = get_ids_from_word(word)
+            if pos != "INTERJ":
+                ids = get_ids_from_word(word)
 
             if not len(ids):
                 source = "fuzzy"
