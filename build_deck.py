@@ -129,7 +129,8 @@ with open(args.json) as jsonfile:
 
 model_guid = list(data['model'].keys())[0]
 model_name = data['model'][model_guid]['name']
-deck_guid = [ item for item in data['deck'] if item != '1' ][0]
+#deck_guid = [ item for item in data['deck'] if item != '1' ][0]
+deck_guid = 1587078062419
 
 # Create a template for anki card
 card_model = genanki.Model(model_guid,
@@ -250,11 +251,12 @@ with open(args.wordlist, newline='') as csvfile: #, open('notes_rebuild.csv', 'w
         item = {
 #            'Picture': format_image(image),
             'Rank': row['rank'],
-            'Spanish': get_article(noun_type) + " " + spanish if pos == "noun" else spanish,
+            'Spanish': spanish,
             'Part of Speech': noun_type if pos == "noun" else pos,
             'Synonyms': ", ".join(syns),
             'English': english,
             'Sentences': get_sentences(spanish, pos, 3),
+            'Article': get_article(noun_type) if pos == "noun" else spanish,
             'Audio':   format_sound(sound),
         }
 
@@ -285,7 +287,7 @@ with open(args.wordlist, newline='') as csvfile: #, open('notes_rebuild.csv', 'w
             exit()
 
         row = []
-        _fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Audio" ]
+        _fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Article", "Audio" ]
         for field in _fields:
             row.append(item[field])
 
