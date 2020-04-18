@@ -39,6 +39,7 @@ def add_tag_to_db(tag,index):
     pos,word = tag.split(":")
 
     for word in set(word.split("|")):
+        word = word.lower()
         if word not in tagdb:
             tagdb[word] = {}
 
@@ -74,6 +75,7 @@ def init_sentences():
             for tag in tagged.split(" "):
                 add_tag_to_db(tag,index)
             index+=1
+
 
 def get_ids_from_phrase(phrase):
     pattern = r"\b" + phrase.strip().lower() + r"\b"

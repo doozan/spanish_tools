@@ -5,7 +5,7 @@ import sys
 import math
 import json
 import re
-import spanish_dictionary
+import spanish_words
 import spanish_sentences
 import spanish_speech
 import argparse
@@ -175,8 +175,8 @@ def format_def(item):
 
             result += pos_tag
 
-            defs = spanish_dictionary.get_best_defs(item[pos][tag],4)
-            usage = spanish_dictionary.defs_to_string(defs, pos)
+            defs = spanish_words.get_best_defs(item[pos][tag],40)
+            usage = spanish_words.defs_to_string(defs, pos)
 
             if tag != "x":
                 result += '<span class="usage-type usage-tag">[%s]: </span>'%tag
@@ -203,7 +203,7 @@ def validate_note(item):
 
 allwords = {}
 def get_synonyms(word, pos):
-    items = spanish_dictionary.get_synonyms(word)
+    items = spanish_words.get_synonyms(word)
     return [ k for k in items if pos+":"+k in allwords ]
 
 
@@ -231,7 +231,7 @@ with open(args.wordlist, newline='') as csvfile: #, open('notes_rebuild.csv', 'w
         english = ""
         noun_type = ""
         pos = row['pos'].lower()
-        usage = spanish_dictionary.lookup(spanish, pos)
+        usage = spanish_words.lookup(spanish, pos)
         syns = get_synonyms(spanish, pos)
         if usage and len(usage):
             english = format_def(usage)

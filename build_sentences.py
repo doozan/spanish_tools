@@ -2,7 +2,8 @@ import argparse
 #import basewords
 import sys
 from os import path
-import spanish_lemmas
+#import spanish_lemmas
+import spanish_words
 
 
 parser = argparse.ArgumentParser(description='Generate a list of tagged/lemmatized sentences')
@@ -40,7 +41,8 @@ def get_tagged_word(item):
     tagclass = tag[0]
     if tagclass in pos_class_tags:
         pos = pos_class_tags[tagclass]
-        lemma = spanish_lemmas.get_lemma(word, pos)
+        #lemma = spanish_lemmas.get_lemma(word, pos)
+        lemma = spanish_words.get_lemma(word, pos)
         #print(word,pos," > ",lemma)
         if not lemma:
 #            print("No lemma: ", word)
@@ -60,6 +62,13 @@ with open(_origfile) as origfile, open(_tagfile) as tagfile:
         # ignore sentences with less than 5 or more than 15 spanish words
         if len(tokens) < 5 or len(tokens) > 15:
             continue
+
+        # ignore duplicates
+        if english in seen or spanish in seen:
+            continue
+        else:
+            seen[english] = 1
+            seen[spanish] = 1
 
         tags = []
         for token in tokens:

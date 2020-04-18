@@ -1,6 +1,6 @@
 import argparse
 import csv
-import spanish_dictionary
+import spanish_words
 import os
 
 parser = argparse.ArgumentParser(description='Fix bad part of speech')
@@ -51,7 +51,7 @@ with open(args.infile, newline='') as csvfile:
     csvreader = csv.DictReader(csvfile)
 
     for row in csvreader:
-        results = spanish_dictionary.lookup(row['spanish'])
+        results = spanish_words.lookup(row['spanish'])
 
         if not results:
             #print("Spanish '%s' not found dictionary"%(row['spanish']))

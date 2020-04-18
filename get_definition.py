@@ -1,5 +1,5 @@
 import sys
-import spanish_dictionary
+import spanish_words
 import argparse
 
 parser = argparse.ArgumentParser(description='Get definition of word')
@@ -14,8 +14,8 @@ def pretty_print(word, item):
         print("%s (%s)"%(word, pos))
 
         for tag in item[pos]:
-            defs = spanish_dictionary.get_best_defs(item[pos][tag],4)
-            usage = spanish_dictionary.defs_to_string(defs, pos)
+            defs = spanish_words.get_best_defs(item[pos][tag],40)
+            usage = spanish_words.defs_to_string(defs, pos)
 
             if tag == "x":
                 print(usage)
@@ -25,7 +25,7 @@ def pretty_print(word, item):
 
 
 if (args.syn):
-    print("See also: %s" % ", ".join(spanish_dictionary.get_synonyms(args.word)))
+    print("See also: %s" % "$ ".join(spanish_words.get_synonyms(args.word)))
 else:
-    result = spanish_dictionary.lookup(args.word, args.pos)
+    result = spanish_words.lookup(args.word, args.pos)
     pretty_print(args.word, result)

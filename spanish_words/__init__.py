@@ -1,4 +1,356 @@
-# coding: utf-8
+from collections import defaultdict
+import re
+import sys
+import os
+
+allverbs = {}
+allwords = {}
+allsyns = {}
+irregular_verbs = {}
+reverse_irregular_verbs = defaultdict(list)
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+def fail(*args, **kwargs):
+    eprint(*args, **kwargs)
+    exit(1)
+
+
+def init_irregular_verbs():
+    # Irregular verbs forms loading
+    with open(os.path.join(os.path.dirname(__file__), 'irregular_verbs.txt')) as verbs_file:
+        for line in verbs_file:
+            if ':' not in line:
+                continue
+            infinitive, forms = line.strip().split(':')
+            #infinitive, forms = line.decode('utf-8').strip().split(':')
+            form_dict = {}
+            for form in forms.split(','):
+                # For some reason irregular_verbs.txt contains two form of one verb
+                # We should ignore second form
+                values = form.split('|')
+                if len(values) == 2:
+                    key, value = values
+                    form_dict[key] = value
+            irregular_verbs[infinitive] = form_dict
+
+    # We need defaultdict with list here because some verbs have same forms in various tenses
+    #for verb, forms in irregular_verbs.iteritems():
+    for verb, forms in irregular_verbs.items():
+        for form in forms.values():
+            reverse_irregular_verbs[form].append(verb)
+
+
+def init_dictionary():
+    FILE=os.path.join(os.path.dirname(__file__), 'es-en.txt')
+    # TODO: check file exists and print error message
+    with open(FILE) as infile:
+        for line in infile:
+            res = re.match("^([^{]+)(?:{([a-z]+)})?", line)
+            word = res.group(1).strip()
+            pos = res.group(1)
+            if pos_is_verb(pos):
+                allverbs[word] = 1
+            if word not in allwords:
+                allwords[word] = [line]
+            else:
+                allwords[word].append(line)
+
+    # TODO: check file exists and print error message
+    FILE=os.path.join(os.path.dirname(__file__), 'custom.txt')
+    with open(FILE) as infile:
+        for line in infile:
+            if line.startswith("#"):
+                continue
+
+            word = re.match("^([^{]+)", line).group(1)
+            word = word.strip()
+
+            if word.startswith("-"):
+                word = word[1:]
+                delete_entries(word, line[1:])
+                continue
+
+            if word not in allwords:
+                allwords[word] = [line]
+            else:
+                allwords[word].append(line)
+
+def init_syns():
+    FILE=os.path.join(os.path.dirname(__file__), 'syns.txt')
+    with open(FILE) as infile:
+        for line in infile:
+            word, syns = line.split(':')
+            syns = syns.strip()
+            allsyns[word] = syns # syns.split('/')
+
+def _init():
+    init_dictionary()
+    init_syns()
+    init_irregular_verbs()
+
+
+def delete_entries(word, line):
+    if word not in allwords:
+        return
+
+    line = line.strip()
+    allwords[word] = [ v for v in allwords[word] if not v.startswith(line) ]
+
+
+def parse_spanish(data):
+
+    res = re.match("^(.*) ?\{(.*?)\} ?\[?([^\]]*)\]?", data)
+
+    # This only applies to 4 obscure entries in the database
+    # better to just delete the bad lines
+    if not res:
+        print("DOES NOT MATCH REGEX: '%s'"% data)
+        return {}
+
+    tags = []
+    if res.group(3) != "":
+        tags = [ item.strip() for item in res.group(3).split(',') ]
+
+    return {
+        'lemma': res.group(1).strip(),
+        'pos': res.group(2),
+        'tags': tags
+    }
+
+def parse_line(line):
+    esp, eng = line.split("::")
+    return {
+       'esp': parse_spanish(esp),
+       'eng': eng.strip()
+    }
+
+def pos_is_verb(pos):
+    return pos.startswith("v")
+
+def pos_is_noun(pos):
+    if pos in ["n", "f", "fp", "fs", "m", "mf", "mp", "ms", "m-f", "f-el"]:
+        return True
+
+def common_pos(pos):
+    if pos_is_verb(pos):
+        return "VERB"
+    if pos_is_noun(pos):
+        return "NOUN"
+    return pos.upper()
+
+def strip_eng_verb(eng):
+    if eng.startswith("to "):
+        return eng[3:]
+    return eng
+
+def should_ignore(item):
+    if {"archaic", "dated", "historical", "obsolete", "rare"} & { tag.lower() for tag in item['tags'] }:
+        return True
+
+    return False
+
+
+el_f_nouns = [ 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia', 'area',
+        'arma', 'arpa', 'asma', 'aula', 'habla', 'habla', 'hacha', 'hambre', 'águila']
+
+
+# splits a list by comma, but with awareness of ()
+# split_defs("one, two (2, II), three") will result in
+# [ "one", "two (2, II)", "three" ]
+def split_def(data):
+    splits=[]
+    nested=0
+
+    last_split=0
+
+    for idx in range(0,len(data)):
+        c = data[idx]
+        if c == "(" or c == "[":
+            nested += 1
+        elif c == ")" or c == "]":
+            nested = nested-1 if nested else 0
+        elif c == "," and not nested:
+            splits.append(data[last_split:idx].strip())
+            last_split=idx+1
+
+    if idx>last_split:
+        splits.append(data[last_split:idx+1].strip())
+
+    return splits
+
+
+def do_analysis(word, items):
+
+    usage = {}
+
+    for item in items:
+        if should_ignore(item['esp']):
+            continue
+
+        pos = item['esp']['pos']
+        if pos not in usage:
+            usage[pos] = {}
+
+        tag = "x"
+        if len(item['esp']['tags']):
+            tag = ", ".join(item['esp']['tags'])
+        if tag not in usage[pos]:
+            usage[pos][tag] = []
+
+        # Definitions are separated by commas and semicolons
+        for defs in item['eng'].split("; "):
+            is_new_def=True
+            for eng in split_def(defs):
+                if pos_is_verb(pos):
+                    eng = strip_eng_verb(eng)
+                if is_new_def:
+                    eng = ";" + eng
+
+                if eng not in usage[pos][tag]:
+                    usage[pos][tag].append(eng)
+                is_new_def = False
+
+
+    if len( {"m","f","mf"} & usage.keys() ) > 1:
+#    if "m" in usage and "f" in usage:
+        usage['m-f'] = {}
+        for oldtag in ['m', 'f', 'mf']:
+            if oldtag in usage:
+                for tag in usage[oldtag].keys():
+                    newtag = oldtag + ' ' + tag if tag != 'x' else oldtag
+                    usage['m-f'][newtag] = usage[oldtag][tag]
+                del usage[oldtag]
+
+    elif "f" in usage and word in el_f_nouns:
+        usage["f-el"] = usage.pop("f")
+
+    return usage
+
+def get_synonyms(word):
+    if word in allsyns and allsyns[word]:
+        return allsyns[word].split('/')
+    else:
+        return []
+
+
+# "primary" defs start with a ';' and synonyms follow
+# for word with many definitons this can be too much info
+
+# given the following input:
+# [ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ]
+# limit=2 gives [ ";def1", ";def2" ]
+# limit=4 gives [ ";def1", "syn1-1", ";def2", ";def3" ]
+# limit=5 gives [ ";def1", "syn1-1", ";def2", ";def3", "def3-syn1" ]
+
+
+def get_best_defs(defs,limit):
+    best = []
+
+    if len(defs) <= limit:
+        return defs
+
+    #primary_defs = [ x[1:] for x in defs if x.startswith(';') ]
+
+    # number of primary defs >= limit just return first limit defs
+    #if len(primary_defs) >= limit:
+    #    return primary_defs[:limit]
+
+    # only one primary def, just return the first limit defs
+    #elif len(primary_defs) == 1:
+    #    return defs[:limit]
+
+    # otherwise, build a list of defs to keep starting with primary defs
+    # then the first syn of each def
+    # then the second...
+    # until we've hit the limit of keepers
+    # Since it's important to keep the primary def and the synonyms together
+    # we build a list of keepers by their index and then sort that index to
+    # get things in the correct order
+
+    keepidx = []
+    keep_depth = 0
+
+    while len(keepidx) < limit:
+        cur_depth=0
+        index=0
+        for item in defs:
+            if item.startswith(';'):
+                cur_depth=0
+            else:
+                cur_depth += 1
+
+            if cur_depth == keep_depth:
+                keepidx.append(index)
+                if len(keepidx) >= int(limit):
+                    break
+            index += 1
+        keep_depth += 1
+        if keep_depth > 3:
+            break;
+
+    keepers = []
+    for idx in sorted(keepidx):
+        keepers.append(defs[idx])
+
+    return keepers
+
+def defs_to_string(defs, pos):
+    usage = ""
+    if pos_is_verb(pos):
+        usage = "to "
+
+    first=True
+    for item in defs:
+        sep=','
+        word = item
+        if item.startswith(';'):
+            sep=';'
+            word=item[1:]
+
+        if not first:
+            usage += sep+" "+word
+        else:
+            usage += word
+            first=False
+
+    return usage
+
+def lookup(word, pos=""):
+    pos = pos.lower()
+    results = []
+
+    if word not in allwords:
+        #print("Not found ", word)
+        return []
+
+    lines = allwords[word]
+    for line in lines:
+        results.append(parse_line(line))
+
+    # do pos filtering
+    filtered = []
+    if pos != "":
+        for item in results:
+            item_pos = item['esp']['pos']
+            if (pos == "verb" and pos_is_verb(item_pos)) or \
+               (pos == "noun" and pos_is_noun(item_pos)) or \
+               (pos == item_pos):
+                   filtered.append(item)
+        if not len(filtered):
+            removed = [ item['esp']['pos'] for item in results ]
+            #print("%s: %s not in %s" % (word,pos, removed))
+    else:
+        filtered = results
+
+    analysis = do_analysis(word, filtered)
+    return analysis
+
+
+_init()
+
+
 
 #  Spanish verbs conjugation library. Based on Pythoñol (http://pythonol.sourceforge.net)
 #
@@ -9,43 +361,7 @@
 #  this software. If you did not, you may get a copy of the
 #  license at: http://github.com/voldmar/conjugation/blob/master/LICENSE
 
-from collections import defaultdict
-from os import path
 
-verbs = {}
-irregular_verbs = {}
-reverse_irregular_verbs = defaultdict(list)
-
-# Known verbs
-with open(path.join(path.dirname(__file__), 'verbs.txt')) as allverbs_file:
-    for line in allverbs_file:
-        if ':' not in line:
-            continue
-        infinitive, definition = line.split(':')
-        verbs[infinitive] = definition
-
-# Irregular verbs forms loading
-with open(path.join(path.dirname(__file__), 'irregular_verbs.txt')) as verbs_file:
-    for line in verbs_file:
-        if ':' not in line:
-            continue
-        infinitive, forms = line.strip().split(':')
-        #infinitive, forms = line.decode('utf-8').strip().split(':')
-        form_dict = {}
-        for form in forms.split(','):
-            # For some reason irregular_verbs.txt contains two form of one verb
-            # We should ignore second form
-            values = form.split('|')
-            if len(values) == 2:
-                key, value = values
-                form_dict[key] = value
-        irregular_verbs[infinitive] = form_dict
-
-# We need defaultdict with list here because some verbs have same forms in various tenses
-#for verb, forms in irregular_verbs.iteritems():
-for verb, forms in irregular_verbs.items():
-    for form in forms.values():
-        reverse_irregular_verbs[form].append(verb)
 
 verb_endings = [
     u'ar', u'er', u'ir',
@@ -419,15 +735,17 @@ def reverse_conjugate(verb_tense):
     # let's make sure the 'constructed' infinitive is a known spanish word
     valid_verbs = [verb for verb in possible_verbs if verb_tense in conjugate(verb).values()]
 
+
+    # filter against a list of known verbs to throw out any we've invented
     known_verbs = []
     for verb in valid_verbs:
-        if verb in verbs:
+        if verb in allverbs:
             known_verbs.append(verb)
-            if verb+"se" in verbs and verbs[verb] != verbs[verb+"se"]:
-                known_verbs.append(verb+"se")
+#            if verb+"se" in verbs and verbs[verb] != verbs[verb+"se"]:
+#                known_verbs.append(verb+"se")
 
 
-    # No results, try stripping any objects
+    # No results, try stripping any objects (dime => di)
     if not len(known_verbs):
         endings = [ending for ending in pronouns if verb_tense.endswith(ending)]
         for ending in endings:
@@ -535,7 +853,7 @@ noplural_nouns = [
     "viescas"
 ]
 
-def get_single_noun(word):
+def get_base_noun(word):
     word = word.lower()
 
     if word in irregular_nouns:
@@ -579,4 +897,26 @@ def get_base_adjective(word):
     if word.endswith("a"):
         return word[:-1] + "o"
 
+    return word
+
+def get_lemmas(word, pos):
+    word = word.lower().strip()
+    pos = pos.lower()
+
+    if pos == "adj":
+        return [ get_base_adjective(word) ]
+
+    elif pos == "noun":
+        return [ get_base_noun(word) ]
+
+    elif pos == "verb":
+        return reverse_conjugate(word)
+
+def get_lemma(word, pos):
+    lemmas = get_lemmas(word,pos)
+    if lemmas and len(lemmas)>1:
+        # remove dups
+        lemmas = list(set(lemmas))
+        #eprint(word, pos, lemmas)
+        return "|".join(lemmas)
     return word
