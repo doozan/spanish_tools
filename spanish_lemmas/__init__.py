@@ -16,8 +16,31 @@ if "custom.txt" in files:
 
 if not len(files):
     print("No text files in %s"%srcdir, file=sys.stderr)
-    print("wget https://github.com/michmech/lemmatization-lists/raw/master/lemmatization-es.txt", sys.stderr)
+    print("Download lemmas from https://github.com/ChatScript/ChatScript/blob/master/DICT/SPANISH/", sys.stderr)
     exit(1)
+
+
+desc2pos = {
+'ADVERB': 'ADV',
+'ADJECTIVE': 'ADJ',
+'ADJECTIVE_NUMBER': 'ADJ',
+'CONJUNCTION_COORDINATE': 'CONJ',
+'CONJUNCTION_SUBORDINATE': 'CONJ',
+'DETERMINER': 'DET',
+'NOUN': 'NOUN',
+'NOUN_GERUND': 'NOUN',
+'NOUN_NUMBER': 'NOUN',
+'NOUN_PLURAL': 'NOUN',
+'NOUN_PROPER_PLURAL': 'NOUN',
+'NOUN_PROPER_SINGULAR': 'NOUN',
+'NOUN_SINGULAR': 'NOUN',
+'PREPOSITION': 'PREP',
+'PRONOUN_OBJECT': 'PRON',
+'PRONOUN_SUBJECT': 'PRON',
+'VERB': 'VERB',
+'VERB_INFINITIVE': 'VERB',
+'VERB_PAST_PARTICIPLE': 'VERB'
+}
 
 
 
@@ -29,7 +52,9 @@ if not len(files):
 # verde ( NOUN ADJECTIVE NOUN_SINGULAR NOUN_PLURAL ) lemma=`verde`verde` ADJ  NC
 # vete ( VERB ) lemma=`ir|ver`vetar` VCLIfin  VLfin
 
+
 #tags = {}
+words = {}
 for _file in files:
     with open(_file) as infile:
         for line in infile:
@@ -38,6 +63,8 @@ for _file in files:
                 continue
 
             word = res.group(1)
+            if len(res.group(2)):
+                words[word] = [ desc2pos[x] for x in res.group(2).strip().split(" ") ]
             #pos = res.group(2).strip().split(" ")
 
             lemmas = res.group(4).strip().split('`') if res.group(4) else []
@@ -73,3 +100,8 @@ def get_lemma(item,pos):
 def get_lemmas(item):
     if item in lemmadb:
         return lemmadb[item]
+
+
+def get_all_pos(word):
+    if word in words:
+        return words[word]
