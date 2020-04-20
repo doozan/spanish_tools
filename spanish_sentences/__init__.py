@@ -229,8 +229,10 @@ def get_best_pos(word, all_pos=None):
             pos = pos.lower()
             if pos in tagdb[word]:
                 count = len(tagdb[word][pos])
+#                print(count,word,pos)
                 if count > best_count:
                     best_pos = pos
+                    best_count = count
 
     return best_pos
 
