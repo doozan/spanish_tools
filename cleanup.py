@@ -59,18 +59,19 @@ def format_sentences(sentences):
 
 seen = {}
 seenword = {}
-with open(args.basefile) as infile:
-    csvreader = csv.DictReader(infile)
-    fields = csvreader.fieldnames
-    for row in csvreader:
-        word = row['spanish'].lower()
-        pos = row['pos'].lower()
+if args.basefile:
+    with open(args.basefile) as infile:
+        csvreader = csv.DictReader(infile)
+        fields = csvreader.fieldnames
+        for row in csvreader:
+            word = row['spanish'].lower()
+            pos = row['pos'].lower()
 
-        seen[pos+":"+word] = 1
-        if word in seenword:
-            seenword[word] += "-" +pos
-        else:
-            seenword[word] = pos
+            seen[pos+":"+word] = 1
+            if word in seenword:
+                seenword[word] += "-" +pos
+            else:
+                seenword[word] = pos
 
 
 
