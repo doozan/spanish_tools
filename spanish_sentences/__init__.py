@@ -3,13 +3,11 @@ import sys
 import math
 import re
 import os
-import spanish_lemmas
+import spanish_words
 
 grepdb = []
-worddb = []
 sentencedb = []
 tagdb = {}
-worddb = {}
 
 _tagfile = os.path.join(os.path.dirname(__file__), 'spa-tagged.txt')
 
@@ -44,9 +42,9 @@ def add_tag_to_db(tag,index):
             tagdb[word] = {}
 
         if pos not in tagdb[word]:
-            tagdb[word][pos] = [index]
-        else:
-            tagdb[word][pos].append(index)
+            tagdb[word][pos] = []
+
+        tagdb[word][pos].append(index)
 
 
 
@@ -65,12 +63,6 @@ def init_sentences():
             tag_interjections(spanish, index)
             sentencedb.append( (spanish, english) )
             grepdb.append(stripped)
-
-            for word in stripped.split(" "):
-                if word not in worddb:
-                    worddb[word] = [index]
-                else:
-                    worddb[word].append(index)
 
             for tag in tagged.split(" "):
                 add_tag_to_db(tag,index)
@@ -111,21 +103,13 @@ def get_ids_fuzzy(word, pos):
         search_pos = [ pos ]
 
     for p in search_pos:
-        lemma = spanish_lemmas.get_lemma(word, p)
+        lemma = spanish_words.get_lemma(word, p)
         ids += get_ids_from_tag(lemma, p)
-        if lemma and lemma in worddb:
-           ids += worddb[lemma]
 
     return sorted(set(ids))
 
 def get_ids_from_word(word):
-
-    index = []
-    if word in worddb:
-        index = worddb[word]
-
-    return index
-
+    return get_ids_from_tag("@"+word, "")
 
 
 # if pos is set it return only results matching that word,pos
@@ -136,7 +120,7 @@ def get_ids_from_tag(word, pos):
     if word in tagdb:
         lemma = word
     else:
-        lemma = spanish_lemmas.get_lemma(word, pos)
+        lemma = spanish_words.get_lemma(word, pos)
         if not lemma or not lemma in tagdb:
             return []
 
@@ -195,7 +179,7 @@ def clean_word(word):
 #    return word
 
 
-def get_sentences(lookup, pos, count):
+def get_sentence_ids(lookup, pos):
     ids = []
     lookup = lookup.strip().lower()
     pos = pos.lower()
@@ -215,9 +199,42 @@ def get_sentences(lookup, pos, count):
             if not len(ids):
                 source = "fuzzy"
                 ids = get_ids_fuzzy(word, pos)
+    return { "ids": ids, "source": source }
 
-    sentences = get_sentences_from_ids(ids, count)
-    return { "sentences": sentences, "matched": source }
+def get_sentences(lookup, pos, count):
+    res = get_sentence_ids(lookup, pos)
+    sentences = get_sentences_from_ids(res['ids'], count)
+    return { "sentences": sentences, "matched": res['source'] }
+
+
+def get_all_pos(word):
+    word = word.lower()
+    if word in tagdb:
+        return list(tagdb[word].keys())
+    return []
+
+
+def get_best_pos(word, all_pos=None):
+    word = word.lower()
+    if word not in tagdb:
+        return ""
+
+    if not all_pos:
+        all_pos = tagdb[word]
+
+    best_pos = ""
+    best_count = -1
+    if word in tagdb:
+        for pos in all_pos:
+            pos = pos.lower()
+            if pos in tagdb[word]:
+                count = len(tagdb[word][pos])
+                if count > best_count:
+                    best_pos = pos
+
+    return best_pos
+
+
 
 
 
