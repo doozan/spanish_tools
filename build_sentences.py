@@ -29,7 +29,7 @@ pos_class_tags = {
     "N": "NOUN",
     "P": "PRON",
     "R": "ADV",
-    "S": "ADP",
+    "S": "PREP",
     "V": "VERB",
     "Z": "NUM"
 }
@@ -41,13 +41,10 @@ def get_tagged_word(item):
     tagclass = tag[0]
     if tagclass in pos_class_tags:
         pos = pos_class_tags[tagclass]
-        #lemma = spanish_lemmas.get_lemma(word, pos)
         lemma = spanish_words.get_lemma(word, pos)
-        #print(word,pos," > ",lemma)
         if not lemma:
-#            print("No lemma: ", word)
             lemma = word
-        return pos_class_tags[tagclass] + ":" + lemma
+        return pos + ":" + lemma + "|@" + word
 
 
 with open(_origfile) as origfile, open(_tagfile) as tagfile:
@@ -80,8 +77,9 @@ with open(_origfile) as origfile, open(_tagfile) as tagfile:
         if len(tags) < 2:
             continue
 
-        # ignore duplicates
-        uniqueid = ";".join(sorted(tags))
+        # ignore sentences with the same adj/adv/noun/verb combination
+        unique_tags = [t for t in tags if t[0] in ["A", "N", "V" ]]
+        uniqueid = ":".join(sorted(unique_tags))
         if uniqueid in seen:
             continue
         seen[uniqueid] = 1
