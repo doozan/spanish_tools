@@ -7,96 +7,12 @@ import argparse
 import spanish_words
 import spanish_sentences
 import spanish_lemmas
+import get_best_pos
 
 parser = argparse.ArgumentParser(description='Lemmatize frequency list')
 parser.add_argument('file', help="Frequency list")
 parser.add_argument('outfile', help="CSV file to create")
 args = parser.parse_args()
-
-
-lemmapos2pos = {
-'PREP': 'PREP',
-'ADJ': 'ADJ',
-'ADV': 'ADV',
-'NC': 'NOUN',
-'NP': 'NP',
-'VCLIfin': 'VERB',
-'VCLIger': 'VERB',
-'VCLIinf': 'VERB',
-'VEadj': 'VERB',
-'VEfin': 'VERB',
-'VEger': 'VERB',
-'VEinf': 'VERB',
-'VHadj': 'VERB',
-'VHfin': 'VERB',
-'VHger': 'VERB',
-'VLadj': 'VERB',
-'VLfin': 'VERB',
-'VLger': 'VERB',
-'VLinf': 'VERB',
-'VMadj': 'VERB',
-'VMfin': 'VERB',
-'VMger': 'VERB',
-'VMinf': 'VERB',
-'VSadj': 'VERB',
-'VSfin': 'VERB',
-'VSger': 'VERB',
-'VSinf': 'VERB',
-}
-
-
-def get_best_pos(word):
-    lemmadb_pos = spanish_lemmas.get_all_pos(word)
-    lemmadb_pos = set(lemmadb_pos) if lemmadb_pos and len(lemmadb_pos) else set()
-    sentences_pos = set(map(str.upper, spanish_sentences.get_all_pos(word)))
-    dictionary_pos = set(spanish_words.get_all_pos(word))
-
-    all_pos = lemmadb_pos & sentences_pos & dictionary_pos
-    if not len(all_pos):
-        all_pos = sentences_pos & dictionary_pos
-
-    if not len(all_pos):
-        all_pos = lemmadb_pos & dictionary_pos
-
-    if not len(all_pos):
-        all_pos = lemmadb_pos & sentences_pos
-
-    if not len(all_pos):
-        if len(dictionary_pos):
-            all_pos = dictionary_pos
-        elif len(sentences_pos):
-            all_pos = sentences_pos
-        elif len(lemmadb_pos):
-            all_pos = lemmadb_pos
-
-    pos  = ""
-    if len(all_pos):
-        pos = spanish_sentences.get_best_pos(word, all_pos)
-
-
-    if pos == "":
-        all_pos = lemmadb_pos | sentences_pos | dictionary_pos
-#        pos = "NONE"
-        best_pos = ""
-        best_count = -1
-        for pos in all_pos:
-            lemma = spanish_words.get_lemma(word, pos)
-            count = len(spanish_sentences.get_ids_from_tag(lemma, pos.lower()))
-            if count > best_count:
-                best_count = count
-                best_pos = pos
-
-#            all_results += str(count)+":"+pos
-
-
-        if best_pos == "":
-            #print("No great pos", word)
-            pos = "NONE"
-        else:
-            pos = best_pos
-
-    return pos
-
 
 freq = {}
 def add_count(word, pos, count, origword):
@@ -210,7 +126,7 @@ with open(args.file) as infile, open(args.file+".lemmas.csv",'w') as outfile:
     for line in infile:
         word, count = line.strip().split(' ')
 
-        pos = get_best_pos(word).upper()
+        pos = get_best_pos.get_best_pos(word).upper()
         lemma = spanish_words.get_lemma(word, pos)
         add_count(lemma, pos, count, word)
 
