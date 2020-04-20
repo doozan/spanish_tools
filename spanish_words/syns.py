@@ -3,7 +3,6 @@ import re
 all_syns = {}
 
 with open("data_dict1.txt", encoding="ISO-8859-1") as infile:
-#with open("test.txt", encoding="ISO-8859-1") as infile:
     for line in infile:
 
         spanish,english = line.split(":")

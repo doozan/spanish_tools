@@ -6,6 +6,8 @@ import os
 allverbs = {}
 allwords = {}
 allsyns = {}
+wordpos = {}
+nouns_ending_s = {}
 irregular_verbs = {}
 reverse_irregular_verbs = defaultdict(list)
 
@@ -49,16 +51,25 @@ def init_dictionary():
         for line in infile:
             res = re.match("^([^{]+)(?:{([a-z]+)})?", line)
             word = res.group(1).strip()
-            pos = res.group(1)
-            if pos_is_verb(pos):
+            pos = common_pos(res.group(2))
+
+            if pos and pos == "VERB":
                 allverbs[word] = 1
+            elif pos and pos == "NOUN" and word[-1:] == "s":
+                nouns_ending_s[word] = 1
             if word not in allwords:
-                allwords[word] = [line]
-            else:
-                allwords[word].append(line)
+                allwords[word] = []
+
+            allwords[word].append(line)
+
+            if word not in wordpos:
+                wordpos[word] = []
+
+            if pos not in wordpos[word]:
+                wordpos[word].append(pos)
 
     # TODO: check file exists and print error message
-    FILE=os.path.join(os.path.dirname(__file__), 'custom.txt')
+    FILE=os.path.join(os.path.dirname(__file__), 'es-en.custom.txt')
     with open(FILE) as infile:
         for line in infile:
             if line.startswith("#"):
@@ -77,8 +88,9 @@ def init_dictionary():
             else:
                 allwords[word].append(line)
 
+
 def init_syns():
-    FILE=os.path.join(os.path.dirname(__file__), 'syns.txt')
+    FILE=os.path.join(os.path.dirname(__file__), 'synonyms.txt')
     with open(FILE) as infile:
         for line in infile:
             word, syns = line.split(':')
@@ -134,11 +146,20 @@ def pos_is_noun(pos):
         return True
 
 def common_pos(pos):
+    if not pos:
+        return
+
     if pos_is_verb(pos):
         return "VERB"
     if pos_is_noun(pos):
         return "NOUN"
+
     return pos.upper()
+
+def get_all_pos(word):
+    if word not in wordpos:
+        return []
+    return wordpos[word]
 
 def strip_eng_verb(eng):
     if eng.startswith("to "):
@@ -735,7 +756,6 @@ def reverse_conjugate(verb_tense):
     # let's make sure the 'constructed' infinitive is a known spanish word
     valid_verbs = [verb for verb in possible_verbs if verb_tense in conjugate(verb).values()]
 
-
     # filter against a list of known verbs to throw out any we've invented
     known_verbs = []
     for verb in valid_verbs:
@@ -743,7 +763,6 @@ def reverse_conjugate(verb_tense):
             known_verbs.append(verb)
 #            if verb+"se" in verbs and verbs[verb] != verbs[verb+"se"]:
 #                known_verbs.append(verb+"se")
-
 
     # No results, try stripping any objects (dime => di)
     if not len(known_verbs):
@@ -783,51 +802,6 @@ irregular_nouns = {
     "sándwiches": "sándwich"
 }
 
-plural_and_single_nouns = [
-    "dux",
-    "paraguas",
-    "tijeras",
-    "compost",
-    "test",
-    "valses",
-    "escolaridad",
-    "análisis",
-    "caries",
-    "trust",
-    "dosis",
-    "éxtasis",
-    "hipótesis",
-    "metamorfosis",
-    "síntesis",
-    "tesis",
-    "alias",
-    "crisis",
-    "rascacielos",
-    "parabrisas",
-    "sacacorchos",
-    "pararrayos",
-    "portaequipajes",
-    "guardarropas",
-    "marcapasos",
-    "gafas",
-    "vacaciones",
-    "víveres",
-    "lunes",
-    "afrikáans",
-    "fórceps",
-    "triceps",
-    "cuadriceps",
-    "martes",
-    "miércoles",
-    "jueves",
-    "viernes",
-    "cumpleaños",
-    "virus",
-    "atlas",
-    "sms",
-    "déficit"
-]
-
 noplural_nouns = [
     "nada",
     "nadie",
@@ -859,7 +833,7 @@ def get_base_noun(word):
     if word in irregular_nouns:
         return irregular_nouns[word]
 
-    if word in plural_and_single_nouns:
+    if word in nouns_ending_s:
         return word
 
     if word in noplural_nouns:
@@ -914,9 +888,11 @@ def get_lemmas(word, pos):
 
 def get_lemma(word, pos):
     lemmas = get_lemmas(word,pos)
-    if lemmas and len(lemmas)>1:
+    if not lemmas:
+        return word
+    elif len(lemmas)>1:
         # remove dups
         lemmas = list(set(lemmas))
         #eprint(word, pos, lemmas)
         return "|".join(lemmas)
-    return word
+    return lemmas[0]
