@@ -36,7 +36,7 @@ def get_interjections(string):
 def add_tag_to_db(tag,index):
     pos,word = tag.split(":")
 
-    for word in set(word.split("|")):
+    for word in list(dict.fromkeys(word.split("|"))):
         word = word.lower()
         if word not in tagdb:
             tagdb[word] = {}
