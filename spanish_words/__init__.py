@@ -769,7 +769,7 @@ def reverse_conjugate(verb_tense):
         endings = [ending for ending in pronouns if verb_tense.endswith(ending)]
         for ending in endings:
             res = reverse_conjugate( verb_tense[:len(ending)*-1] )
-            if res:
+            if len(res):
                 return res
 
     return known_verbs
@@ -798,7 +798,6 @@ irregular_nouns = {
     "ultimatos": "ultimátum",
     "memorandos": "memorándum",
     "referendos": "referéndum",
-    "canciones": "canción",
     "sándwiches": "sándwich"
 }
 
@@ -839,13 +838,21 @@ def get_base_noun(word):
     if word in noplural_nouns:
         return word
 
-    if len(word) > 3 and word[-3] == "ces":
+    # canciones, coleciones
+    if len(word) > 5 and word.endswith("iones"):
+        return word[:-5] + "ión"
+
+    # profesores, doctores, actores
+    if len(word) > 4 and word.endswith("ores"):
+        return word[:-4] + "or"
+
+    if len(word) > 3 and word.endswith("ces"):
         return word[:-3] + "z"
 
-    if len(word) > 3 and word[-3] in [ "éis", "áis", "óis", "úis" ]:
+    if len(word) > 3 and word[-3:] in [ "éis", "áis", "óis", "úis" ]:
         return word[:-3] + "y"
 
-    if len(word) > 3 and word[-3] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "xes", "yes", "íes" ]:
+    if len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "xes", "yes", "íes" ]:
         return word[:-2]
 
     if len(word) > 2 and word[-2:] in [ "as", "bs", "cs", "ds", "es", "fs", "gs", "ks", "ls", "ms", "ns", "os", "ps", "rs", "ts", "vs", "ás", "ís", "ós", "ús" ]:
@@ -857,6 +864,9 @@ def get_base_noun(word):
 def get_base_adjective(word):
     if word.endswith("s"):
         word = word[:-1]
+
+    if word.endswith("ale"):
+        return word[:-1]
 
     if word.endswith("dora"):
         return word[:-1]
