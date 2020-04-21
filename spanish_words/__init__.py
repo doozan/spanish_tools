@@ -702,14 +702,19 @@ def secondary_conjugations(base, reflexive):
 
 # object endings
 pronouns = [
-        'me', 'melo', 'mela', 'melos', 'melas',
-        'te', 'telo', 'tela', 'telos', 'telas',
+        'me',
+        'te',
         'le',
-        'nos', 'noslo', 'nosla', 'noslos', 'noslas',
-        'os',  'oslo',  'osla',  'oslos',  'oslas',
+        'nos',
+        'os',
         'les',
-        'se', 'selo', 'sela', 'selos', 'selas',
-        'lo', 'la', 'los', 'las'
+        'se',
+        'lo', 'la', 'los', 'las',
+        'melo', 'mela', 'melos', 'melas',
+        'telo', 'tela', 'telos', 'telas',
+        'noslo', 'nosla', 'noslos', 'noslas',
+        'oslo',  'osla',  'oslos',  'oslas',
+        'selo', 'sela', 'selos', 'selas',
 ]
 
 def reverse_conjugate(verb_tense):
@@ -896,13 +901,17 @@ def get_lemmas(word, pos):
     elif pos == "verb":
         return reverse_conjugate(word)
 
+    return [ word ]
+
 def get_lemma(word, pos):
     lemmas = get_lemmas(word,pos)
-    if not lemmas:
+
+    if not len(lemmas):
         return word
-    elif len(lemmas)>1:
-        # remove dups
-        lemmas = list(set(lemmas))
-        #eprint(word, pos, lemmas)
-        return "|".join(lemmas)
-    return lemmas[0]
+
+    if len(lemmas) == 1:
+        return lemmas[0]
+
+    # remove dups
+    lemmas = list(dict.fromkeys(lemmas)) # Requires cpython 3.6 or python 3.7
+    return "|".join(lemmas)
