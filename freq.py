@@ -26,7 +26,9 @@ def add_count(word, pos, count, origword):
 flags_defs = {
     'UNKNOWN': "Word does not appear in lemma database or dictionary",
     'NOUSAGE': "Multiple POS, but no sentences for any usage",
+    'PRONOUN': "Ignoring pronouns",
     'FILLER': "Common filler word",
+    'LETTER': "Letter",
     'NODEF': "No definition",
     'NOSENT': "No sentences",
     "FUZZY": "Only has fuzzy sentance matches",
@@ -50,6 +52,12 @@ def get_word_flags(word,pos):
 
     if pos == "NONE":
         flags.append(flag("NOUSAGE"))
+
+    if pos == "PRON":
+        flags.append(flag("PRONOUN"))
+
+    if pos == "LETTER":
+        flags.append(flag("LETTER"))
 
 
     definition = spanish_words.lookup(word, pos)
@@ -138,7 +146,7 @@ build_wordlist()
 
 with open(args.outfile,'w') as outfile:
     csvwriter = csv.writer(outfile)
-    csvwriter.writerow(["Count", "Word", "Part of Speech","Flags","Usage"])
+    csvwriter.writerow(["rank", "spanish", "pos","flags","usage"])
 
     for k,item in sorted(wordlist.items(), key=lambda item: item[1]['count']):
         if len(item['flags']) == 1 and "FUZZY" in item['flags']:
