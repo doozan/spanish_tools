@@ -214,27 +214,28 @@ def get_all_pos(word):
     return []
 
 
-def get_best_pos(word, all_pos=None):
+def get_best_pos(word, all_pos=None, debug=False):
     word = word.lower()
-    if word not in tagdb:
-        return ""
 
-    if not all_pos:
-        all_pos = tagdb[word]
 
     best_pos = ""
     best_count = -1
     if word in tagdb:
+        if not all_pos:
+            all_pos = tagdb[word]
         for pos in all_pos:
             pos = pos.lower()
             if pos in tagdb[word]:
                 count = len(tagdb[word][pos])
-#                print(count,word,pos)
+                if debug:
+                    print(count,word,pos)
                 if count > best_count:
                     best_pos = pos
                     best_count = count
+            elif debug:
+                print(0,word,pos)
 
-    return best_pos
+    return { 'count': best_count, 'pos': best_pos }
 
 
 
