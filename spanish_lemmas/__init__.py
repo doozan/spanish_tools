@@ -104,4 +104,9 @@ def get_lemmas(item):
 
 def get_all_pos(word):
     if word in words:
-        return words[word]
+        # Filter duplicates, but preserve order of list
+        unique = []
+        for item in words[word]:
+            if item not in unique:
+                unique.append(item)
+    return []
