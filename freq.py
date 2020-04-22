@@ -32,6 +32,7 @@ flags_defs = {
     'NODEF': "No definition",
     'NOSENT': "No sentences",
     "FUZZY": "Only has fuzzy sentance matches",
+    "DUPLICATE": "Duplicate usage of word with different POS",
     "DUPLICATE-ADJ-ADV": "Adverb duplicates existing adjective",
     "DUPLICATE-ADJ-NOUN": "Noun duplicates existing adjective",
     "DUPLICATE-REFLEXIVE": "Reflexive verb duplicase existing non-reflexive verb"
@@ -85,23 +86,24 @@ wordlist = {}
 def build_wordlist():
 
     wordusage = {}
-    for k,v in sorted(freq.items(), key=lambda item: item[1]['count'], reverse=True):
-        pos,word = k.split(":")
-
-        if word not in wordusage:
-            wordusage[word] = []
-        wordusage[word].append(pos)
-
     count = 1
     for k,item in sorted(freq.items(), key=lambda item: item[1]['count'], reverse=True):
         pos,word = k.split(":")
 
         flags = get_word_flags(word, pos)
         # flag the most common "filler" words (pronouns, articles, etc)
-        if count<200 and pos not in [ "ADJ", "ADV", "NOUN", "VERB" ]:
+        if count<200 and pos not in [ "adj", "adv", "noun", "verb" ]:
             flags.append(flag("FILLER"))
 
-        wordlist[pos+":"+word] = {
+        # Check for repeat usage
+        if word not in wordusage:
+            wordusage[word] = {}
+        else:
+            flags.append("DUPLICATE")
+
+        wordusage[word][pos] = item['count']
+
+        wordlist[k] = {
             'count': count,
             'word': word,
             'pos': pos,
@@ -109,21 +111,20 @@ def build_wordlist():
             'usage': item['usage']
         }
 
-#        print(count,pos,word)
         count += 1
 
-    repeatusage = {}
-    for word in wordusage:
-        if len(wordusage[word]) > 1:
-            repeatusage[word] = wordusage[word]
-
-    for word,all_pos in repeatusage.items():
-        if "ADJ" in all_pos and "ADV" in all_pos:
-            wordlist["ADV:"+word]['flags'].append(flag("DUPLICATE-ADJ-ADV"))
-        if "ADJ" in all_pos and "NOUN" in all_pos:
-            wordlist["NOUN:"+word]['flags'].append(flag("DUPLICATE-ADJ-NOUN"))
+#    repeatusage = {}
+#    for word in wordusage:
+#        if len(wordusage[word].keys()) > 1:
+#            repeatusage[word] = wordusage[word]
+#
+#    for word,all_pos in repeatusage.items():
+#        if "adj" in all_pos and "adv" in all_pos:
+#            wordlist["adv:"+word]['flags'].append(flag("DUPLICATE-ADJ-ADV"))
+#        if "adj" in all_pos and "noun" in all_pos:
+#            wordlist["noun:"+word]['flags'].append(flag("DUPLICATE-ADJ-NOUN"))
 #        for pos in all_pos:
-#            if pos not in ["ADJ", "ADV", "NOUN"]:
+#            if pos not in ["adj", "adv", "noun"]:
 #                wordlist[pos+":"+word]['flags'].append("REPEAT-"+ "-".join(all_pos))
 
 
