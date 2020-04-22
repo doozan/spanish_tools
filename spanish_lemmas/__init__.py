@@ -21,25 +21,25 @@ if not len(files):
 
 
 desc2pos = {
-'ADVERB': 'ADV',
-'ADJECTIVE': 'ADJ',
-'ADJECTIVE_NUMBER': 'ADJ',
-'CONJUNCTION_COORDINATE': 'CONJ',
-'CONJUNCTION_SUBORDINATE': 'CONJ',
-'DETERMINER': 'DET',
-'NOUN': 'NOUN',
-'NOUN_GERUND': 'NOUN',
-'NOUN_NUMBER': 'NOUN',
-'NOUN_PLURAL': 'NOUN',
-'NOUN_PROPER_PLURAL': 'NOUN',
-'NOUN_PROPER_SINGULAR': 'NOUN',
-'NOUN_SINGULAR': 'NOUN',
-'PREPOSITION': 'PREP',
-'PRONOUN_OBJECT': 'PRON',
-'PRONOUN_SUBJECT': 'PRON',
-'VERB': 'VERB',
-'VERB_INFINITIVE': 'VERB',
-'VERB_PAST_PARTICIPLE': 'VERB'
+'ADVERB': 'adv',
+'ADJECTIVE': 'adj',
+'ADJECTIVE_NUMBER': 'adj',
+'CONJUNCTION_COORDINATE': 'conj',
+'CONJUNCTION_SUBORDINATE': 'conj',
+'DETERMINER': 'det',
+'NOUN': 'noun',
+'NOUN_GERUND': 'noun',
+'NOUN_NUMBER': 'noun',
+'NOUN_PLURAL': 'noun',
+'NOUN_PROPER_PLURAL': 'noun',
+'NOUN_PROPER_SINGULAR': 'noun',
+'NOUN_SINGULAR': 'noun',
+'PREPOSITION': 'prep',
+'PRONOUN_OBJECT': 'pron',
+'PRONOUN_SUBJECT': 'pron',
+'VERB': 'verb',
+'VERB_INFINITIVE': 'verb',
+'VERB_PAST_PARTICIPLE': 'verb'
 }
 
 
@@ -68,14 +68,14 @@ for _file in files:
             #pos = res.group(2).strip().split(" ")
 
             lemmas = res.group(4).strip().split('`') if res.group(4) else []
-            lemmas_pos = res.group(5).strip().split("  ") if res.group(4) else []
+            lemmas_pos = res.group(5).strip().split("  ") if res.group(5) else []
             lemmadict = dict(zip(lemmas_pos, lemmas))
             for oldpos in lemmas_pos:
                 newpos = ""
                 if oldpos[0] == "V":
-                    newpos = "VERB"
+                    newpos = "verb"
                 elif oldpos in [ "NC", "NM", "NMEA" ]:
-                    newpos = "NOUN"
+                    newpos = "noun"
                 else:
                     continue
                 if newpos in lemmadict and lemmadict[newpos] != lemmadict[oldpos]:

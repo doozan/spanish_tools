@@ -47,16 +47,17 @@ def flag(name):
 
 def get_word_flags(word,pos):
     flags = []
-    if pos == "UNKNOWN":
+    pos = pos.lower()
+    if pos == "unknown":
         flags.append(flag("UNKNOWN"))
 
-    if pos == "NONE":
+    if pos == "none":
         flags.append(flag("NOUSAGE"))
 
-    if pos == "PRON":
+    if pos == "pron":
         flags.append(flag("PRONOUN"))
 
-    if pos == "LETTER":
+    if pos == "letter":
         flags.append(flag("LETTER"))
 
 
@@ -73,7 +74,7 @@ def get_word_flags(word,pos):
             flags.append(flag("FUZZY"))
 
     # remove reflexive verbs if the non-reflexive verb is already on the list
-    if word.endswith("rse") and pos == "VERB" and "VERB:"+word[:-2] in wordlist:
+    if word.endswith("rse") and pos == "verb" and "verb:"+word[:-2] in wordlist:
         flags.append(flag("DUPLICATE-REFLEXIVE"))
 
     return flags
@@ -134,7 +135,7 @@ with open(args.file) as infile, open(args.file+".lemmas.csv",'w') as outfile:
     for line in infile:
         word, count = line.strip().split(' ')
 
-        pos = get_best_pos.get_best_pos(word).upper()
+        pos = get_best_pos.get_best_pos(word)
         lemma = spanish_words.get_lemma(word, pos)
         add_count(lemma, pos, count, word)
 

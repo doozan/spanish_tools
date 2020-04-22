@@ -53,9 +53,9 @@ def init_dictionary():
             word = res.group(1).strip()
             pos = common_pos(res.group(2))
 
-            if pos and pos == "VERB":
+            if pos and pos == "verb":
                 allverbs[word] = 1
-            elif pos and pos == "NOUN" and word[-1:] == "s":
+            elif pos and pos == "noun" and word[-1:] == "s":
                 nouns_ending_s[word] = 1
             if word not in allwords:
                 allwords[word] = []
@@ -150,11 +150,11 @@ def common_pos(pos):
         return
 
     if pos_is_verb(pos):
-        return "VERB"
+        return "verb"
     if pos_is_noun(pos):
-        return "NOUN"
+        return "noun"
 
-    return pos.upper()
+    return pos.lower()
 
 def get_all_pos(word):
     if word not in wordpos:

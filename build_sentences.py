@@ -5,80 +5,80 @@ tagger = treetaggerwrapper.TreeTagger(TAGLANG='es')#,TAGDIR="~/Downloads/treetag
 
 tag2pos = {
 'ACRNM': "", # acronym (ISO, CEI)
-'ADJ': "ADJ", # Adjectives (mayores, mayor)
-'ADV': "ADV", # Adverbs (muy, demasiado, cómo)
+'ADJ': "adj", # Adjectives (mayores, mayor)
+'ADV': "adv", # Adverbs (muy, demasiado, cómo)
 'ALFP': "", # Plural letter of the alphabet (As/Aes, bes)
 'ALFS': "", # Singular letter of the alphabet (A, b)
-'ART': "ART", # Articles (un, las, la, unas)
+'ART': "art", # Articles (un, las, la, unas)
 'BACKSLASH': "", # backslash (\)
-'CARD': "NUM", # Cardinals
-'CC': "CONJ", # Coordinating conjunction (y, o)
-'CCAD': "CONJ", # Adversative coordinating conjunction (pero)
-'CCNEG': "CONJ", # Negative coordinating conjunction (ni)
+'CARD': "num", # Cardinals
+'CC': "conj", # Coordinating conjunction (y, o)
+'CCAD': "conj", # Adversative coordinating conjunction (pero)
+'CCNEG': "conj", # Negative coordinating conjunction (ni)
 'CM': "", # comma (,)
 'CODE': "", # Alphanumeric code
 'COLON': "", # colon (:)
-'CQUE': "CONJ", # que (as conjunction)
-'CSUBF': "CONJ", # Subordinating conjunction that introduces finite clauses (apenas)
-'CSUBI': "CONJ", # Subordinating conjunction that introduces infinite clauses (al)
-'CSUBX': "CONJ", # Subordinating conjunction underspecified for subord-type (aunque)
+'CQUE': "conj", # que (as conjunction)
+'CSUBF': "conj", # Subordinating conjunction that introduces finite clauses (apenas)
+'CSUBI': "conj", # Subordinating conjunction that introduces infinite clauses (al)
+'CSUBX': "conj", # Subordinating conjunction underspecified for subord-type (aunque)
 'DASH': "", # dash (-)
-'DM': "PRON", # Demonstrative pronouns (ésas, ése, esta)
+'DM': "pron", # Demonstrative pronouns (ésas, ése, esta)
 'DOTS': "", # POS tag for "..."
 'FO': "", # Formula
 'FS': "", # Full stop punctuation marks
 'INT': "", # Interrogative pronouns (quiénes, cuántas, cuánto)
-'ITJN': "INTERJ", # Interjection (oh, ja)
+'ITJN': "interj", # Interjection (oh, ja)
 'LP': "", # left parenthesis ("(", "[")
-'NC': "NOUN", # Common nouns (mesas, mesa, libro, ordenador)
+'NC': "noun", # Common nouns (mesas, mesa, libro, ordenador)
 'NEG': "", # Negation
-'NMEA': "NOUN", # measure noun (metros, litros)
-'NMON': "NOUN", # month name
-'NP': "NOUN", # Proper nouns
-'ORD': "ADJ", # Ordinals (primer, primeras, primera)
+'NMEA': "noun", # measure noun (metros, litros)
+'NMON': "noun", # month name
+'NP': "noun", # Proper nouns
+'ORD': "adj", # Ordinals (primer, primeras, primera)
 'PAL': "", # Portmanteau word formed by a and el
 'PDEL': "", # Portmanteau word formed by de and el
 'PE': "", # Foreign word
 'PERCT': "", # percent sign (%)
 'PNC': "", # Unclassified word
-'PPC': "PRON", # Clitic personal pronoun (le, les)
-'PPO': "PRON", # Possessive pronouns (mi, su, sus)
-'PPX': "PRON", # Clitics and personal pronouns (nos, me, nosotras, te, sí)
-'PREP': "PREP", # Negative preposition (sin)
-'PREP': "PREP", # Preposition
-'PREP/DEL': "PREP", #  Complex preposition "después del"
+'PPC': "pron", # Clitic personal pronoun (le, les)
+'PPO': "pron", # Possessive pronouns (mi, su, sus)
+'PPX': "pron", # Clitics and personal pronouns (nos, me, nosotras, te, sí)
+'PREP': "prep", # Negative preposition (sin)
+'PREP': "prep", # Preposition
+'PREP/DEL': "prep", #  Complex preposition "después del"
 'QT': "", # quotation symbol (" ' `)
-'QU': "ADJ", # Quantifiers (sendas, cada)
-'REL': "PRON", # Relative pronouns (cuyas, cuyo)
+'QU': "adj", # Quantifiers (sendas, cada)
+'REL': "pron", # Relative pronouns (cuyas, cuyo)
 'RP': "", # right parenthesis (")", "]")
 'SE': "", # Se (as particle)
 'SEMICOLON': "", # semicolon (;)
 'SLASH': "", # slash (/)
 'SYM': "", # Symbols
 'UMMX': "", # measure unit (MHz, km, mA)
-'VCLIger': "VERB", #  clitic gerund verb
-'VCLIinf': "VERB", #  clitic infinitive verb
-'VCLIfin': "VERB", #  clitic finite verb
-'VEadj': "VERB", # Verb estar. Past participle
-'VEfin': "VERB", # Verb estar. Finite
-'VEger': "VERB", # Verb estar. Gerund
-'VEinf': "VERB", # Verb estar. Infinitive
-'VHadj': "VERB", # Verb haber. Past participle
-'VHfin': "VERB", # Verb haber. Finite
-'VHger': "VERB", # Verb haber. Gerund
-'VHinf': "VERB", # Verb haber. Infinitive
-'VLadj': "VERB", # Lexical verb. Past participle
-'VLfin': "VERB", # Lexical verb. Finite
-'VLger': "VERB", # Lexical verb. Gerund
-'VLinf': "VERB", # Lexical verb. Infinitive
-'VMadj': "VERB", # Modal verb. Past participle
-'VMfin': "VERB", # Modal verb. Finite
-'VMger': "VERB", # Modal verb. Gerund
-'VMinf': "VERB", # Modal verb. Infinitive
-'VSadj': "VERB", # Verb ser. Past participle
-'VSfin': "VERB", # Verb ser. Finite
-'VSger': "VERB", # Verb ser. Gerund
-'VSinf': "VERB", # Verb ser. Infinitive
+'VCLIger': "verb", #  clitic gerund verb
+'VCLIinf': "verb", #  clitic infinitive verb
+'VCLIfin': "verb", #  clitic finite verb
+'VEadj': "verb", # Verb estar. Past participle
+'VEfin': "verb", # Verb estar. Finite
+'VEger': "verb", # Verb estar. Gerund
+'VEinf': "verb", # Verb estar. Infinitive
+'VHadj': "verb", # Verb haber. Past participle
+'VHfin': "verb", # Verb haber. Finite
+'VHger': "verb", # Verb haber. Gerund
+'VHinf': "verb", # Verb haber. Infinitive
+'VLadj': "verb", # Lexical verb. Past participle
+'VLfin': "verb", # Lexical verb. Finite
+'VLger': "verb", # Lexical verb. Gerund
+'VLinf': "verb", # Lexical verb. Infinitive
+'VMadj': "verb", # Modal verb. Past participle
+'VMfin': "verb", # Modal verb. Finite
+'VMger': "verb", # Modal verb. Gerund
+'VMinf': "verb", # Modal verb. Infinitive
+'VSadj': "verb", # Verb ser. Past participle
+'VSfin': "verb", # Verb ser. Finite
+'VSger': "verb", # Verb ser. Gerund
+'VSinf': "verb", # Verb ser. Infinitive
 }
 
 
@@ -147,4 +147,4 @@ with open("spa.txt") as infile:
         spanish_tagged = " ".join(tags)
         print("%s\t%s\t%s\t%s"%(english, spanish, spanish_tagged, credits))
 
-    print(mismatch)
+#    print(mismatch)

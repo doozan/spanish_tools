@@ -84,9 +84,9 @@ def get_ids_from_phrase(phrase):
 
 
 fuzzy_pos_search = {
-    "VERB": [ "VERB", "ADJ", "ADV", "NOUN" ],
-    "ADJ":  [ "ADJ", "ADV" ],
-    "ADV":  [ "ADV", "ADJ" ]
+    "verb": [ "verb", "adj", "adv", "noun" ],
+    "adj":  [ "adj", "adv" ],
+    "adv":  [ "adv", "adj" ]
 }
 
 def get_ids_fuzzy(word, pos):
@@ -94,7 +94,7 @@ def get_ids_fuzzy(word, pos):
     ids = []
     search_pos = []
 
-    if pos == "INTERJ":
+    if pos == "interj":
         return []
 
     if pos in fuzzy_pos_search:
