@@ -97,8 +97,8 @@ def build_wordlist():
         # Check for repeat usage
         if word not in wordusage:
             wordusage[word] = {}
-        else:
-            flags.append("DUPLICATE")
+#        else:
+#            flags.append("DUPLICATE")
 
         wordusage[word][pos] = item['count']
 
@@ -112,19 +112,30 @@ def build_wordlist():
 
         count += 1
 
-#    repeatusage = {}
-#    for word in wordusage:
-#        if len(wordusage[word].keys()) > 1:
-#            repeatusage[word] = wordusage[word]
-#
-#    for word,all_pos in repeatusage.items():
-#        if "adj" in all_pos and "adv" in all_pos:
-#            wordlist["adv:"+word]['flags'].append(flag("DUPLICATE-ADJ-ADV"))
-#        if "adj" in all_pos and "noun" in all_pos:
-#            wordlist["noun:"+word]['flags'].append(flag("DUPLICATE-ADJ-NOUN"))
-#        for pos in all_pos:
-#            if pos not in ["adj", "adv", "noun"]:
-#                wordlist[pos+":"+word]['flags'].append("REPEAT-"+ "-".join(all_pos))
+    repeatusage = {}
+    for word in wordusage:
+        if len(wordusage[word].keys()) > 1:
+            repeatusage[word] = wordusage[word]
+
+    for word,all_pos in repeatusage.items():
+        best_count = -1
+        best_pos = ""
+        for pos,count in all_pos.items():
+            if count > best_count:
+                best_count = count
+                best_pos = pos
+
+        popular_pos = []
+        for pos,count in all_pos.items():
+            if count<(best_count/2):
+                wordlist[pos+":"+word]['flags'].append("LESSUSED-"+ "-".join(all_pos))
+            else:
+                popular_pos.append(pos)
+
+        if "adj" in popular_pos and "adv" in popular_pos:
+            wordlist["adv:"+word]['flags'].append(flag("DUPLICATE-ADJ-ADV"))
+        if "adj" in popular_pos and "noun" in popular_pos:
+            wordlist["noun:"+word]['flags'].append(flag("DUPLICATE-ADJ-NOUN"))
 
 
 
