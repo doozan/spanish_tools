@@ -1,0 +1,31 @@
+# items to add on delete from the dictionary
+#
+# Delete all definitions for a word
+# -word
+#
+# Delete all definitions for a matching word/pos
+# -word {pos} :: 
+#
+# Delete a specific definition for a matching word/pos
+# -word {pos} :: start of definition
+#
+cojones {mp} [vulgar] :: balls, guts
+varios {adj} :: various ; varied
+-mano {m}
+-par {f}
+-marca {mf}
+-defensa {m}
+-pez {f}
+-pelota {mf}
+-libra {mf}
+-moto {m}
+-moral {m}
+-primavera {mf}
+-naranja {m}
+-lanza {m}
+-poli {f}
+-barba {m}
+-manga {m}
+-bata {m}
+-titular {mf}
+-sinvergüenza {f}

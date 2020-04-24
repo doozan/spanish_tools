@@ -69,8 +69,7 @@ def init_dictionary():
                 wordpos[word].append(pos)
 
     # TODO: check file exists and print error message
-    FILE=os.path.join(os.path.dirname(__file__), 'es-en.custom.txt')
-    with open(FILE) as infile:
+    with open(FILE+".custom") as infile:
         for line in infile:
             if line.startswith("#"):
                 continue
