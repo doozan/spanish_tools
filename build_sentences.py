@@ -34,7 +34,7 @@ tag2pos = {
 'NEG': "", # Negation
 'NMEA': "noun", # measure noun (metros, litros)
 'NMON': "noun", # month name
-'NP': "noun", # Proper nouns
+'NP': "propnoun", # Proper nouns
 'ORD': "adj", # Ordinals (primer, primeras, primera)
 'PAL': "", # Portmanteau word formed by a and el
 'PDEL': "", # Portmanteau word formed by de and el
@@ -97,12 +97,12 @@ def tag_to_pos(tag):
         lemma = spanish_words.get_lemma(word, pos)
         if oldlemma != lemma:
             mismatch[oldlemma] = lemma
+        if pos != "propnoun":
+            word = word.lower()
+            lemma = lemma.lower()
 
         return pos+":"+lemma+"|@"+word
 
-
-def clean(spanish):
-    return spanish.lower()
 
 def get_tags(spanish):
     tags = tagger.tag_text(spanish)
@@ -116,7 +116,7 @@ with open("spa.txt") as infile:
     for line in infile:
         line = line.strip()
         english, spanish, credits = line.split("\t")
-        tags = get_tags(clean(spanish))
+        tags = get_tags(spanish)
         if "__BADTAG__" in tags:
             continue
 
