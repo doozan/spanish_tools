@@ -2,6 +2,7 @@
 
 stats () {
 
+echo "Stats for $1"
 origfile=/tmp/${1}_orig.csv
 [ -f $origfile ] || echo "$origfile not found" 
 
@@ -41,6 +42,7 @@ ADDED=$(grep "^+" $comparefile | wc -l)
 CHANGES=$((MISSING + CHANGED + NEW))
 
 echo "$CHANGES changes from $1 ($CHANGED changed, $MISSING removed, $ADDED new)"
+echo " - see $comparefile for details"
 }
 
 
@@ -59,6 +61,7 @@ oldtag=lastrun
 
 echo "$oldtag stats"
 stats $oldtag
+[ "$oldtag" == "lastrun" ] || stats lastrun
 do_freq
 cp 2018.csv /tmp/${newtag}_orig.csv
 cp 2018_es_50k.txt.lemmas.csv /tmp/${newtag}_pos.csv
@@ -69,7 +72,6 @@ stats $newtag
 compare $oldtag $newtag
 [ "$oldtag" == "lastrun" ] || compare lastrun $newtag
 
-echo "see /tmp/compare_lastrun_${newtag}.txt for details"
 
 cp /tmp/${newtag}_orig.csv /tmp/lastrun_orig.csv
 cp /tmp/${newtag}_pos.csv /tmp/lastrun_pos.csv
