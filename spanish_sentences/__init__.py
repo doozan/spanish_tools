@@ -8,12 +8,27 @@ import spanish_words
 grepdb = []
 sentencedb = []
 tagdb = {}
+tagfixes = {}
 
 _tagfile = os.path.join(os.path.dirname(__file__), 'spa-tagged.txt')
+_tagfixes = _tagfile + ".tagfixes"
 
 if not os.path.isfile(_tagfile):
     print("Cannot find tagged data, run build_sentences.py first")
     exit(1)
+
+
+if os.path.isfile(_tagfixes):
+    with open(_tagfixes) as infile:
+        for line in infile:
+            line = line.strip()
+            if line.startswith("#") or not ":" in line:
+                continue
+            word,oldpos,newpos = line.split(":")
+
+            if word not in tagfixes:
+                tagfixes[word] = {}
+            tagfixes[word][oldpos] = newpos
 
 
 def strip_sentence(string):
@@ -40,6 +55,9 @@ def add_tag_to_db(tag,index):
         word = word.lower()
         if word not in tagdb:
             tagdb[word] = {}
+
+        if word in tagfixes and pos in tagfixes[word]:
+            pos = tagfixes[word][pos]
 
         if pos not in tagdb[word]:
             tagdb[word][pos] = []
