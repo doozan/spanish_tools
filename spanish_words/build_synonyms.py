@@ -1,9 +1,12 @@
 import re
+import sys
 
 all_syns = {}
 
-with open("data_dict1.txt", encoding="ISO-8859-1") as infile:
-    for line in infile:
+#with open("data_dict1.txt", encoding="ISO-8859-1") as infile:
+#    for line in infile:
+
+for line in sys.stdin:
 
         spanish,english = line.split(":")
         if "/" not in spanish and ";" not in spanish:
@@ -27,9 +30,10 @@ with open("data_dict1.txt", encoding="ISO-8859-1") as infile:
                 if re.match("^[a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]{2,}$", syn):
                     all_syns[word].append(syn)
 
-with open("syns.txt", "w") as outfile:
-    for k in sorted(all_syns.keys()):
+#with open("synonymss.txt", "w") as outfile:
+for k in sorted(all_syns.keys()):
         syns = set(all_syns[k])
         syns.remove(k)
         if len(syns):
-            outfile.write("%s: %s\n"%(k, "/".join(sorted(syns))))
+            print("%s: %s"%(k, "/".join(sorted(syns))))
+            #outfile.write("%s: %s\n"%(k, "/".join(sorted(syns))))

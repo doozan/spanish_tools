@@ -1,8 +1,8 @@
 # gawk script to create a Language-English dictionary
 # from the Foreign-Language sections of en.wiktionary.org
-# Version: 20190602
+# Version: 20200325
 #
-# (c) 2011-2019 by Matthias Buchmeier
+# (c) 2011-2020 by Matthias Buchmeier
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,8 +19,7 @@
 # include synonyms and antonyms (syn and ant template)
 # include usage examples?
 # {{taxon|
-# include {{zh-see| (generally no definition lines)
-#
+# implement [[Wiktionary:Templates_with_current_language_parameter]]
 # Command-line options:
 ########################
 #  required gawk command-line switches:
@@ -216,7 +215,7 @@ rmtemplate = "g2";
 #
 if(lang == "Polish") {
 iso = "pl";
-exclude_POS = "\\{\\{(pl-verb-form|pl-noun-form|head\\|pl\\|(verb|noun|proper noun|adjective|numeral|participle|noun plural) form)(\\||\\})";
+exclude_POS = "\\{\\{(pl-verb-form|pl-noun-form|head\\|pl\\|(verb|noun|proper noun|adjective|numeral|participle|noun plural|comparative adjective|superlative adjective) form|pl-participle)(\\||\\})";
 exclude_defn = "\\{\\{(misspelling of|form of|inflection of|archaic form of|surname)(\\||\\})";
 nounhead = "\\{\\{head\\|pl\\|(noun|proper noun)\\||\\{\\{pl-noun\\||\\{\\{pl-proper noun\\|";
 verbhead = "\\{\\{pl-verb[\\|\\}]|\\{\\{head\\|pl\\|verb[\\|\\}]";
@@ -229,9 +228,9 @@ if(lang == "Russian") {
 iso = "ru";
 exclude_POS = "\\{\\{(head\\|ru\\|(past participle|verb|adjective|noun plural|noun|proper noun|participle|numeral) form|ru-noun form|head\\|ru\\|participle)(\\||\\})"
 exclude_defn = "\\{\\{(misspelling of|form of|inflection of|archaic form of|surname|passive of|passive form of|patronymic|ru-pre-reform|infl of)(\\||\\})";
-nounhead = "\\{\\{(head\\|ru\\|(noun|proper noun)|ru-noun|ru-noun[+]|ru-noun-alt-?|ru-proper noun|ru-proper noun[+]|ru-proper noun-alt-?)(\\||\\})";
+nounhead = "\\{\\{(head\\|ru\\|(noun|proper noun)|ru-noun|ru-noun[+]|ru-noun-alt-ё|ru-proper noun|ru-proper noun[+]|ru-proper noun-alt-ё)(\\||\\})";
 verbhead = "\\{\\{(head\\|ru\\|verb|ru-verb)(\\||\\})";
-rmtemplate = "??????? ??????????|ru-etym initialism of";
+rmtemplate = "Русская грамматика|ru-etym initialism of";
 rm_headless_pos = 1;
 has_neuter = 1;
 enable_ipa = 0;
@@ -283,7 +282,7 @@ enable_ipa = 0;
 if(lang == "Greek") {
 iso = "el";
 exclude_POS = "\\{\\{(head\\|el\\|(past participle|verb|adjective|noun plural|noun|proper noun|participle|numeral) form)(\\||\\})"
-exclude_defn = "\\{\\{(misspelling of|form of|inflection of|archaic form of|surname|passive of|passive form of|patronymic|definite of|past passive participle of|el-form-of-nounadj|Katharevousa form of|el-verb form of|el-form-of-verb|katharevousa|el-form-of-adv|polytonic form of|el-polytonic form of|morse code for|el-form-of-pronoun|el-comp-form-of|el-participle of|monotonic form of|el-Katharevousa form of)(\\||\\})";
+exclude_defn = "\\{\\{(misspelling of|form of|inflection of|archaic form of|surname|passive of|passive form of|patronymic|definite of|past passive participle of|el-form-of-nounadj|Katharevousa form of|el-verb form of|el-form-of-verb|katharevousa|el-form-of-adv|polytonic form of|el-polytonic form of|morse code for|el-form-of-pronoun|el-comp-form-of|el-participle of|monotonic form of|el-Katharevousa form of|el-poly-of)(\\||\\})";
 verbhead = "\\{\\{(head\\|el\\|verb|el-verb)(\\||\\})";
 nounhead = "\\{\\{(head\\|el\\|(noun|proper noun)|el-noun|el-noun-proper)(\\||\\})";
 rm_headless_pos = 1;
@@ -311,6 +310,17 @@ defipa = "\\{\\{zh-pron";
 altipa = "XXXXXXX";
 }
 #
+if(lang == "Danish") {
+iso = "da";
+#exclude_POS = "XXXXX";
+exclude_POS = "\\{\\{(head\\|da\\|(noun|verb|adjective) form)(\\||\\})"
+exclude_defn = "\\{\\{(defn|superlative predicative of|superlative attributive of|singular indefinite of|da-e-form of|definite plural of|inflection of)(\\||\\})";
+nounhead = "\\{\\{head\\|da\\|(noun|proper noun)\\||\\{\\{da-noun\\||\\{\\{da-noun-pl\\|";
+verbhead = "\\{\\{(head\\|da\\|verb|da-verb)(\\||\\})";
+has_neuter = 1;
+rm_headless_pos = 0;
+rmtemplate = "XXXXX";
+}
 #
 # Configuration for dictionaries containing all inflected forms
 #
@@ -443,7 +453,7 @@ for(i=1;i<=n1;i++) { language_names[iso_array[i]] = languages_array[i];
 # incomplete and possible conflicting among templates
 # TODO: all shortcuts from Module:form of/data
 # shortcuts:
-shortcuts="1|first|first person|2|second|second person|3|third|third person|0|imp|impers|s|sg|sing|p|pl|d|col|m|f|mf|m-f|n|c|pres|past|fut|futr|prog|pret|preterit|perf|imp|impf|imperf|plup|pluperf|phis|imp|impr|ind|indc|indic|sub|subj|cond|dat|acc|actv|act|part|par|ger|gerundio|gerundive|adv|inf|y|n|aff|+|neg|-|onlym|onlyf|a|�|as|�s|os|�s|pr|pp|i|g|v|k1|k2|gen|nom|voc|abl|pasv|pass|sup|loc|ptcp|def|indef|aug|dim|super|ins|an|pers|mix|str|wk|comd|supd|poss|adj|12|2s|3s|3p|1p|2p|sim|obs";
+shortcuts="1|first|first person|2|second|second person|3|third|third person|0|imp|impers|s|sg|sing|p|pl|d|col|m|f|mf|m-f|n|c|pres|past|fut|futr|prog|pret|preterit|perf|imp|impf|imperf|plup|pluperf|phis|imp|impr|ind|indc|indic|sub|subj|cond|dat|acc|actv|act|part|par|ger|gerundio|gerundive|adv|inf|y|n|aff|+|neg|-|onlym|onlyf|a|ª|as|ªs|os|ºs|pr|pp|i|g|v|k1|k2|gen|nom|voc|abl|pasv|pass|sup|loc|ptcp|def|indef|aug|dim|super|ins|an|pers|mix|str|wk|comd|supd|poss|adj|12|2s|3s|3p|1p|2p|sim|obs";
 # corresponding replacements:
 replacement="first-person|first-person|first-person|second-person|second-person|second-person|third-person|third-person|third-person|impersonal|impersonal|impersonal|singular|singular|singular|plural|plural|dual|collective|masculine|feminine|masculine and feminine|masculine and feminine|neuter|common|present|past|future|future|progressive|preterite|preterite|perfect|imperfect|imperfect|imperfect|pluperfect|pluperfect|past historic|imperative|imperative|indicative|indicative|indicative|subjunctive|subjunctive|conditional|dative|accusative|active|active|participle|participle|gerund|gerund|gerund|adverbial|infinitive|yes|no|affirmative|affirmative|negative|negative|only masculine|only feminine|feminine singular|feminine singular|feminine plural|feminine plural|masculine plural|masculine plural|present participle|past participle|imperative|present tense|past tense|subjunctive 1|subjunctive 2|genitive|nominative|vocative|ablative|passive|passive|supine|locative|participle|definite|indefinite|augmentative|diminutive|superlative|instrumental|animate|personal|mixed|strong|weak|comparative degree|superlative degree|possissive|adjectival|first/ and second-person|second-person singular|third-person singular|third-person plural|first-person plural|second-person plural|simple|obsolete";
 # common strings which are no shortcuts:
@@ -461,9 +471,9 @@ for(i=1;i<=n1;i++) {
 }
 
 # shortcuts for template names:(Italiot|Cretan|Maniot|Cypriot) dialect form of
-shortcuts="altform|alt-form|altcaps|altspelling|altspell|alt-sp|synonym|abbreviation|clipping|abbreviation-old|altname|pf.|indeclinable|plural|de-inflected form of|pt-verb-form-of|de-form-adj|pt-apocopic-verb|de-form-noun|de-du contraction|de-umlautless spelling of|de-zu-infinitive of|synof|only-in|altspell|en-simple past of|en-third-person singular of|en-past of|en-comparative of|phrasal verb|en-superlative of|en-irregular plural of|en-archaic second-person singular of|pronunciation spelling|en-third person singular of|alt form of|en-archaic third-person singular of|fr-post-1990|obs-sp|abb|ru-abbrev of|ru-initialism of|ru-pre-reform|ru-acronym of|ru-alt-?|dim of|onlyin|cs-imperfective form of|syn of|syn-of|altcase|cretan dialect form of|ao|io|clip|rareform|past participle|ellipse of|ellipsis|obssp|standspell|back-form|abbr of|alt sp|alt case|init of|obs sp|clip of|honor alt case|en-archaic second-person singular past of|stand sp|alt form|el-Italiot dialect form of|el-Cretan dialect form of|el-Maniot dialect form of|el-Cypriot dialect form of|la-praenominal abbreviation of|zh-original|zh-abbrev|zh-only|zh-used|zh-alt-form|zh-classifier|zh-short|zh-only used in|zh-used in|zh-erhua form of|zh-altterm|zh-also|pinread|pinof|zh-character component|zh-see|zh-misspelling|cmn-erhua form of";
+shortcuts="altform|alt-form|altcaps|altspelling|altspell|alt-sp|synonym|abbreviation|clipping|abbreviation-old|altname|pf.|indeclinable|plural|de-inflected form of|pt-verb-form-of|de-form-adj|pt-apocopic-verb|de-form-noun|de-du contraction|de-umlautless spelling of|de-zu-infinitive of|synof|only-in|altspell|en-simple past of|en-third-person singular of|en-past of|en-comparative of|phrasal verb|en-superlative of|en-irregular plural of|en-archaic second-person singular of|pronunciation spelling|en-third person singular of|alt form of|en-archaic third-person singular of|fr-post-1990|obs-sp|abb|ru-abbrev of|ru-initialism of|ru-pre-reform|ru-acronym of|ru-alt-ё|dim of|onlyin|cs-imperfective form of|syn of|syn-of|altcase|cretan dialect form of|ao|io|clip|rareform|past participle|ellipse of|ellipsis|obssp|standspell|back-form|abbr of|alt sp|alt case|init of|obs sp|clip of|honor alt case|en-archaic second-person singular past of|stand sp|alt form|el-Italiot dialect form of|el-Cretan dialect form of|el-Maniot dialect form of|el-Cypriot dialect form of|la-praenominal abbreviation of|zh-original|zh-abbrev|zh-only|zh-used|zh-alt-form|zh-classifier|zh-short|zh-only used in|zh-used in|zh-erhua form of|zh-altterm|zh-also|pinread|pinof|zh-character component|zh-see|zh-misspelling|cmn-erhua form of|obs form";
 
-replacement="alternative form of|alternative form of|alternative letter-case form of|alternative spelling of|alternative spelling of|alternative spelling of|synonym of|abbreviation of|clipping of|old abbreviation of|alternative name of|pf|indecl|p|inflected form of|verb form of|adjective form of|apocopic (used preceding the pronouns lo, la, los or las) form of|noun form of|Contraction of|nonstandard umlautless spelling of|zu-infinitive of|synonym of|only in|alternative spelling of|simple past of|third-person singular of|simple past tense and past participle of|comparative form of|A component in at least one phrasal verb:|superlative of|irregular plural of|archaic second-person singular of|pronunciation spelling of|third person singular of|alternative form of|archaic third-person singular of|post-1990 spelling of|obsolete spelling of|abbreviation of|abbreviation of|initialism of|pre-reform form of|acronym of|alternative form of|diminutive of|only used in|imperfective form of|synonym of|synonym of|alternative letter-case form of|Cretan dialect form of|abbreviation of|initialism of|clipping o|rare form of|past participle of|ellipsis of|ellipsis of|obsolete spelling of|standard spelling of|back formation from|abbreviation of|alternative spelling of|alternative case form of|initialism of|obsolete spelling of|clipping of|honorific alternative case of|archaic second-person singular past of|standard spelling of|alternative form of|Italiot dialect form of|Cretan dialect form of|Maniot dialect form of|Cypriot dialect form of|praenominal abbreviation of|original form of|abbreviation of|only used in|only used in|alternative form of|classifier for|abbreviation of|only used in|used in|erhua form of|alternative form of|=>|pinyin reading of|pinyin reading of|the Chinese character component|see|misspelling of|Mandarin erhua form of";
+replacement="alternative form of|alternative form of|alternative letter-case form of|alternative spelling of|alternative spelling of|alternative spelling of|synonym of|abbreviation of|clipping of|old abbreviation of|alternative name of|pf|indecl|p|inflected form of|verb form of|adjective form of|apocopic (used preceding the pronouns lo, la, los or las) form of|noun form of|Contraction of|nonstandard umlautless spelling of|zu-infinitive of|synonym of|only in|alternative spelling of|simple past of|third-person singular of|simple past tense and past participle of|comparative form of|A component in at least one phrasal verb:|superlative of|irregular plural of|archaic second-person singular of|pronunciation spelling of|third person singular of|alternative form of|archaic third-person singular of|post-1990 spelling of|obsolete spelling of|abbreviation of|abbreviation of|initialism of|pre-reform form of|acronym of|alternative form of|diminutive of|only used in|imperfective form of|synonym of|synonym of|alternative letter-case form of|Cretan dialect form of|abbreviation of|initialism of|clipping o|rare form of|past participle of|ellipsis of|ellipsis of|obsolete spelling of|standard spelling of|back formation from|abbreviation of|alternative spelling of|alternative case form of|initialism of|obsolete spelling of|clipping of|honorific alternative case of|archaic second-person singular past of|standard spelling of|alternative form of|Italiot dialect form of|Cretan dialect form of|Maniot dialect form of|Cypriot dialect form of|praenominal abbreviation of|original form of|abbreviation of|only used in|only used in|alternative form of|classifier for|abbreviation of|only used in|used in|erhua form of|alternative form of|⇒|pinyin reading of|pinyin reading of|the Chinese character component|see|misspelling of|Mandarin erhua form of|obsolete form of";
 
 n1=split(shortcuts,sh_array,"|");
 n2=split(replacement,rep_array,"|");
@@ -641,7 +651,7 @@ return "";
 
 # templates to be deleted
 # add know templates to get rid off "unknown template" warnings
-case /^(attention|rfc-tbot|inv|rfr|rfscript|rftranslit|NNBS|RL|LR|\,|jump|rfv|rfex|rfgloss|attention|rfv-sense|defdate|gloss-stub|senseid|es-demonstrative-accent-usage|R[:].*|pos_n|rfdef|cite-web|cite|C|cite-book|rft-sense|cite|rfquote-sense|RFV-sense|rfc-sense|datedef|ISBN|topics|anchor|color panel|colour panel|colorbox|nowrap|pedialite|rfm-sense|cite-journal|cite book|wikipedia|rfc-def|rfd-sense|rfdate|attn|sense stub|c|categorize|cln|catlangname|question|rfinfl|cite web|top|wiki|cite news|rfd-redundant|rfexample|rfdatek|rfphoto|rfquotek|rfcite-sense|Cite book|example needed|quote-book|Cite news|rfusex|gbooks|examples-right|hot sense|-|refn|U:fr:1990 reform spelling|rfquote|EtymOnLine)$/:
+case /^(attention|rfc-tbot|inv|rfr|rfscript|rftranslit|NNBS|RL|LR|\,|jump|rfv|rfex|rfgloss|attention|rfv-sense|defdate|gloss-stub|senseid|es-demonstrative-accent-usage|R[:].*|pos_n|rfdef|cite-web|cite|C|cite-book|rft-sense|cite|rfquote-sense|RFV-sense|rfc-sense|datedef|ISBN|topics|anchor|color panel|colour panel|colorbox|nowrap|pedialite|rfm-sense|cite-journal|cite book|wikipedia|rfc-def|rfd-sense|rfdate|attn|sense stub|c|categorize|cln|catlangname|question|rfinfl|cite web|top|wiki|cite news|rfd-redundant|rfexample|rfdatek|rfphoto|rfquotek|rfcite-sense|Cite book|example needed|quote-book|Cite news|rfusex|gbooks|examples-right|hot sense|-|refn|U:fr:1990 reform spelling|rfquote|EtymOnLine|rfclarify)$/:
 template_number -= 1;
 return "";
 
@@ -685,7 +695,7 @@ case "1":
 return "[[" toupper(substr(tpar[1],1,1)) substr(tpar[1],2) "]]";
 
 # template-name [[{{1}}]], {{1}} or template-name [[{{2}}]], {{2}} (if lang named parameter is not present then the first unnamed parameter is the language iso-code)
-case /^(altform|alt-form|altcaps|altspelling|alt-sp|synonym|abbreviation|clipping|altname|synof|only-in|altspell|phrasal verb|pronunciation spelling|obs-sp|abb|dim of|onlyin|syn of|syn-of|altcase|ao|io|clip|rareform|past participle|ellipse of|ellipsis|obssp|standspell|back-form|abbr of|alt sp|init of|obs sp|alt case|clip of|honor alt case|stand sp|alt form|alt form of)$/:
+case /^(altform|alt-form|altcaps|altspelling|alt-sp|synonym|abbreviation|clipping|altname|synof|only-in|altspell|phrasal verb|pronunciation spelling|obs-sp|abb|dim of|onlyin|syn of|syn-of|altcase|ao|io|clip|rareform|past participle|ellipse of|ellipsis|obssp|standspell|back-form|abbr of|alt sp|init of|obs sp|alt case|clip of|honor alt case|stand sp|alt form|alt form of|obs form)$/:
 tpar[0]=trep_text[tpar[0]];
 
 case /^(contraction of|dated form of|alternative capitalization of|informal spelling of|nonstandard spelling of|alternative spelling of|obsolete spelling of|alternative form of|alternate form of|abbreviation of|acronym of|rare spelling of|archaic spelling of|obsolete form of|eye dialect of|agent noun of|initialism of|synonym of|alternate spelling of|rare form of|eye dialect|only used in|medieval spelling of|superseded spelling of|euphemistic spelling of|alternative term for|feminine noun of|alternative form of|alternative case form of|short of|common misspelling of|only in|pejorative of|attributive of|short for|euphemistic form of|eye-dialect of|nonstandard form of|short form of|short for|diminutive of|superlative of|comparative of|augmentative of|reflexive of|apocopic form of|obsolete form of|short form of|informal form of|dated spelling of|pronunciation spelling of|former name of|superseded form of|clipping of|alternative typography of|supine of|nominalization of|construed with|syncopic form of|perfect participle of|obsolete typography of|present active participle of|alternative plural of|ellipsis of|aphetic form of|masculine singular past participle of|deliberate misspelling of|uncommon form of|early form of|present tense of|verbal noun of|standard form of|misconstruction of|alternative name of|second-person singular past of|archaic form of|elongated form of|eggcorn of|pronunciation respelling of|past of|attributive form of|spelling of|present of|comparative form of|superlative form of|participle of|endearing form of|singulative of|substantivisation of|frequentative of|perfective form of|imperfective form of|negative of|iterative of|alternative capitalisation of|misspelling form of|late form of|second-person singular of|definite of|blend of|past participle form of|alternative form of|diminutive plural of|causative of|definite singular of|female equivalent of|feminine equivalent of|feminine of|masculine of|neuter of|indefinite plural of|masculine noun of)$/:
@@ -706,7 +716,7 @@ return outp;
 
 
 # template-name [[{{1}}]] or template-name {{1}} (no lang parameter, language-specific template)
-case /^(en-simple past of|en-third-person singular of|en-past of|en-comparative of|en-superlative of|en-irregular plural of|en-archaic second-person singular of|en-third person singular of|en-archaic third-person singular of|fr-post-1990|ru-abbrev of|ru-initialism of|ru-pre-reform|ru-acronym of|ru-alt-?|cs-imperfective form of|hu-case|cretan dialect form of|en-archaic second-person singular past of|el-Italiot dialect form of|el-Cretan dialect form of|el-Maniot dialect form of|el-Cypriot dialect form of|la-praenominal abbreviation of|zh-original|zh-abbrev|zh-only|zh-used|zh-alt-form|zh-classifier|zh-short|zh-only used in|zh-used in|zh-erhua form of|zh-altterm|zh-also|pinread|pinof|zh-character component|zh-see|zh-misspelling|cmn-erhua form of)$/:
+case /^(en-simple past of|en-third-person singular of|en-past of|en-comparative of|en-superlative of|en-irregular plural of|en-archaic second-person singular of|en-third person singular of|en-archaic third-person singular of|fr-post-1990|ru-abbrev of|ru-initialism of|ru-pre-reform|ru-acronym of|ru-alt-ё|cs-imperfective form of|hu-case|cretan dialect form of|en-archaic second-person singular past of|el-Italiot dialect form of|el-Cretan dialect form of|el-Maniot dialect form of|el-Cypriot dialect form of|la-praenominal abbreviation of|zh-original|zh-abbrev|zh-only|zh-used|zh-alt-form|zh-classifier|zh-short|zh-only used in|zh-used in|zh-erhua form of|zh-altterm|zh-also|pinread|pinof|zh-character component|zh-misspelling|cmn-erhua form of)$/:
 tpar[0]=trep_text[tpar[0]];
 
 case /^(European Portuguese form of|European Portuguese spelling of|(Italiot|Cretan|Maniot|Cypriot) dialect form of|British and International English spelling of|native or resident of|abbreviated|praenominal abbreviation of|pinyin reading of)$/:
@@ -783,8 +793,8 @@ return iso2lang(tpar[1]) " " tpar[2];
 
 case /^(ux|uxi|usex)$/:
 outp = tpar[2];
-if(3 in tpar) outp = outp " - " tpar[3];
-if("t" in tpar) outp = outp " - " tpar["t"];
+if(3 in tpar) outp = outp " ― " tpar[3];
+if("t" in tpar) outp = outp " ― " tpar["t"];
 return outp;
 
 case "nbsp":
@@ -799,7 +809,8 @@ return tpar[1] "th c.";
 
 # TODO: from fields
 case "standard spelling of":
-return "alternative spelling of " tpar[1];
+if("lang" in tpar) return "alternative spelling of " tpar[1];
+else return "alternative spelling of " tpar[2];
 
 # frac template
 case "frac":
@@ -881,8 +892,8 @@ if(headline == 1) {
 }
 return "";
 
-# Serbo-Croatian
-case /^(sh-noun|sh-proper noun)$/:
+# Serbo-Croatian, Danish
+case /^(sh-noun|sh-proper noun|da-noun|da-noun-pl)$/:
 if(headline == 1) {
 	if(("g" in tpar)&&(tpar["g"] != "")) gend = gend sob tpar["g"] scb;
 }
@@ -946,15 +957,15 @@ else print "#WARNING: misplaced template mk-verb, page: \"" title "\", line: \""
 return "";
 
 # Russian
-# get perfective, imperfective from ru-verb and verb-alt-?:
-case /^(ru-verb|verb-alt-?)$/:
+# get perfective, imperfective from ru-verb and verb-alt-ё:
+case /^(ru-verb|verb-alt-ё)$/:
 if(headline ==1) 
 	{if(2 in tpar) gend = " " tpar[2];}
 else print "#WARNING: misplaced template ru-noun, page: \"" title "\", line: \"" $0 "\"" >fixme;
 return "";
 
 # Russian and Czech gender
-case /^(ru-noun|ru-noun-alt-?|ru-proper noun|ru-proper noun-alt-?)$/:
+case /^(ru-noun|ru-noun-alt-ё|ru-proper noun|ru-proper noun-alt-ё)$/:
 if(headline == 1) 
 	if((2 in tpar)&&(tpar[2] != "")) gend = gend sob tpar[2] scb;
 case /^(ru-noun[+]|ru-proper noun[+]|cs-noun|cs-proper noun)$/:
@@ -995,7 +1006,7 @@ return "";
 case /^(zh-pron)$/:
 # print "in zh-pron"
 if(headline == 1) {
-	if(lang == "(Chinese|Mandarin)") {
+	if(iso == "cmn") {
 		if(("m" in tpar)&&(tpar["m"] != "")) ipa = tpar["m"]
 		else ipa = "---"
 	}
@@ -1044,6 +1055,12 @@ if(1 in tpar) outp = tpar[1];
 if("tr" in tpar) outp = outp " /" tpar["tr"] "/";
 return outp;
 
+case "zh-see":
+if(1 in tpar) {
+	if(headline == 1) first = tpar[1];
+	else { return "see " tpar[1];}
+}
+
 case "zh-mw":
 outp = "(Classifier: "
 for(i=1;i in tpar;i++) {outp = outp tpar[i];}
@@ -1062,12 +1079,12 @@ for(i=1;i in tpar;i++) {outp = outp " " tpar[i];}
 return outp;
 
 case "zh-div":
-return "(~ " tpar[1] ")";
+return "(～ " tpar[1] ")";
 
-case /^(+|zh-obsolete|zh-no-solo|zh-o)$/:
+case /^(†|zh-obsolete|zh-no-solo|zh-o)$/:
 return "[obsolete]";
 
-case /^(zh-hd|?|zh-hg|zh-hist-ghost|zh-historical-ghost)$/:
+case /^(zh-hd|‡|zh-hg|zh-hist-ghost|zh-historical-ghost)$/:
 return "[historical dictionaries]";
 
 case "zh-alt-lb":
@@ -1118,11 +1135,20 @@ return "<sup>" tpar[1] "</sup>";
 # inflected forms:
 ####################
 # output template-name {{1}}
-# TODO: enable iso-code as first argument
 case /^(present participle of|past participle of|feminine plural past participle of|feminine singular past participle of|masculine plural past participle of|feminine past participle of|masculine plural of|feminine plural of|plural of|singular of|uncommon spelling of|imperative of|gerund of|plural form of|neuter singular of|feminine singular of|misspelling of|past tense of|(vocative|nominative|genitive|dative|accusative) (singular of|plural of|of)|combining form of)$/:
+
 outp = tpar[0] " ";
-if(tpar[1] ~ /\[\[/) outp = outp tpar[1];
-	else outp = outp "[[" tpar[1] "]]";
+if(("lang" in tpar) && (tpar[1]!="")) {
+if(tpar[1] ~ /\[\[/)
+	outp = outp tpar[1];
+else outp = outp "[[" tpar[1] "]]";
+}
+else {
+if(tpar[2] ~ /\[\[/)
+	outp = outp tpar[2];
+else outp = outp "[[" tpar[2] "]]";
+}
+
 return outp;
 
 # TODO: gloss, alt-text and tr and type of form
@@ -1224,7 +1250,7 @@ if(1 in tpar) {
 return outp;
 
 case /^(pt-ordinal form|pt-ordinal def)$/:
-if(tpar[1] ~ /[1-9]/) outp = outp sc2txt(tpar[2]) " of " tpar[1] "�";
+if(tpar[1] ~ /[1-9]/) outp = outp sc2txt(tpar[2]) " of " tpar[1] "º";
 	else outp = outp sc2txt(tpar[2]) " form of " tpar[1] "o";
 return outp;
 
@@ -1334,6 +1360,8 @@ for(i=1; i<=nt; i=i+1) {
 #	remove spaces	
 	gsub(/[\ ]*[=][\ ]*/, "=", ts);
 	gsub(/[\ ]*\|[\ ]*/, "|", ts);
+	gsub(/[\ ]*[}][}]/, "}}", ts);
+
 
 #	split template arguments into array targs	
 	sub(/\{\{/, "", ts); sub(/\}\}/, "", ts);
@@ -1393,14 +1421,15 @@ gsub(/&[mn]dash;/, "-", out);
 gsub(/&thinsp;/, "", out);
 gsub(/&minus;/, "-", out);
 gsub(/&equals;/, "=", out);
-gsub(/&equiv;/, "?", out);
-gsub(/&rarr;/, "->", out);
-gsub(/&harr;/, "<->", out);
+gsub(/&equiv;/, "≡", out);
+gsub(/&rarr;/, "→", out);
+gsub(/&harr;/, "↔", out);
 gsub(/&#39;/, "'", out);
 gsub(/&#61;/, "=", out);
-gsub(/&frac12;/, "�", out);
+gsub(/&frac12;/, "½", out);
 gsub(/&ldquo;/, "\"", out);
 gsub(/&rdquo;/, "\"", out);
+gsub(/&prime;/, "′", out);
 
 # NOTE: these must be done after converting '&lt;' -> '<'  and '&gt;' -> '>'
 # remove <ref ... \>
@@ -1443,7 +1472,7 @@ if(remove_wikilinks==1) {
 # remove diacritics
 out = remove_diacritics(lang, out);
 #if(iso == "ru") 
-#	out = gensub(/([????????????????????])(\xCC\x81|\xCC\x80)/, "\\1",  "g", out);
+#	out = gensub(/([аеёиоуыэюяАЕЁИОУЫЭЮЯ])(\xCC\x81|\xCC\x80)/, "\\1",  "g", out);
 
 print out;
 }
@@ -1456,15 +1485,15 @@ function remove_diacritics(generic_lang, text) {
 switch (generic_lang) {
 
 case "Russian":
-text = gensub(/([????????????????????])(\xCC\x81|\xCC\x80)/, "\\1",  "g", text);
+text = gensub(/([аеёиоуыэюяАЕЁИОУЫЭЮЯ])(\xCC\x81|\xCC\x80)/, "\\1",  "g", text);
 return text;
 
 case "Bulgarian":
 gsub(/(\xCC\x81|\xCC\x80)/, "", text);
-gsub(/?/, "?", text);
-gsub(/?/, "?", text);
-gsub(/?/, "?", text);
-gsub(/?/, "?", text);
+gsub(/Ѐ/, "Е", text);
+gsub(/ѐ/, "е", text);
+gsub(/Ѝ/, "И", text);
+gsub(/ѝ/, "и", text);
 return text;
 
 case "Macedonian":
@@ -1473,23 +1502,23 @@ return text;
 
 case "Serbo-Croatian":
 gsub(/(\xCC\x81|\xCC\x80|\xCC\x8F|\xCC\x91|\xCC\x84|\xCC\x83)/, "", text);
-gsub(/?�?�?�/, "A", text);
-gsub(/?�?�?�/, "a", text);
-gsub(/?�?�??/, "E", text);
-gsub(/?�?�??/, "e", text);
-gsub(/?�?�??/, "I", text);
-gsub(/?�?�??/, "i", text);
-gsub(/?�?�?�/, "O", text);
-gsub(/?�?�?�/, "o", text);
-gsub(/???/, "R", text);
-gsub(/???/, "r", text);
-gsub(/?�?�??/, "U", text);
-gsub(/?�?�??/, "u", text);
-gsub(/?/, "?", text);
-gsub(/?/, "?", text);
-gsub(/??/, "?", text);
-gsub(/?/, "?", text);
-gsub(/?/, "?", text);
+gsub(/ȀÀȂÁĀÃ/, "A", text);
+gsub(/ȁàȃáāã/, "a", text);
+gsub(/ȄÈȆÉĒẼ/, "E", text);
+gsub(/ȅèȇéēẽ/, "e", text);
+gsub(/ȈÌȊÍĪĨ/, "I", text);
+gsub(/ȉìȋíīĩ/, "i", text);
+gsub(/ȌÒȎÓŌÕ/, "O", text);
+gsub(/ȍòȏóōõ/, "o", text);
+gsub(/ȐȒŔ/, "R", text);
+gsub(/ȑȓŕ/, "r", text);
+gsub(/ȔÙȖÚŪŨ/, "U", text);
+gsub(/ȕùȗúūũ/, "u", text);
+gsub(/Ѐ/, "Е", text);
+gsub(/ѐ/, "е", text);
+gsub(/ӢЍ/, "И", text);
+gsub(/Ӯ/, "У", text);
+gsub(/ӯ/, "у", text);
 return text;
 
 case "Arabic":
@@ -1767,6 +1796,17 @@ headline = 0;
 # skip definition lines via exclude_defn filter
 $0 ~ exclude_defn {next;}
 
+# Chinese alternative forms, not on definition line
+/\{\{zh-see\|/ {
+if((langsect==1)&&(iso == "cmn")) {
+headline=1;
+first="";
+HD = $0;
+HD = parse_templates(HD);
+headline = 0;
+if(first != "") printout( "[[" title "]] {def} SEE: [[" first  "]] ::");
+}}
+
 # main section: format output lines
 ## exclude nested definitions
 #/^[\x20]*\x23/ 	{ 
@@ -1889,7 +1929,7 @@ if(LHS_qualifier != "") LHS = LHS " ["  LHS_qualifier "]";
 if(enable_ipa==1) {
 	if(ipa1!="") { 
 		LHS = LHS " /" ipa1 "/ ";
-		if(lang != "(Chinese|Mandarin)") ipa1="";
+		if(iso != "cmn") ipa1="";
 		ipa2="";
 	}
 
