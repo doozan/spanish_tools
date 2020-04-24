@@ -338,17 +338,16 @@ def defs_to_string(defs, pos):
 
     return usage
 
+def get_raw_defs(word):
+    return allwords[word] if word in allwords else []
+
+def get_all_defs(word):
+    return [ parse_line(x) for x in get_raw_defs(word) ]
+
 def lookup(word, pos=""):
     pos = pos.lower()
-    results = []
 
-    if word not in allwords:
-        #print("Not found ", word)
-        return []
-
-    lines = allwords[word]
-    for line in lines:
-        results.append(parse_line(line))
+    results = get_all_defs(word)
 
     # do pos filtering
     filtered = []
@@ -831,39 +830,61 @@ noplural_nouns = [
     "viescas"
 ]
 
+def get_masculine_noun(word):
+    if not word.endswith("a"):
+        return
+
+    masculine = word[:-1]+"o"
+    defs = get_all_defs(word)
+    for item in defs:
+        if item['esp']['pos'] == 'f':
+            if item['eng'].startswith("feminine noun of "+masculine):
+                return masculine
+            # Only search the first {f} definition (eliminates secondary uses like hamburguesa as a lady from Hamburg)
+            else:
+                return
+    return
+
 def get_base_noun(word):
     word = word.lower()
+    lemma = word
 
     if word in irregular_nouns:
-        return irregular_nouns[word]
+        lemma = irregular_nouns[word]
 
-    if word in nouns_ending_s:
-        return word
+    elif word in nouns_ending_s:
+        lemma = word
 
-    if word in noplural_nouns:
-        return word
+    elif word in noplural_nouns:
+        lemma = word
 
     # canciones, coleciones
-    if len(word) > 5 and word.endswith("iones"):
-        return word[:-5] + "ión"
+    elif len(word) > 5 and word.endswith("iones"):
+        lemma = word[:-5] + "ión"
 
     # profesores, doctores, actores
-    if len(word) > 4 and word.endswith("ores"):
-        return word[:-4] + "or"
+    elif len(word) > 4 and word.endswith("ores"):
+        lemma = word[:-4] + "or"
 
-    if len(word) > 3 and word.endswith("ces"):
-        return word[:-3] + "z"
+    elif len(word) > 3 and word.endswith("ces"):
+        lemma = word[:-3] + "z"
 
-    if len(word) > 3 and word[-3:] in [ "éis", "áis", "óis", "úis" ]:
-        return word[:-3] + "y"
+    elif len(word) > 3 and word[-3:] in [ "éis", "áis", "óis", "úis" ]:
+        lemma = word[:-3] + "y"
 
-    if len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "xes", "yes", "íes" ]:
-        return word[:-2]
+    elif len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "xes", "yes", "íes" ]:
+        lemma = word[:-2]
 
-    if len(word) > 2 and word[-2:] in [ "as", "bs", "cs", "ds", "es", "fs", "gs", "ks", "ls", "ms", "ns", "os", "ps", "rs", "ts", "vs", "ás", "ís", "ós", "ús" ]:
-        return word[:-1]
+    elif len(word) > 2 and word[-2:] in [ "as", "bs", "cs", "ds", "es", "fs", "gs", "ks", "ls", "ms", "ns", "os", "ps", "rs", "ts", "vs", "ás", "ís", "ós", "ús" ]:
+        lemma = word[:-1]
 
-    return word
+    # Check definitions for "feminine of word-o" and use word-o as lemma (mentiroso/a)
+    if lemma.endswith("a"):
+        masculine = get_masculine_noun(lemma)
+        if masculine:
+            lemma = masculine
+
+    return lemma
 
 
 def get_base_adjective(word):
