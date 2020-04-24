@@ -6,7 +6,6 @@ import sys
 import argparse
 import spanish_words
 import spanish_sentences
-import spanish_lemmas
 import get_best_pos
 
 parser = argparse.ArgumentParser(description='Lemmatize frequency list')

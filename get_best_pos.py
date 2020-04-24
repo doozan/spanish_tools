@@ -20,7 +20,7 @@ def get_best_pos(word, debug=False):
     # show up in the dictionary, but the lemma "casa" does
     all_pos = []
     for pos in ["", "adj", "noun", "verb"]:
-        lemma = spanish_words.get_lemma(word, pos)
+        lemma = spanish_words.get_lemma(word, pos).split("|")[0]
         all_pos +=  spanish_words.get_all_pos(lemma)
 
     all_pos = list(dict.fromkeys(all_pos))
