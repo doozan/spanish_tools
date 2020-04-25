@@ -140,8 +140,24 @@ def parse_line(line):
 def pos_is_verb(pos):
     return pos.startswith("v")
 
+noun_tags = set([
+    "n",    # noun (very few cases, mainly just cruft in wiktionary)
+    "f",    # feminine (casa)
+    "fp",   # feminine always plural (uncommon) (las esposas - handcuffs)
+    "fs",   # feminine singular - not used (wiktionary crufy)
+    "m",    # masculine (frijole)
+    "mf",   # uses el/la to indicate gender of person (el/la dentista)
+    "mp",   # masculine plural, nouns that are always plural (lentes)
+    "ms",   # masculine singular - not used (more cruft)
+
+    # These don't appear in the dictionary, but are generated during word analysis
+    "m-f",  # uses el/la to indigate different meanings of word (la cura, el cura)
+    "f-el", # feminine, but uses "el" when singular
+    "m/f"   # part of a masculine/feminine noun pair (amigo/amiga)
+])
+
 def pos_is_noun(pos):
-    if pos in ["n", "f", "fp", "fs", "m", "mf", "mp", "ms", "m-f", "f-el"]:
+    if pos in noun_tags:
         return True
 
 def common_pos(pos):
@@ -201,8 +217,8 @@ def split_def(data):
     return splits
 
 
-def do_analysis(word, items):
 
+def lines_to_usage(items):
     usage = {}
 
     for item in items:
@@ -231,7 +247,13 @@ def do_analysis(word, items):
                 if eng not in usage[pos][tag]:
                     usage[pos][tag].append(eng)
                 is_new_def = False
+    return usage
 
+
+
+def do_analysis(word, items):
+
+    usage = lines_to_usage(items)
 
     if len( {"m","f","mf"} & usage.keys() ) > 1:
 #    if "m" in usage and "f" in usage:
@@ -246,7 +268,32 @@ def do_analysis(word, items):
     elif "f" in usage and word in el_f_nouns:
         usage["f-el"] = usage.pop("f")
 
+    elif "m" in usage:
+
+        # If this has a "-a" feminine counterpart, reclassify the "m" defs as "m/f"
+        # and add any feminine definitions (ignoring the "feminine noun of xxx" def)
+        femnoun = get_feminine_noun(word)
+        if femnoun:
+            femdefs = get_all_defs(femnoun)
+            femlines = filter_def_pos(femdefs, "f")
+            femusage = lines_to_usage(femlines)
+            for k in list(femusage['f'].keys()):
+                femusage['f'][k].remove(";feminine noun of " + word)
+                if not(len(femusage['f'][k])):
+                    del femusage['f'][k]
+
+            if len(femusage['f'].keys()):
+                usage['f'] = femusage['f']
+                usage['m/f'] = {}
+
+                for oldtag in ['m', 'f']:
+                    for tag in usage[oldtag].keys():
+                        newtag = oldtag + ' ' + tag if tag != 'x' else oldtag
+                        usage['m/f'][newtag] = usage[oldtag][tag]
+                    del usage[oldtag]
+
     return usage
+
 
 def get_synonyms(word):
     if word in allsyns and allsyns[word]:
@@ -343,25 +390,32 @@ def get_raw_defs(word):
 def get_all_defs(word):
     return [ parse_line(x) for x in get_raw_defs(word) ]
 
-def lookup(word, pos=""):
-    pos = pos.lower()
 
-    results = get_all_defs(word)
+def filter_def_pos(defs, pos):
+
+    if not pos or pos == "":
+        return defs
 
     # do pos filtering
     filtered = []
-    if pos != "":
-        for item in results:
-            item_pos = item['esp']['pos']
-            if (pos == "verb" and pos_is_verb(item_pos)) or \
-               (pos == "noun" and pos_is_noun(item_pos)) or \
-               (pos == item_pos):
-                   filtered.append(item)
-        if not len(filtered):
-            removed = [ item['esp']['pos'] for item in results ]
-            #print("%s: %s not in %s" % (word,pos, removed))
-    else:
-        filtered = results
+    for item in defs:
+        item_pos = item['esp']['pos']
+        if (pos == "verb" and pos_is_verb(item_pos)) or \
+           (pos == "noun" and pos_is_noun(item_pos)) or \
+           (pos == item_pos):
+               filtered.append(item)
+    if not len(filtered):
+        removed = [ item['esp']['pos'] for item in defs ]
+        #print("%s: %s not in %s" % (word,pos, removed))
+
+    return filtered
+
+
+def lookup(word, pos=""):
+    pos = pos.lower()
+
+    defs = get_all_defs(word)
+    filtered = filter_def_pos(defs, pos)
 
     analysis = do_analysis(word, filtered)
     return analysis
@@ -829,20 +883,37 @@ noplural_nouns = [
     "viescas"
 ]
 
+def is_feminized_noun(word, masculine):
+    if not word.endswith("a"):
+        return
+
+    defs = get_all_defs(word)
+    for item in defs:
+        if item['esp']['pos'] == 'f':
+            if item['eng'].startswith("feminine noun of "+masculine):
+                return True
+            # Only search the first {f} definition (eliminates secondary uses like hamburguesa as a lady from Hamburg)
+            else:
+                return False
+    return False
+
+
+def get_feminine_noun(word):
+    if not word.endswith("o"):
+        return
+
+    feminine = word[:-1]+"a"
+    if is_feminized_noun(feminine, word):
+        return feminine
+
+
 def get_masculine_noun(word):
     if not word.endswith("a"):
         return
 
     masculine = word[:-1]+"o"
-    defs = get_all_defs(word)
-    for item in defs:
-        if item['esp']['pos'] == 'f':
-            if item['eng'].startswith("feminine noun of "+masculine):
-                return masculine
-            # Only search the first {f} definition (eliminates secondary uses like hamburguesa as a lady from Hamburg)
-            else:
-                return
-    return
+    if is_feminized_noun(word, masculine):
+        return masculine
 
 def get_base_noun(word):
     word = word.lower()
