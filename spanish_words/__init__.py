@@ -3,111 +3,12 @@ import re
 import sys
 import os
 
-allverbs = {}
-allwords = {}
-allsyns = {}
-wordpos = {}
-nouns_ending_s = {}
-irregular_verbs = {}
-reverse_irregular_verbs = defaultdict(list)
-
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 def fail(*args, **kwargs):
     eprint(*args, **kwargs)
     exit(1)
-
-
-def init_irregular_verbs():
-    # Irregular verbs forms loading
-    with open(os.path.join(os.path.dirname(__file__), 'irregular_verbs.txt')) as verbs_file:
-        for line in verbs_file:
-            if ':' not in line:
-                continue
-            infinitive, forms = line.strip().split(':')
-            #infinitive, forms = line.decode('utf-8').strip().split(':')
-            form_dict = {}
-            for form in forms.split(','):
-                # For some reason irregular_verbs.txt contains two form of one verb
-                # We should ignore second form
-                values = form.split('|')
-                if len(values) == 2:
-                    key, value = values
-                    form_dict[key] = value
-            irregular_verbs[infinitive] = form_dict
-
-    # We need defaultdict with list here because some verbs have same forms in various tenses
-    #for verb, forms in irregular_verbs.iteritems():
-    for verb, forms in irregular_verbs.items():
-        for form in forms.values():
-            reverse_irregular_verbs[form].append(verb)
-
-
-def init_dictionary():
-    FILE=os.path.join(os.path.dirname(__file__), 'es-en.txt')
-    # TODO: check file exists and print error message
-    with open(FILE) as infile:
-        for line in infile:
-            res = re.match("^([^{]+)(?:{([a-z]+)})?", line)
-            word = res.group(1).strip()
-            pos = common_pos(res.group(2))
-
-            if pos and pos == "verb":
-                allverbs[word] = 1
-            elif pos and pos == "noun" and word[-1:] == "s":
-                nouns_ending_s[word] = 1
-            if word not in allwords:
-                allwords[word] = []
-
-            allwords[word].append(line)
-
-            if word not in wordpos:
-                wordpos[word] = []
-
-            if pos not in wordpos[word]:
-                wordpos[word].append(pos)
-
-    # TODO: check file exists and print error message
-    with open(FILE+".custom") as infile:
-        for line in infile:
-            if line.startswith("#"):
-                continue
-
-            word = re.match("^([^{]+)", line).group(1)
-            word = word.strip()
-
-            if word.startswith("-"):
-                word = word[1:]
-                delete_entries(word, line[1:])
-                continue
-
-            if word not in allwords:
-                allwords[word] = [line]
-            else:
-                allwords[word].append(line)
-
-
-def init_syns():
-    FILE=os.path.join(os.path.dirname(__file__), 'synonyms.txt')
-    with open(FILE) as infile:
-        for line in infile:
-            word, syns = line.split(':')
-            syns = syns.strip()
-            allsyns[word] = syns # syns.split('/')
-
-def _init():
-    init_dictionary()
-    init_syns()
-    init_irregular_verbs()
-
-
-def delete_entries(word, line):
-    if word not in allwords:
-        return
-
-    line = line.strip()
-    allwords[word] = [ v for v in allwords[word] if not v.startswith(line) ]
 
 
 def parse_spanish(data):
@@ -170,11 +71,6 @@ def common_pos(pos):
         return "noun"
 
     return pos.lower()
-
-def get_all_pos(word):
-    if word not in wordpos:
-        return []
-    return wordpos[word]
 
 def strip_eng_verb(eng):
     if eng.startswith("to "):
@@ -248,59 +144,6 @@ def lines_to_usage(items):
                     usage[pos][tag].append(eng)
                 is_new_def = False
     return usage
-
-
-
-def do_analysis(word, items):
-
-    usage = lines_to_usage(items)
-
-    if len( {"m","f","mf"} & usage.keys() ) > 1:
-#    if "m" in usage and "f" in usage:
-        usage['m-f'] = {}
-        for oldtag in ['m', 'f', 'mf']:
-            if oldtag in usage:
-                for tag in usage[oldtag].keys():
-                    newtag = oldtag + ' ' + tag if tag != 'x' else oldtag
-                    usage['m-f'][newtag] = usage[oldtag][tag]
-                del usage[oldtag]
-
-    elif "f" in usage and word in el_f_nouns:
-        usage["f-el"] = usage.pop("f")
-
-    elif "m" in usage:
-
-        # If this has a "-a" feminine counterpart, reclassify the "m" defs as "m/f"
-        # and add any feminine definitions (ignoring the "feminine noun of xxx" def)
-        femnoun = get_feminine_noun(word)
-        if femnoun:
-            femdefs = get_all_defs(femnoun)
-            femlines = filter_def_pos(femdefs, "f")
-            femusage = lines_to_usage(femlines)
-            for k in list(femusage['f'].keys()):
-                femusage['f'][k].remove(";feminine noun of " + word)
-                if not(len(femusage['f'][k])):
-                    del femusage['f'][k]
-
-            if len(femusage['f'].keys()):
-                usage['f'] = femusage['f']
-                usage['m/f'] = {}
-
-                for oldtag in ['m', 'f']:
-                    for tag in usage[oldtag].keys():
-                        newtag = oldtag + ' ' + tag if tag != 'x' else oldtag
-                        usage['m/f'][newtag] = usage[oldtag][tag]
-                    del usage[oldtag]
-
-    return usage
-
-
-def get_synonyms(word):
-    if word in allsyns and allsyns[word]:
-        return allsyns[word].split('/')
-    else:
-        return []
-
 
 # "primary" defs start with a ';' and synonyms follow
 # for word with many definitons this can be too much info
@@ -384,13 +227,6 @@ def defs_to_string(defs, pos):
 
     return usage
 
-def get_raw_defs(word):
-    return allwords[word] if word in allwords else []
-
-def get_all_defs(word):
-    return [ parse_line(x) for x in get_raw_defs(word) ]
-
-
 def filter_def_pos(defs, pos):
 
     if not pos or pos == "":
@@ -409,19 +245,6 @@ def filter_def_pos(defs, pos):
         #print("%s: %s not in %s" % (word,pos, removed))
 
     return filtered
-
-
-def lookup(word, pos=""):
-    pos = pos.lower()
-
-    defs = get_all_defs(word)
-    filtered = filter_def_pos(defs, pos)
-
-    analysis = do_analysis(word, filtered)
-    return analysis
-
-
-_init()
 
 
 
@@ -552,82 +375,6 @@ def get_base(full_word):
 def is_reflexive(full_word):
     return full_word.endswith(u'se')
 
-
-def conjugate(full_word, secondary=False):
-    full_word = full_word.lower().strip()
-    if not is_verb(full_word):
-        raise ValueError(u'%s is not proper spanish verb' % full_word)
-
-    base = get_base(full_word)
-    reflexive = is_reflexive(full_word)
-    root = get_root(full_word)
-    conjugations={}
-
-    if base.endswith(u'ir') or base.endswith(u'ír'):
-        conjugations.update((type, root + ending) for type, ending in ir_endings.items())
-
-    if base.endswith(u'er') or base.endswith(u'ér'):
-        conjugations.update((type, root + ending) for type, ending in er_endings.items())
-
-    if base.endswith(u'ar') or base.endswith(u'ár'):
-        conjugations.update((type, root + ending) for type, ending in ar_endings.items())
-        _root = root[:-1]
-        if base.endswith(u'zar'):
-            conjugations.update((type, _root) for type, ending in zar_endings.items())
-        if base.endswith(u'gar'):
-            conjugations.update((type, _root + ending) for type, ending in gar_endings.items())
-        if base.endswith('car'):
-            conjugations.update((type, _root + ending) for type, ending in car_endings.items())
-
-    if base in irregular_verbs:
-        conjugations.update((type, tense) for type, tense in irregular_verbs[base].items())
-
-    if reflexive:
-        for type, form in conjugations.items():
-            if type.startswith(u'1'):
-                conjugations[type] = u'me ' + conjugations[type]
-            if type.startswith(u'2'):
-                if type == u'2imp':
-                    conjugations[type] = conjugations[type] + u'te' #exception for imperative
-                else:
-                    conjugations[type] = u'te ' + conjugations[type]
-            if type.startswith(u'3'):
-                if type == u'3imp':
-                    conjugations[type] = conjugations[type] + u'se'
-                else:
-                    conjugations[type] = u'se ' + conjugations[type]
-            if type.startswith(u'4'):
-                if type == u'4imp':
-                    conjugations[type] = conjugations[type] + u'nos'
-                else:
-                    conjugations[type] = u'nos ' + conjugations[type]
-            if type.startswith(u'5'):
-                if type == u'5imp':
-                    conjugations[type] = conjugations[type] + u'os'
-                else:
-                    conjugations[type] = u'os ' + conjugations[type]
-            if type.startswith(u'6'):
-                if type == u'6imp':
-                    conjugations[type] = conjugations[type] + u'se'
-                else:
-                    conjugations[type] = u'se ' + conjugations[type]
-
-    if secondary:
-        conjugations.update(secondary_conjugations(base, reflexive))
-
-    # negative imperatives:
-    if u'2pres' in conjugations:
-        conjugations[u'2impn'] = u'no ' + conjugations[u'2pres']
-    if u'3pres' in conjugations:
-        conjugations[u'3impn'] = u'no ' + conjugations[u'3pres']
-    if u'4pres' in conjugations:
-        conjugations[u'4impn'] = u'no ' + conjugations[u'4pres']
-    if u'5pres' in conjugations:
-        conjugations[u'5impn'] = u'no ' + conjugations[u'5pres']
-    if u'6pres' in conjugations:
-        conjugations[u'6impn'] = u'no ' + conjugations[u'6pres']
-
-    return conjugations
 
 def secondary_conjugations(base, reflexive):
     conjugations = {}
@@ -769,240 +516,501 @@ pronouns = [
         'selo', 'sela', 'selos', 'selas',
 ]
 
-def reverse_conjugate(verb_tense):
-    verb_tense = verb_tense.lower().strip()
 
-    if is_verb(verb_tense):
-        return [verb_tense]
 
-    # first check to see if this is a known irregular verb
-    if verb_tense in reverse_irregular_verbs:
-        return reverse_irregular_verbs[verb_tense]
+class SpanishWords:
 
-    irv, erv, arv, carv, zarv, garv = range(1, 7)
+    def __init__(self, dictionary, synonyms, iverbs):
+        self.allverbs = {}
+        self.allwords = {}
+        self.allsyns = {}
+        self.wordpos = {}
+        self.nouns_ending_s = {}
+        self.irregular_verbs = {}
+        self.reverse_irregular_verbs = defaultdict(list)
 
-    verb_matches = {}
-    all_endings = {
-        1: ir_endings,
-        2: er_endings,
-        3: ar_endings,
-        4: car_endings,
-        5: zar_endings,
-        6: gar_endings,
+        self.init_dictionary(dictionary)
+        self.init_syns(synonyms)
+        self.init_irregular_verbs(iverbs)
+
+
+    def init_irregular_verbs(self, datafile):
+        if not os.path.isfile(datafile):
+            fail("Cannot open irregular verbs:", datafile)
+
+        # Irregular verbs forms loading
+        with open(datafile) as verbs_file:
+            for line in verbs_file:
+                if ':' not in line:
+                    continue
+                infinitive, forms = line.strip().split(':')
+                #infinitive, forms = line.decode('utf-8').strip().split(':')
+                form_dict = {}
+                for form in forms.split(','):
+                    # For some reason irregular_verbs.txt contains two form of one verb
+                    # We should ignore second form
+                    values = form.split('|')
+                    if len(values) == 2:
+                        key, value = values
+                        form_dict[key] = value
+                self.irregular_verbs[infinitive] = form_dict
+
+        # We need defaultdict with list here because some verbs have same forms in various tenses
+        #for verb, forms in irregular_verbs.iteritems():
+        for verb, forms in self.irregular_verbs.items():
+            for form in forms.values():
+                self.reverse_irregular_verbs[form].append(verb)
+
+
+    def init_dictionary(self, datafile):
+        if not os.path.isfile(datafile):
+            fail("Cannot open dictionary:", datafile)
+
+        with open(datafile) as infile:
+            for line in infile:
+                res = re.match("^([^{]+)(?:{([a-z]+)})?", line)
+                word = res.group(1).strip()
+                pos = common_pos(res.group(2))
+
+                if pos and pos == "verb":
+                    self.allverbs[word] = 1
+                elif pos and pos == "noun" and word[-1:] == "s":
+                    self.nouns_ending_s[word] = 1
+                if word not in self.allwords:
+                    self.allwords[word] = []
+
+                self.allwords[word].append(line)
+
+                if word not in self.wordpos:
+                    self.wordpos[word] = []
+
+                if pos not in self.wordpos[word]:
+                    self.wordpos[word].append(pos)
+
+        if not os.path.isfile(datafile + ".custom"):
+            return
+
+        with open(datafile+".custom") as infile:
+            for line in infile:
+                if line.startswith("#"):
+                    continue
+
+                word = re.match("^([^{]+)", line).group(1)
+                word = word.strip()
+
+                if word.startswith("-"):
+                    word = word[1:]
+                    self.delete_entries(word, line[1:])
+                    continue
+
+                if word not in self.allwords:
+                    self.allwords[word] = [line]
+                else:
+                    self.allwords[word].append(line)
+
+
+    def init_syns(self, datafile):
+        if not os.path.isfile(datafile):
+            fail("Cannot open synonyms:", datafile)
+
+        with open(datafile) as infile:
+            for line in infile:
+                word, syns = line.split(':')
+                syns = syns.strip()
+                self.allsyns[word] = syns # syns.split('/')
+
+    def delete_entries(self, word, line):
+        if word not in self.allwords:
+            return
+
+        line = line.strip()
+        self.allwords[word] = [ v for v in self.allwords[word] if not v.startswith(line) ]
+
+    def get_all_pos(self, word):
+        if word not in self.wordpos:
+            return []
+        return self.wordpos[word]
+
+    def do_analysis(self, word, items):
+
+        usage = lines_to_usage(items)
+
+        if len( {"m","f","mf"} & usage.keys() ) > 1:
+    #    if "m" in usage and "f" in usage:
+            usage['m-f'] = {}
+            for oldtag in ['m', 'f', 'mf']:
+                if oldtag in usage:
+                    for tag in usage[oldtag].keys():
+                        newtag = oldtag + ' ' + tag if tag != 'x' else oldtag
+                        usage['m-f'][newtag] = usage[oldtag][tag]
+                    del usage[oldtag]
+
+        elif "f" in usage and word in el_f_nouns:
+            usage["f-el"] = usage.pop("f")
+
+        elif "m" in usage:
+
+            # If this has a "-a" feminine counterpart, reclassify the "m" defs as "m/f"
+            # and add any feminine definitions (ignoring the "feminine noun of xxx" def)
+            femnoun = self.get_feminine_noun(word)
+            if femnoun:
+                femdefs = self.get_all_defs(femnoun)
+                femlines = filter_def_pos(femdefs, "f")
+                femusage = lines_to_usage(femlines)
+                for k in list(femusage['f'].keys()):
+                    if ";feminine noun of " + word in femusage['f'][k]:
+                        femusage['f'][k].remove(";feminine noun of " + word)
+                        if not(len(femusage['f'][k])):
+                            del femusage['f'][k]
+
+                if len(femusage['f'].keys()):
+                    usage['f'] = femusage['f']
+                    usage['m/f'] = {}
+
+                    for oldtag in ['m', 'f']:
+                        for tag in usage[oldtag].keys():
+                            newtag = oldtag + ' ' + tag if tag != 'x' else oldtag
+                            usage['m/f'][newtag] = usage[oldtag][tag]
+                        del usage[oldtag]
+
+        return usage
+
+
+    def get_synonyms(self, word):
+        if word in self.allsyns and self.allsyns[word]:
+            return self.allsyns[word].split('/')
+        else:
+            return []
+
+    def get_raw_defs(self, word):
+        return self.allwords[word] if word in self.allwords else []
+
+    def get_all_defs(self, word):
+        return [ parse_line(x) for x in self.get_raw_defs(word) ]
+
+
+    def lookup(self, word, pos=""):
+        pos = pos.lower()
+
+        defs = self.get_all_defs(word)
+        filtered = filter_def_pos(defs, pos)
+
+        analysis = self.do_analysis(word, filtered)
+        return analysis
+
+    def conjugate(self, full_word, secondary=False):
+        full_word = full_word.lower().strip()
+        if not is_verb(full_word):
+            raise ValueError(u'%s is not proper spanish verb' % full_word)
+
+        base = get_base(full_word)
+        reflexive = is_reflexive(full_word)
+        root = get_root(full_word)
+        conjugations={}
+
+        if base.endswith(u'ir') or base.endswith(u'ír'):
+            conjugations.update((type, root + ending) for type, ending in ir_endings.items())
+
+        if base.endswith(u'er') or base.endswith(u'ér'):
+            conjugations.update((type, root + ending) for type, ending in er_endings.items())
+
+        if base.endswith(u'ar') or base.endswith(u'ár'):
+            conjugations.update((type, root + ending) for type, ending in ar_endings.items())
+            _root = root[:-1]
+            if base.endswith(u'zar'):
+                conjugations.update((type, _root) for type, ending in zar_endings.items())
+            if base.endswith(u'gar'):
+                conjugations.update((type, _root + ending) for type, ending in gar_endings.items())
+            if base.endswith('car'):
+                conjugations.update((type, _root + ending) for type, ending in car_endings.items())
+
+        if base in self.irregular_verbs:
+            conjugations.update((type, tense) for type, tense in self.irregular_verbs[base].items())
+
+        if reflexive:
+            for type, form in conjugations.items():
+                if type.startswith(u'1'):
+                    conjugations[type] = u'me ' + conjugations[type]
+                if type.startswith(u'2'):
+                    if type == u'2imp':
+                        conjugations[type] = conjugations[type] + u'te' #exception for imperative
+                    else:
+                        conjugations[type] = u'te ' + conjugations[type]
+                if type.startswith(u'3'):
+                    if type == u'3imp':
+                        conjugations[type] = conjugations[type] + u'se'
+                    else:
+                        conjugations[type] = u'se ' + conjugations[type]
+                if type.startswith(u'4'):
+                    if type == u'4imp':
+                        conjugations[type] = conjugations[type] + u'nos'
+                    else:
+                        conjugations[type] = u'nos ' + conjugations[type]
+                if type.startswith(u'5'):
+                    if type == u'5imp':
+                        conjugations[type] = conjugations[type] + u'os'
+                    else:
+                        conjugations[type] = u'os ' + conjugations[type]
+                if type.startswith(u'6'):
+                    if type == u'6imp':
+                        conjugations[type] = conjugations[type] + u'se'
+                    else:
+                        conjugations[type] = u'se ' + conjugations[type]
+
+        if secondary:
+            conjugations.update(secondary_conjugations(base, reflexive))
+
+        # negative imperatives:
+        if u'2pres' in conjugations:
+            conjugations[u'2impn'] = u'no ' + conjugations[u'2pres']
+        if u'3pres' in conjugations:
+            conjugations[u'3impn'] = u'no ' + conjugations[u'3pres']
+        if u'4pres' in conjugations:
+            conjugations[u'4impn'] = u'no ' + conjugations[u'4pres']
+        if u'5pres' in conjugations:
+            conjugations[u'5impn'] = u'no ' + conjugations[u'5pres']
+        if u'6pres' in conjugations:
+            conjugations[u'6impn'] = u'no ' + conjugations[u'6pres']
+
+        return conjugations
+
+
+    def reverse_conjugate(self, verb_tense):
+        verb_tense = verb_tense.lower().strip()
+
+        if is_verb(verb_tense):
+            return [verb_tense]
+
+        # first check to see if this is a known irregular verb
+        if verb_tense in self.reverse_irregular_verbs:
+            return self.reverse_irregular_verbs[verb_tense]
+
+        irv, erv, arv, carv, zarv, garv = range(1, 7)
+
+        verb_matches = {}
+        all_endings = {
+            1: ir_endings,
+            2: er_endings,
+            3: ar_endings,
+            4: car_endings,
+            5: zar_endings,
+            6: gar_endings,
+        }
+
+        for number, endings in all_endings.items():
+            for type, ending in endings.items():
+                if verb_tense.endswith(ending):
+                    if number in verb_matches:
+                        if len(ending) > len(endings[verb_matches[number]]):
+                            verb_matches[number] = type
+                    else:
+                        verb_matches[number] = type
+
+        if not verb_matches:
+            return []
+
+        possible_verbs = []
+
+        for number, type in verb_matches.items():
+            ending = {1: u'ir', 2: u'er', 3: u'ar', 4: u'car', 5: u'zar', 6: u'gar'}[number]
+            strip_ending = all_endings[number][type]
+            possible_verbs.append(verb_tense[:-len(strip_ending)] + ending)
+
+        # let's make sure the 'constructed' infinitive is a known spanish word
+        valid_verbs = [verb for verb in possible_verbs if verb_tense in self.conjugate(verb).values()]
+
+        # filter against a list of known verbs to throw out any we've invented
+        known_verbs = []
+        for verb in valid_verbs:
+            if verb in self.allverbs:
+                known_verbs.append(verb)
+    #            if verb+"se" in verbs and verbs[verb] != verbs[verb+"se"]:
+    #                known_verbs.append(verb+"se")
+
+        # No results, try stripping any objects (dime => di)
+        if not len(known_verbs):
+            endings = [ending for ending in pronouns if verb_tense.endswith(ending)]
+            for ending in endings:
+                res = self.reverse_conjugate( verb_tense[:len(ending)*-1] )
+                if len(res):
+                    return res
+
+        return known_verbs
+
+
+
+    # Noun stuff based on GPL code from https://github.com/Neuw84/SpanishInflectorStemmer
+
+    irregular_nouns = {
+        "oes": "o",
+        "espráis": "espray",
+        "noes": "no",
+        "yoes": "yos",
+        "volúmenes": "volumen",
+        "cracs": "crac",
+        "albalaes": "albalá",
+        "faralaes": "faralá",
+        "clubes": "club",
+        "países": "país",
+        "jerséis": "jersey",
+        "especímenes": "espécimen",
+        "caracteres": "carácter",
+        "menús": "menú",
+        "regímenes": "régimen",
+        "currículos": "curriculum",
+        "ultimatos": "ultimátum",
+        "memorandos": "memorándum",
+        "referendos": "referéndum",
+        "sándwiches": "sándwich"
     }
 
-    for number, endings in all_endings.items():
-        for type, ending in endings.items():
-            if verb_tense.endswith(ending):
-                if number in verb_matches:
-                    if len(ending) > len(endings[verb_matches[number]]):
-                        verb_matches[number] = type
+    noplural_nouns = [
+        "nada",
+        "nadie",
+        "pereza",
+        "adolescencia",
+        "generosidad",
+        "pánico",
+        "decrepitud",
+        "eternidad",
+        "caos",
+        "yo",
+        "tu",
+        "tú",
+        "el",
+        "él",
+        "ella",
+        "nosotros",
+        "nosotras",
+        "vosotros",
+        "vosotras",
+        "ellos",
+        "ellas",
+        "viescas"
+    ]
+
+    def is_feminized_noun(self, word, masculine):
+        if not word.endswith("a"):
+            return
+
+        defs = self.get_all_defs(word)
+        for item in defs:
+            if item['esp']['pos'] == 'f':
+                if item['eng'].startswith("feminine noun of "+masculine):
+                    return True
+                # Only search the first {f} definition (eliminates secondary uses like hamburguesa as a lady from Hamburg)
                 else:
-                    verb_matches[number] = type
-
-    if not verb_matches:
-        return []
-
-    possible_verbs = []
-
-    for number, type in verb_matches.items():
-        ending = {1: u'ir', 2: u'er', 3: u'ar', 4: u'car', 5: u'zar', 6: u'gar'}[number]
-        strip_ending = all_endings[number][type]
-        possible_verbs.append(verb_tense[:-len(strip_ending)] + ending)
-
-    # let's make sure the 'constructed' infinitive is a known spanish word
-    valid_verbs = [verb for verb in possible_verbs if verb_tense in conjugate(verb).values()]
-
-    # filter against a list of known verbs to throw out any we've invented
-    known_verbs = []
-    for verb in valid_verbs:
-        if verb in allverbs:
-            known_verbs.append(verb)
-#            if verb+"se" in verbs and verbs[verb] != verbs[verb+"se"]:
-#                known_verbs.append(verb+"se")
-
-    # No results, try stripping any objects (dime => di)
-    if not len(known_verbs):
-        endings = [ending for ending in pronouns if verb_tense.endswith(ending)]
-        for ending in endings:
-            res = reverse_conjugate( verb_tense[:len(ending)*-1] )
-            if len(res):
-                return res
-
-    return known_verbs
+                    return False
+        return False
 
 
+    def get_feminine_noun(self, word):
+        if not word.endswith("o"):
+            return
 
-# Noun stuff based on GPL code from https://github.com/Neuw84/SpanishInflectorStemmer
-
-irregular_nouns = {
-    "oes": "o",
-    "espráis": "espray",
-    "noes": "no",
-    "yoes": "yos",
-    "volúmenes": "volumen",
-    "cracs": "crac",
-    "albalaes": "albalá",
-    "faralaes": "faralá",
-    "clubes": "club",
-    "países": "país",
-    "jerséis": "jersey",
-    "especímenes": "espécimen",
-    "caracteres": "carácter",
-    "menús": "menú",
-    "regímenes": "régimen",
-    "currículos": "curriculum",
-    "ultimatos": "ultimátum",
-    "memorandos": "memorándum",
-    "referendos": "referéndum",
-    "sándwiches": "sándwich"
-}
-
-noplural_nouns = [
-    "nada",
-    "nadie",
-    "pereza",
-    "adolescencia",
-    "generosidad",
-    "pánico",
-    "decrepitud",
-    "eternidad",
-    "caos",
-    "yo",
-    "tu",
-    "tú",
-    "el",
-    "él",
-    "ella",
-    "nosotros",
-    "nosotras",
-    "vosotros",
-    "vosotras",
-    "ellos",
-    "ellas",
-    "viescas"
-]
-
-def is_feminized_noun(word, masculine):
-    if not word.endswith("a"):
-        return
-
-    defs = get_all_defs(word)
-    for item in defs:
-        if item['esp']['pos'] == 'f':
-            if item['eng'].startswith("feminine noun of "+masculine):
-                return True
-            # Only search the first {f} definition (eliminates secondary uses like hamburguesa as a lady from Hamburg)
-            else:
-                return False
-    return False
+        feminine = word[:-1]+"a"
+        if self.is_feminized_noun(feminine, word):
+            return feminine
 
 
-def get_feminine_noun(word):
-    if not word.endswith("o"):
-        return
+    def get_masculine_noun(self, word):
+        if not word.endswith("a"):
+            return
 
-    feminine = word[:-1]+"a"
-    if is_feminized_noun(feminine, word):
-        return feminine
+        masculine = word[:-1]+"o"
+        if self.is_feminized_noun(word, masculine):
+            return masculine
 
-
-def get_masculine_noun(word):
-    if not word.endswith("a"):
-        return
-
-    masculine = word[:-1]+"o"
-    if is_feminized_noun(word, masculine):
-        return masculine
-
-def get_base_noun(word):
-    word = word.lower()
-    lemma = word
-
-    if word in irregular_nouns:
-        lemma = irregular_nouns[word]
-
-    elif word in nouns_ending_s:
+    def get_base_noun(self, word):
+        word = word.lower()
         lemma = word
 
-    elif word in noplural_nouns:
-        lemma = word
+        if word in self.irregular_nouns:
+            lemma = self.irregular_nouns[word]
 
-    # canciones, coleciones
-    elif len(word) > 5 and word.endswith("iones"):
-        lemma = word[:-5] + "ión"
+        elif word in self.nouns_ending_s:
+            lemma = word
 
-    # profesores, doctores, actores
-    elif len(word) > 4 and word.endswith("ores"):
-        lemma = word[:-4] + "or"
+        elif word in self.noplural_nouns:
+            lemma = word
 
-    elif len(word) > 3 and word.endswith("ces"):
-        lemma = word[:-3] + "z"
+        # canciones, coleciones
+        elif len(word) > 5 and word.endswith("iones"):
+            lemma = word[:-5] + "ión"
 
-    elif len(word) > 3 and word[-3:] in [ "éis", "áis", "óis", "úis" ]:
-        lemma = word[:-3] + "y"
+        # profesores, doctores, actores
+        elif len(word) > 4 and word.endswith("ores"):
+            lemma = word[:-4] + "or"
 
-    elif len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "xes", "yes", "íes" ]:
-        lemma = word[:-2]
+        elif len(word) > 3 and word.endswith("ces"):
+            lemma = word[:-3] + "z"
 
-    elif len(word) > 2 and word[-2:] in [ "as", "bs", "cs", "ds", "es", "fs", "gs", "ks", "ls", "ms", "ns", "os", "ps", "rs", "ts", "vs", "ás", "ís", "ós", "ús" ]:
-        lemma = word[:-1]
+        elif len(word) > 3 and word[-3:] in [ "éis", "áis", "óis", "úis" ]:
+            lemma = word[:-3] + "y"
 
-    # Check definitions for "feminine of word-o" and use word-o as lemma (mentiroso/a)
-    if lemma.endswith("a"):
-        masculine = get_masculine_noun(lemma)
-        if masculine:
-            lemma = masculine
+        elif len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "xes", "yes", "íes" ]:
+            lemma = word[:-2]
 
-    return lemma
+        elif len(word) > 2 and word[-2:] in [ "as", "bs", "cs", "ds", "es", "fs", "gs", "ks", "ls", "ms", "ns", "os", "ps", "rs", "ts", "vs", "ás", "ís", "ós", "ús" ]:
+            lemma = word[:-1]
+
+        # Check definitions for "feminine of word-o" and use word-o as lemma (mentiroso/a)
+        if lemma.endswith("a"):
+            masculine = self.get_masculine_noun(lemma)
+            if masculine:
+                lemma = masculine
+
+        return lemma
 
 
-def get_base_adjective(word):
-    if word.endswith("s"):
-        word = word[:-1]
+    def get_base_adjective(self, word):
+        if word.endswith("s"):
+            word = word[:-1]
 
-    if word.endswith("ale"):
-        return word[:-1]
+        if word.endswith("ale"):
+            return word[:-1]
 
-    if word.endswith("dora"):
-        return word[:-1]
+        if word.endswith("dora"):
+            return word[:-1]
 
-    if word.endswith("tora"):
-        return word[:-1]
+        if word.endswith("tora"):
+            return word[:-1]
 
-    if word.endswith("ista"):
+        if word.endswith("ista"):
+            return word
+
+        # Not a real rule, but good enough for stemming
+        if word.endswith("a"):
+            return word[:-1] + "o"
+
         return word
 
-    # Not a real rule, but good enough for stemming
-    if word.endswith("a"):
-        return word[:-1] + "o"
+    def get_lemmas(self, word, pos):
+        word = word.lower().strip()
+        pos = pos.lower()
 
-    return word
+        if pos == "adj":
+            return [ self.get_base_adjective(word) ]
 
-def get_lemmas(word, pos):
-    word = word.lower().strip()
-    pos = pos.lower()
+        elif pos == "noun":
+            return [ self.get_base_noun(word) ]
 
-    if pos == "adj":
-        return [ get_base_adjective(word) ]
+        elif pos == "verb":
+            return self.reverse_conjugate(word)
 
-    elif pos == "noun":
-        return [ get_base_noun(word) ]
+        return [ word ]
 
-    elif pos == "verb":
-        return reverse_conjugate(word)
+    def get_lemma(self, word, pos):
+        lemmas = self.get_lemmas(word,pos)
 
-    return [ word ]
+        if not len(lemmas):
+            return word
 
-def get_lemma(word, pos):
-    lemmas = get_lemmas(word,pos)
+        if len(lemmas) == 1:
+            return lemmas[0]
 
-    if not len(lemmas):
-        return word
+        # remove dups
+        lemmas = list(dict.fromkeys(lemmas)) # Requires cpython 3.6 or python 3.7
+        return "|".join(lemmas)
 
-    if len(lemmas) == 1:
-        return lemmas[0]
 
-    # remove dups
-    lemmas = list(dict.fromkeys(lemmas)) # Requires cpython 3.6 or python 3.7
-    return "|".join(lemmas)

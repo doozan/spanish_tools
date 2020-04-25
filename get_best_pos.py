@@ -1,5 +1,3 @@
-import spanish_words
-import spanish_sentences
 import sys
 
 
@@ -12,7 +10,7 @@ def dprint(*args, **kwargs):
     if _debug:
         print(*args, file=sys.stderr, **kwargs)
 
-def get_best_pos(word, debug=False):
+def get_best_pos(word, spanish_words, spanish_sentences, debug=False):
     set_debug(debug)
 
     # get all possible POS usage for this word

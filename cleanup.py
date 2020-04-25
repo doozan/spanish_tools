@@ -36,6 +36,10 @@ if not (args.dup or args.repeat or args.nodef or args.wrongpos or args.nosent or
     print("You didn't specify anything to flag")
     exit(1)
 
+
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.txt")
+spanish_sentences = spanish_sentences.sentences(words, "spanish_data/spa-tagged.txt")
+
 def format_def(item):
     result = ""
     for pos in item:
@@ -113,24 +117,24 @@ with open(args.infile) as infile, open(args.outfile,'w') as outfile:
         newpos = pos
 
         deftext = ""
-        definition = spanish_words.lookup(word,pos.lower())
+        definition = words.lookup(word,pos.lower())
         if not definition:
             if (args.nodef):
                 flags.append("nodef")
 
             if (args.wrongpos):
-                definition = spanish_words.lookup(word)
+                definition = words.lookup(word)
                 if len(definition):
                     flags.append("wrongpos-" + "-".join(definition.keys()))
 
         if (args.showdef):
-            definition = spanish_words.lookup(word)
+            definition = words.lookup(word)
             deftext = format_def(definition)
 
 #        if pos == "VERB" and word.endswith("se"):
-#            definition = spanish_words.lookup(word[:-2],"verb")
+#            definition = words.lookup(word[:-2],"verb")
 #            deftext = format_def(definition)
-#            definition = spanish_words.lookup(word,"verb")
+#            definition = words.lookup(word,"verb")
 #            deftext += "###########\n"+ format_def(definition)
 #            flags.append("reflexive")
 
@@ -153,7 +157,7 @@ with open(args.infile) as infile, open(args.outfile,'w') as outfile:
 
         if args.showdef:
             if len(flags):
-                definition = spanish_words.lookup(word,pos.lower())
+                definition = words.lookup(word,pos.lower())
                 row['_definition'] = format_def(definition)
             else:
                 row['_definition'] = ""

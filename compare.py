@@ -2,7 +2,6 @@ import csv
 import os
 import sys
 import argparse
-#import spanish_words
 
 parser = argparse.ArgumentParser(description='Compare two wordlists and merge into a third')
 parser.add_argument('file1', help="Primary wordlist")

@@ -10,6 +10,8 @@ import spanish_sentences
 import spanish_speech
 import argparse
 
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.txt")
+spanish_sentences = spanish_sentences.sentences(words, "spanish_data/spa-tagged.txt")
 
 allwords = {}
 
@@ -187,7 +189,7 @@ def validate_note(item):
     return True
 
 def get_synonyms(word, pos):
-    items = spanish_words.get_synonyms(word)
+    items = words.get_synonyms(word)
     return [ k for k in items if pos+":"+k in allwords ]
 
 
@@ -196,7 +198,7 @@ def build_item(row):
     english = ""
     noun_type = ""
     pos = row['pos'].lower()
-    usage = spanish_words.lookup(spanish, pos)
+    usage = words.lookup(spanish, pos)
     syns = get_synonyms(spanish, pos)
     if usage and len(usage):
         english = format_def(usage)

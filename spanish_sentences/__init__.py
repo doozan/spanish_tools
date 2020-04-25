@@ -1,262 +1,240 @@
-#import random
 import sys
 import math
 import re
 import os
-import spanish_words
 
-grepdb = []
-sentencedb = []
-tagdb = {}
-tagfixes = {}
+class sentences:
 
-_tagfile = os.path.join(os.path.dirname(__file__), 'spa-tagged.txt')
-_tagfixes = _tagfile + ".tagfixes"
+    def __init__(self, spanish_words, datafile):
 
-if not os.path.isfile(_tagfile):
-    print("Cannot find tagged data, run build_sentences.py first")
-    exit(1)
+        self.spanish_words = spanish_words
+        self.grepdb = []
+        self.sentencedb = []
+        self.tagdb = {}
+        self.tagfixes = {}
 
+        if not os.path.isfile(datafile):
+            print("Cannot find data file:", datafile)
 
-if os.path.isfile(_tagfixes):
-    with open(_tagfixes) as infile:
-        for line in infile:
-            line = line.strip()
-            if line.startswith("#") or not ":" in line:
-                continue
-            word,oldpos,newpos = line.split(":")
+        # Tagfixes must be loaded before the main file
+        datafixes = datafile + ".tagfixes"
+        if os.path.isfile(datafixes):
+            with open(datafixes) as infile:
+                for line in infile:
+                    line = line.strip()
+                    if line.startswith("#") or not ":" in line:
+                        continue
+                    word,oldpos,newpos = line.split(":")
 
-            if word not in tagfixes:
-                tagfixes[word] = {}
-            tagfixes[word][oldpos] = newpos
+                    if word not in self.tagfixes:
+                        self.tagfixes[word] = {}
+                    self.tagfixes[word][oldpos] = newpos
 
+        index=0
+        with open(datafile) as infile:
+            for line in infile:
+                english, spanish, tagged, extras = line.split("\t",4)
+                stripped = self.strip_sentence(spanish).strip()
+                tagged = tagged.strip()
 
-def strip_sentence(string):
-    stripped = re.sub('[^ a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+', '', string).lower()
-    return re.sub(' +', ' ', stripped)
+                self.tag_interjections(spanish, index)
+                self.sentencedb.append( (spanish, english) )
+                self.grepdb.append(stripped)
 
-def get_interjections(string):
-
-    pattern = r"""(?x)(?=          # use lookahead as the separators may overlap (word1. word2, blah blah) should match word1 and word2 using "." as a separator
-        (?:^|[:;,.¡!¿]\ ?)         # Punctuation (followed by an optional space) or the start of the line
-        ([a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+)  # the interjection
-        (?:[;,.!?]|$)              # punctuation or the end of the line
-    )"""
-    return re.findall(pattern, string, re.IGNORECASE)
-
-
-# tags usually look like noun:word
-# but can also look look noun:word1|word1|word2
-
-def add_tag_to_db(tag,index):
-    pos,word = tag.split(":")
-
-    for word in list(dict.fromkeys(word.split("|"))):
-        word = word.lower()
-        if word not in tagdb:
-            tagdb[word] = {}
-
-        if word in tagfixes and pos in tagfixes[word]:
-            pos = tagfixes[word][pos]
-
-        if pos not in tagdb[word]:
-            tagdb[word][pos] = []
-
-        tagdb[word][pos].append(index)
+                for tag in tagged.split(" "):
+                    self.add_tag_to_db(tag,index)
+                index+=1
 
 
+    def strip_sentence(self, string):
+        stripped = re.sub('[^ a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+', '', string).lower()
+        return re.sub(' +', ' ', stripped)
 
-def tag_interjections(sentence, index):
-    for word in get_interjections(sentence):
-        add_tag_to_db("interj:"+word, index)
+    def get_interjections(self, string):
 
-def init_sentences():
-    index=0
-    with open(_tagfile) as infile:
-        for line in infile:
-            english, spanish, tagged, extras = line.split("\t",4)
-            stripped = strip_sentence(spanish).strip()
-            tagged = tagged.strip()
+        pattern = r"""(?x)(?=          # use lookahead as the separators may overlap (word1. word2, blah blah) should match word1 and word2 using "." as a separator
+            (?:^|[:;,.¡!¿]\ ?)         # Punctuation (followed by an optional space) or the start of the line
+            ([a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+)  # the interjection
+            (?:[;,.!?]|$)              # punctuation or the end of the line
+        )"""
+        return re.findall(pattern, string, re.IGNORECASE)
 
-            tag_interjections(spanish, index)
-            sentencedb.append( (spanish, english) )
-            grepdb.append(stripped)
 
-            for tag in tagged.split(" "):
-                add_tag_to_db(tag,index)
+    # tags usually look like noun:word
+    # but can also look look noun:word1|word1|word2
+
+    def add_tag_to_db(self, tag, index):
+        pos,word = tag.split(":")
+
+        for word in list(dict.fromkeys(word.split("|"))):
+            word = word.lower()
+            if word not in self.tagdb:
+                self.tagdb[word] = {}
+
+            if word in self.tagfixes and pos in self.tagfixes[word]:
+                pos = self.tagfixes[word][pos]
+
+            if pos not in self.tagdb[word]:
+                self.tagdb[word][pos] = []
+
+            self.tagdb[word][pos].append(index)
+
+
+
+    def tag_interjections(self, sentence, index):
+        for word in self.get_interjections(sentence):
+            self.add_tag_to_db("interj:"+word, index)
+
+    def get_ids_from_phrase(self, phrase):
+        pattern = r"\b" + phrase.strip().lower() + r"\b"
+
+        matches = []
+        index = 0
+        for item in self.grepdb:
+            if re.search(pattern, item):
+                matches.append(index)
             index+=1
 
-
-def get_ids_from_phrase(phrase):
-    pattern = r"\b" + phrase.strip().lower() + r"\b"
-
-    matches = []
-    index = 0
-    for item in grepdb:
-        if re.search(pattern, item):
-            matches.append(index)
-        index+=1
-
-    return matches
+        return matches
 
 
 
-fuzzy_pos_search = {
-    "verb": [ "verb", "adj", "adv", "noun" ],
-    "adj":  [ "adj", "adv" ],
-    "adv":  [ "adv", "adj" ]
-}
+    fuzzy_pos_search = {
+        "verb": [ "verb", "adj", "adv", "noun" ],
+        "adj":  [ "adj", "adv" ],
+        "adv":  [ "adv", "adj" ]
+    }
 
-def get_ids_fuzzy(word, pos):
+    def get_ids_fuzzy(self, word, pos):
 
-    ids = []
-    search_pos = []
+        ids = []
+        search_pos = []
 
-    if pos == "interj":
-        return []
-
-    if pos in fuzzy_pos_search:
-        search_pos = fuzzy_pos_search[pos]
-    else:
-        search_pos = [ pos ]
-
-    for p in search_pos:
-        lemma = spanish_words.get_lemma(word, p)
-        ids += get_ids_from_tag(lemma, p)
-
-    return sorted(set(ids))
-
-def get_ids_from_word(word):
-    return get_ids_from_tag("@"+word, "")
-
-
-# if pos is set it return only results matching that word,pos
-# if it's not set, return all results matching the keyword
-def get_ids_from_tag(word, pos):
-
-    lemma = ""
-    if word in tagdb:
-        lemma = word
-    else:
-        lemma = spanish_words.get_lemma(word, pos)
-        if not lemma or not lemma in tagdb:
+        if pos == "interj":
             return []
 
-    results = set()
-    if not pos:
-        for item in tagdb[lemma]:
-            results.update(tagdb[lemma][item])
-    elif pos in tagdb[lemma]:
-        results = tagdb[lemma][pos]
-    else:
-        return []
+        if pos in self.fuzzy_pos_search:
+            search_pos = self.fuzzy_pos_search[pos]
+        else:
+            search_pos = [ pos ]
 
-    return list(results)
+        for p in search_pos:
+            lemma = self.spanish_words.get_lemma(word, p)
+            ids += self.get_ids_from_tag(lemma, p)
 
+        return sorted(set(ids))
 
-def get_sentences_from_ids(available, count):
-    sentences = []
-    ids = []
-
-    # strip duplicates and sort
-    available = sorted(list(set(available)))
-
-    results = len(available)
-    if results <= count:
-        ids = range(0,results)
-    else:
-        step = results/(count+1.0)
-
-        # select sentences over an even distribution of the range
-        ids = [ math.ceil((i+1)*step) for i in range(count) ]
-
-# Randomly select sentences
-#        while count>0:
-#            rnd = random.randint(0,results)-1
-#            if rnd in ids:
-#                continue
-#            ids.append(rnd)
-#            count-=1
-#        ids = sorted(ids)
-
-    for idx in ids:
-        sentences.append(sentencedb[available[idx]])
-
-    return(sentences)
-
-def clean_word(word):
-    return word.strip()
-
-#    word = re.sub("^el ", "", word)
-#    word = re.sub("^la(s) ", "", word)
-#    word = re.sub(";.*", "", word)
-#    word = re.sub(",.*", "", word)
-#    if " " in word:
-#        word = re.sub("^.{1,3} ", "", word)
-#        word = re.sub(" .{1,3}$", "", word)
-#    return word
+    def get_ids_from_word(self, word):
+        return self.get_ids_from_tag("@"+word, "")
 
 
-def get_sentence_ids(lookup, pos):
-    ids = []
-    lookup = lookup.strip().lower()
-    pos = pos.lower()
-    source = "exact"
+    # if pos is set it return only results matching that word,pos
+    # if it's not set, return all results matching the keyword
+    def get_ids_from_tag(self, word, pos):
 
-    if pos in [ "phrase" ] or " " in lookup:
-        ids = get_ids_from_phrase(lookup)
-    else:
-        word = clean_word(lookup)
-        ids = get_ids_from_tag(word, pos)
+        lemma = ""
+        if word in self.tagdb:
+            lemma = word
+        else:
+            lemma = self.spanish_words.get_lemma(word, pos)
+            if not lemma or not lemma in self.tagdb:
+                return []
 
-        if not len(ids):
-            source = "literal"
-            if pos != "INTERJ":
-                ids = get_ids_from_word(word)
+        results = set()
+        if not pos:
+            for item in self.tagdb[lemma]:
+                results.update(self.tagdb[lemma][item])
+        elif pos in self.tagdb[lemma]:
+            results = self.tagdb[lemma][pos]
+        else:
+            return []
+
+        return list(results)
+
+
+    def get_sentences_from_ids(self, available, count):
+        sentences = []
+        ids = []
+
+        # strip duplicates and sort
+        available = sorted(list(set(available)))
+
+        results = len(available)
+        if results <= count:
+            ids = range(0,results)
+        else:
+            step = results/(count+1.0)
+
+            # select sentences over an even distribution of the range
+            ids = [ math.ceil((i+1)*step) for i in range(count) ]
+
+    # Randomly select sentences
+    #        while count>0:
+    #            rnd = random.randint(0,results)-1
+    #            if rnd in ids:
+    #                continue
+    #            ids.append(rnd)
+    #            count-=1
+    #        ids = sorted(ids)
+
+        for idx in ids:
+            sentences.append(self.sentencedb[available[idx]])
+
+        return(sentences)
+
+    def get_sentence_ids(self, lookup, pos):
+        ids = []
+        lookup = lookup.strip().lower()
+        pos = pos.lower()
+        source = "exact"
+
+        if pos in [ "phrase" ] or " " in lookup:
+            ids = self.get_ids_from_phrase(lookup)
+        else:
+            word = lookup.strip()
+            ids = self.get_ids_from_tag(word, pos)
 
             if not len(ids):
-                source = "fuzzy"
-                ids = get_ids_fuzzy(word, pos)
-    return { "ids": ids, "source": source }
+                source = "literal"
+                if pos != "INTERJ":
+                    ids = self.get_ids_from_word(word)
 
-def get_sentences(lookup, pos, count):
-    res = get_sentence_ids(lookup, pos)
-    sentences = get_sentences_from_ids(res['ids'], count)
-    return { "sentences": sentences, "matched": res['source'] }
+                if not len(ids):
+                    source = "fuzzy"
+                    ids = self.get_ids_fuzzy(word, pos)
+        return { "ids": ids, "source": source }
 
-
-def get_all_pos(word):
-    word = word.lower()
-    if word in tagdb:
-        return list(tagdb[word].keys())
-    return []
+    def get_sentences(self, lookup, pos, count):
+        res = self.get_sentence_ids(lookup, pos)
+        sentences = self.get_sentences_from_ids(res['ids'], count)
+        return { "sentences": sentences, "matched": res['source'] }
 
 
-def get_best_pos(word, all_pos=None, debug=False):
-    word = word.lower()
+    def get_all_pos(self, word):
+        word = word.lower()
+        if word in self.tagdb:
+            return list(self.tagdb[word].keys())
+        return []
 
 
-    best_pos = ""
-    best_count = -1
-    if word in tagdb:
-        if not all_pos:
-            all_pos = tagdb[word]
-        for pos in all_pos:
-            pos = pos.lower()
-            if pos in tagdb[word]:
-                count = len(tagdb[word][pos])
-                if debug:
-                    print(count,word,pos)
-                if count > best_count:
-                    best_pos = pos
-                    best_count = count
-            elif debug:
-                print(0,word,pos)
+    def get_best_pos(self, word, all_pos=None, debug=False):
+        word = word.lower()
 
-    return { 'count': best_count, 'pos': best_pos }
+        best_pos = ""
+        best_count = -1
+        if word in self.tagdb:
+            if not all_pos:
+                all_pos = self.tagdb[word]
+            for pos in all_pos:
+                pos = pos.lower()
+                if pos in self.tagdb[word]:
+                    count = len(self.tagdb[word][pos])
+                    if debug:
+                        print(count,word,pos)
+                    if count > best_count:
+                        best_pos = pos
+                        best_count = count
+                elif debug:
+                    print(0,word,pos)
 
-
-
-
-
-init_sentences()
+        return { 'count': best_count, 'pos': best_pos }

@@ -13,6 +13,9 @@ parser.add_argument('file', help="Frequency list")
 parser.add_argument('outfile', help="CSV file to create")
 args = parser.parse_args()
 
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.txt")
+sentences = spanish_sentences.sentences(words, "spanish_data/spa-tagged.txt")
+
 freq = {}
 def add_count(word, pos, count, origword):
     tag = pos+":"+word
@@ -61,11 +64,11 @@ def get_word_flags(word,pos):
         flags.append(flag("LETTER"))
 
 
-    definition = spanish_words.lookup(word, pos)
+    definition = words.lookup(word, pos)
     if not definition:
         flags.append(flag("NODEF"))
 
-    res = spanish_sentences.get_sentences(word,pos,1)
+    res = sentences.get_sentences(word,pos,1)
     if not len(res['sentences']):
         flags.append(flag("NOSENT"))
 
@@ -146,8 +149,8 @@ with open(args.file) as infile, open(args.file+".lemmas.csv",'w') as outfile:
     for line in infile:
         word, count = line.strip().split(' ')
 
-        pos = get_best_pos.get_best_pos(word)
-        lemma = spanish_words.get_lemma(word, pos)
+        pos = get_best_pos.get_best_pos(word, words, sentences)
+        lemma = words.get_lemma(word, pos)
         add_count(lemma, pos, count, word)
 
         csvwriter.writerow([count,word,lemma,pos])

@@ -8,6 +8,7 @@ parser.add_argument('word', help="Word to search for")
 parser.add_argument('pos', nargs="?", default="", help="part of speech")
 args = parser.parse_args()
 
+
 def pretty_print(word, item):
     for pos in item:
         print("==========================")
@@ -24,8 +25,10 @@ def pretty_print(word, item):
     print("==========================")
 
 
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.txt")
+
 if (args.syn):
-    print("See also: %s" % "$ ".join(spanish_words.get_synonyms(args.word)))
+    print("See also: %s" % "$ ".join(words.get_synonyms(args.word)))
 else:
-    result = spanish_words.lookup(args.word, args.pos)
+    result = words.lookup(args.word, args.pos)
     pretty_print(args.word, result)

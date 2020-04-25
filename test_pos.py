@@ -1,4 +1,9 @@
+import spanish_words
+import spanish_sentences
 import get_best_pos
+
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.txt")
+sentences = spanish_sentences.sentences(words, "spanish_data/spa-tagged.txt")
 
 test_words = {
 "pesos": "noun",
@@ -38,7 +43,7 @@ test_words = {
 
 matches = 0
 for word,pos in test_words.items():
-    res_pos = get_best_pos.get_best_pos(word, debug=False)
+    res_pos = get_best_pos.get_best_pos(word, words, sentences, debug=False)
     if res_pos == pos:
         matches +=1
     else:
