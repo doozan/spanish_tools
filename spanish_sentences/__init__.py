@@ -5,9 +5,8 @@ import os
 
 class sentences:
 
-    def __init__(self, spanish_words, datafile):
+    def __init__(self, datafile):
 
-        self.spanish_words = spanish_words
         self.grepdb = []
         self.sentencedb = []
         self.tagdb = {}
@@ -98,32 +97,6 @@ class sentences:
         return matches
 
 
-
-    fuzzy_pos_search = {
-        "verb": [ "verb", "adj", "adv", "noun" ],
-        "adj":  [ "adj", "adv" ],
-        "adv":  [ "adv", "adj" ]
-    }
-
-    def get_ids_fuzzy(self, word, pos):
-
-        ids = []
-        search_pos = []
-
-        if pos == "interj":
-            return []
-
-        if pos in self.fuzzy_pos_search:
-            search_pos = self.fuzzy_pos_search[pos]
-        else:
-            search_pos = [ pos ]
-
-        for p in search_pos:
-            lemma = self.spanish_words.get_lemma(word, p)
-            ids += self.get_ids_from_tag(lemma, p)
-
-        return sorted(set(ids))
-
     def get_ids_from_word(self, word):
         return self.get_ids_from_tag("@"+word, "")
 
@@ -132,20 +105,15 @@ class sentences:
     # if it's not set, return all results matching the keyword
     def get_ids_from_tag(self, word, pos):
 
-        lemma = ""
-        if word in self.tagdb:
-            lemma = word
-        else:
-            lemma = self.spanish_words.get_lemma(word, pos)
-            if not lemma or not lemma in self.tagdb:
-                return []
+        if word not in self.tagdb:
+            return []
 
         results = set()
         if not pos:
-            for item in self.tagdb[lemma]:
-                results.update(self.tagdb[lemma][item])
-        elif pos in self.tagdb[lemma]:
-            results = self.tagdb[lemma][pos]
+            for item in self.tagdb[word]:
+                results.update(self.tagdb[word][item])
+        elif pos in self.tagdb[word]:
+            results = self.tagdb[word][pos]
         else:
             return []
 
@@ -199,9 +167,6 @@ class sentences:
                 if pos != "INTERJ":
                     ids = self.get_ids_from_word(word)
 
-                if not len(ids):
-                    source = "fuzzy"
-                    ids = self.get_ids_fuzzy(word, pos)
         return { "ids": ids, "source": source }
 
     def get_sentences(self, lookup, pos, count):
