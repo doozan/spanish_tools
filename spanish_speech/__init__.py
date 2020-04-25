@@ -29,12 +29,18 @@ def get_phrase(word, pos, noun_type):
         elif noun_type == "m-f":
             voice = _FEMALE1
             phrase = "la " + word + ". el " + word
-        elif noun_type in ["m", "mf"]:
+        elif noun_type == "m":
             voice = _MALE1
             phrase = "el " + word
-        elif noun_type in ["mp"]:
+        elif noun_type == "mf":
+            voice = _MALE1
+            phrase = "la " + word + ". el " + word
+        elif noun_type == "mp":
             voice = _MALE1
             phrase = "los " + word
+        elif noun_type == "m/f":
+            voice = _MALE1
+            phrase = "el " + word + ". la " + word[:-1]+"a"
         else:
             print("Unknown noun type", noun_type)
             exit()
