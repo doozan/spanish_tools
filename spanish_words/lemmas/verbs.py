@@ -152,7 +152,10 @@ class SpanishVerbs:
                 for form in forms.split(','):
                     values = form.split('|')
                     value = values[1] if len(values) == 2 else values[0]
-                    self.reverse_irregular_verbs[value] = infinitive
+                    if value not in self.reverse_irregular_verbs:
+                        self.reverse_irregular_verbs[value] = [ infinitive ]
+                    elif infinitive not in self.reverse_irregular_verbs[value]:
+                        self.reverse_irregular_verbs[value].append(infinitive)
 
 
     def reverse_conjugate(self, verb_tense):
@@ -164,7 +167,7 @@ class SpanishVerbs:
 
         # Check if it's an irregular verb
         if verb_tense in self.reverse_irregular_verbs:
-            return [ self.reverse_irregular_verbs[verb_tense] ]
+            return self.reverse_irregular_verbs[verb_tense]
 
         all_endings = {
             'ir': ir_endings,
