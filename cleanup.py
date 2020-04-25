@@ -38,7 +38,7 @@ if not (args.dup or args.repeat or args.nodef or args.wrongpos or args.nosent or
 
 
 words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.txt")
-spanish_sentences = spanish_sentences.sentences(words, "spanish_data/spa-tagged.txt")
+spanish_sentences = spanish_sentences.sentences("spanish_data/spa-tagged.txt")
 
 def format_def(item):
     result = ""

@@ -14,7 +14,7 @@ parser.add_argument('outfile', help="CSV file to create")
 args = parser.parse_args()
 
 words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.txt")
-sentences = spanish_sentences.sentences(words, "spanish_data/spa-tagged.txt")
+sentences = spanish_sentences.sentences("spanish_data/spa-tagged.txt")
 
 freq = {}
 def add_count(word, pos, count, origword):
@@ -73,7 +73,9 @@ def get_word_flags(word,pos):
         flags.append(flag("NOSENT"))
 
     else:
-        if res['matched'] != "exact":
+        if res['matched'] == "literal":
+             flags.append(flag("LITERAL"))
+        elif res['matched'] == "fuzzy":
             flags.append(flag("FUZZY"))
 
     # remove reflexive verbs if the non-reflexive verb is already on the list
@@ -164,7 +166,7 @@ with open(args.outfile,'w') as outfile:
     csvwriter.writerow(["rank", "spanish", "pos","flags","usage"])
 
     for k,item in sorted(wordlist.items(), key=lambda item: item[1]['count']):
-        if len(item['flags']) == 1 and "FUZZY" in item['flags']:
+        if len(item['flags']) == 1 and "LITERAL" in item['flags']:
             item['flags'].append("CLEAR")
 
         if not len(item['flags']):
