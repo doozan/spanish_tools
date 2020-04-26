@@ -103,7 +103,50 @@ def get_sentences(word, pos, count):
 
 
 
-#class MyNote(genanki.Note):
+class MyNote(genanki.Note):
+    def write_card_to_db(self, cursor, now_ts, deck_id, note_id, order, due):
+      queue = 0
+      cursor.execute('INSERT INTO cards VALUES(null,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);', (
+        note_id,    # nid
+        deck_id,    # did
+        order,      # ord
+        now_ts,     # mod
+        -1,         # usn
+        0,          # type (=0 for non-Cloze)
+        queue,      # queue
+        due,          # due
+        0,          # ivl
+        0,          # factor
+        0,          # reps
+        0,          # lapses
+        0,          # left
+        0,          # odue
+        0,          # odid
+        0,          # flags
+        "",         # data
+      ))
+
+    def write_to_db(self, cursor, now_ts, deck_id):
+        cursor.execute('INSERT INTO notes VALUES(null,?,?,?,?,?,?,?,?,?,?);', (
+            self.guid,                    # guid
+            self.model.model_id,          # mid
+            now_ts,                       # mod
+            -1,                           # usn
+            self._format_tags(),          # TODO tags
+            self._format_fields(),        # flds
+            self.sort_field,              # sfld
+            0,                            # csum, can be ignored
+            0,                            # flags
+            '',                           # data
+        ))
+
+        note_id = cursor.lastrowid
+
+        count=0
+        for card in self.cards:
+            self.write_card_to_db(cursor, now_ts, deck_id, note_id, count, self._order)
+            count+=1
+
 #    def __init__(self, model=None, fields=None, sort_field=None, tags=None, guid=None):
 #        super(MyNote, self).__init__(model, fields, sort_field, tags, guid)
 #        try:
@@ -354,7 +397,9 @@ with open('notes_rebuild.csv', 'w', newline='') as outfile:
         for field in _fields:
             row.append(item[field])
 
-        my_deck.add_note( genanki.Note( model = card_model, sort_field=row[4], fields = row, guid = item['guid'], tags = item['tags'] ) )
+        note = MyNote( model = card_model, sort_field=row[4], fields = row, guid = item['guid'], tags = item['tags'] )
+        note._order = int(item['Rank'])
+        my_deck.add_note( note )
         csvwriter.writerow(row)
 
 
