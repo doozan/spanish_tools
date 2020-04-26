@@ -228,6 +228,14 @@ def defs_to_string(defs, pos):
 
     return usage
 
+def filter_def_phrase(defs, phrase):
+
+    if not phrase or phrase == "":
+        return defs
+
+    return [ d for d in defs if phrase not in d['eng'] ]
+
+
 def filter_def_pos(defs, pos):
 
     if not pos or pos == "":
@@ -359,16 +367,18 @@ class SpanishWords:
             # and add any feminine definitions (ignoring the "feminine noun of xxx" def)
             femnoun = self.get_feminine_noun(word)
             if femnoun:
+                print(word, "has femnoun")
                 femdefs = self.get_all_defs(femnoun)
-                femlines = filter_def_pos(femdefs, "f")
-                femusage = lines_to_usage(femlines)
-                for k in list(femusage['f'].keys()):
-                    if ";feminine noun of " + word in femusage['f'][k]:
-                        femusage['f'][k].remove(";feminine noun of " + word)
-                        if not(len(femusage['f'][k])):
-                            del femusage['f'][k]
+                femdefs = filter_def_pos(femdefs, "f")
+                femdefs = filter_def_phrase(femdefs, "feminine noun of "+word)
+                femusage = lines_to_usage(femdefs)
+#                for k in list(femusage['f'].keys()):
+#                    if ";feminine noun of " + word in femusage['f'][k]:
+#                        del femusage['f'][k] #.remove(";feminine noun of " + word)
+#                        if not(len(femusage['f'][k])):
+#                            del femusage['f'][k]
 
-                if len(femusage['f'].keys()):
+                if 'f' in femusage and len(femusage['f'].keys()):
                     usage['f'] = femusage['f']
                     usage['m/f'] = {}
 
@@ -377,6 +387,11 @@ class SpanishWords:
                             newtag = oldtag + ' ' + tag if tag != 'x' else oldtag
                             usage['m/f'][newtag] = usage[oldtag][tag]
                         del usage[oldtag]
+                else:
+                    usage['m/f'] = usage.pop('m')
+
+            else:
+                print(word, "no femnoun")
 
         return usage
 
@@ -414,7 +429,7 @@ class SpanishWords:
         defs = self.get_all_defs(word)
         for item in defs:
             if item['esp']['pos'] == 'f':
-                if item['eng'].startswith("feminine noun of "+masculine):
+                if "feminine noun of "+masculine in item['eng']:
                     return True
                 # Only search the first {f} definition (eliminates secondary uses like hamburguesa as a lady from Hamburg)
                 else:
