@@ -1,5 +1,5 @@
 from collections import defaultdict
-import spanish_words.lemmas
+from .lemmas import SpanishLemmas
 import re
 import sys
 import os

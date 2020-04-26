@@ -1,6 +1,6 @@
-import spanish_words.lemmas.verbs
-import spanish_words.lemmas.nouns
-import spanish_words.lemmas.adjectives
+from .verbs import SpanishVerbs
+from .nouns import SpanishNouns
+from .adjectives import *
 
 class SpanishLemmas:
     def __init__(self, spanish_words, irregular_verbs):
