@@ -367,7 +367,6 @@ class SpanishWords:
             # and add any feminine definitions (ignoring the "feminine noun of xxx" def)
             femnoun = self.get_feminine_noun(word)
             if femnoun:
-                print(word, "has femnoun")
                 femdefs = self.get_all_defs(femnoun)
                 femdefs = filter_def_pos(femdefs, "f")
                 femdefs = filter_def_phrase(femdefs, "feminine noun of "+word)
@@ -389,9 +388,6 @@ class SpanishWords:
                         del usage[oldtag]
                 else:
                     usage['m/f'] = usage.pop('m')
-
-            else:
-                print(word, "no femnoun")
 
         return usage
 

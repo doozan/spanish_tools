@@ -13,7 +13,7 @@ parser.add_argument('file', help="Frequency list")
 parser.add_argument('outfile', help="CSV file to create")
 args = parser.parse_args()
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.txt")
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/reverse_irregular.json")
 sentences = spanish_sentences.sentences("spanish_data/spa-tagged.txt")
 
 freq = {}

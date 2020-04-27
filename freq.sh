@@ -34,15 +34,18 @@ echo "$(head -5001 $clearfile | grep ',adv' | wc -l) Adverbs in top 5000"
 
 compare () {
 
-comparefile=/tmp/compare_${1}_${2}.txt
-python3 compare.py /tmp/${1}_clear.csv /tmp/${2}_clear.csv > $comparefile
-MISSING=$(grep "^-" $comparefile | wc -l)
-CHANGED=$(grep "^~" $comparefile | wc -l)
-ADDED=$(grep "^+" $comparefile | wc -l)
-CHANGES=$((MISSING + CHANGED + NEW))
+    comparefile=/tmp/compare_${1}_${2}.txt
+    python3 compare.py /tmp/${1}_clear.csv /tmp/${2}_clear.csv > $comparefile
+    MISSING=$(grep "^-" $comparefile | wc -l)
+    CHANGED=$(grep "^~" $comparefile | wc -l)
+    ADDED=$(grep "^+" $comparefile | wc -l)
+    CHANGES=$((MISSING + CHANGED + NEW))
 
-echo "$CHANGES changes from $1 ($CHANGED changed, $MISSING removed, $ADDED new)"
-echo " - see $comparefile for details"
+    echo "$CHANGES changes from $1 ($CHANGED changed, $MISSING removed, $ADDED new)"
+    head -5 $comparefile
+    if [ "$CHANGES" -gt 5 ]; then
+        echo "see $comparefile for more details"
+    fi
 }
 
 

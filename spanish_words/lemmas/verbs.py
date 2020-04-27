@@ -1,6 +1,8 @@
 from collections import defaultdict
 import re
 import os
+import json
+import sys
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -136,27 +138,8 @@ class SpanishVerbs:
             fail("Cannot open irregular verbs:", iverbs)
 
         # Irregular verbs forms loading
-        with open(iverbs) as verbs_file:
-            for line in verbs_file:
-                if ':' not in line:
-                    continue
-
-                # parse:
-                # infinitive:conj1|word1,conj2|word2,conj3|word4,word5,word6
-                # into:
-                # { word1: infinitive, word2: infinitive, word3: infinitive, word4: infinitive, word5: infinitive, word6: infinitive }
-                # { infinitive: { conj1: [word1], conj2: [word2], conj3: [word4, word5, word6] } }
-
-                infinitive, forms = line.strip().split(':')
-
-                for form in forms.split(','):
-                    values = form.split('|')
-                    value = values[1] if len(values) == 2 else values[0]
-                    if value not in self.reverse_irregular_verbs:
-                        self.reverse_irregular_verbs[value] = [ infinitive ]
-                    elif infinitive not in self.reverse_irregular_verbs[value]:
-                        self.reverse_irregular_verbs[value].append(infinitive)
-
+        with open(iverbs, encoding='utf-8') as verbs_file:
+            self.reverse_irregular_verbs = json.load(verbs_file)
 
     def reverse_conjugate(self, verb_tense):
         verb_tense = verb_tense.lower().strip()
@@ -167,7 +150,7 @@ class SpanishVerbs:
 
         # Check if it's an irregular verb
         if verb_tense in self.reverse_irregular_verbs:
-            return self.reverse_irregular_verbs[verb_tense]
+            return self.reverse_irregular_verbs[verb_tense].split("|")
 
         all_endings = {
             'ir': ir_endings,

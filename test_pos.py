@@ -2,7 +2,7 @@ import spanish_words
 import spanish_sentences
 import get_best_pos
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.txt")
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/reverse_irregular.json")
 sentences = spanish_sentences.sentences("spanish_data/spa-tagged.txt")
 
 test_words = {
