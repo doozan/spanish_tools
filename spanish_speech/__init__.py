@@ -34,13 +34,13 @@ def get_phrase(word, pos, noun_type):
             phrase = "el " + word
         elif noun_type == "mf":
             voice = _MALE1
-            phrase = "la " + word + ". el " + word
+            phrase = "el " + word + ". la " + word
         elif noun_type == "mp":
             voice = _MALE1
             phrase = "los " + word
         elif noun_type == "m/f":
             voice = _MALE1
-            phrase = "el " + word + ". la " + word[:-1]+"a"
+            phrase = "la " + word[:-1]+"a. " + "el " + word
         else:
             print("Unknown noun type", noun_type)
             exit()
