@@ -83,57 +83,62 @@ class SpanishVerbs:
             for item in vdata:
                 conjugations = self.conjugate( item['stems'], ending, item['pattern'], only_pattern=True )
 
-#                if verb == "ser":
-#                    print(conjugations)
                 for meta,words in conjugations.items():
-#                    if verb == "ser":
-#                        print(words)
                     for word in words:
-#                        if word == "fui":
-#                            print("XXX")
                         if word in self.reverse_irregular_verbs:
-                            self.reverse_irregular_verbs[word].append(str(meta)+":"+verb)
+                            self.reverse_irregular_verbs[word].append( { "verb": verb, "tense": meta } )
                         else:
-                            self.reverse_irregular_verbs[word] = [ str(meta)+":"+verb ]
-
-#        print(self.reverse_irregular_verbs['fui'])
+                            self.reverse_irregular_verbs[word] = [ { "verb": verb, "tense": meta } ]
 
 
     def get_endings(self, ending, pattern):
-        return(sorted(set([k[0] for k in [ v1 for k1,v1 in self.conjugate([""], ending, pattern).items()]])))
+        res = {}
+        data =  self.conjugate([""], ending, pattern)
+        for conj,endings in data.items():
+            for ending in endings:
+                if ending not in res:
+                    res[ending] = [ conj ]
+                else:
+                    res[ending].append(conj)
+        return res
 
+
+    # Returns a list of dicts containing all possible matches [ { "verb": "infinitive", "tense": X } ]
     def reverse_conjugate(self, word):
         word = word.lower().strip()
 
+        valid_verbs =[]
+
         # Check if it's already an infinitive
         if any(word.endswith(ending) for ending in all_verb_endings):
-            return [word]
+            return [ { "verb": word, "tense": 1 } ]
 
         # Check if it's an irregular verb
         if word in self.reverse_irregular_verbs:
-            return [ tagged.split(":")[1] for tagged in self.reverse_irregular_verbs[word] ]
+            valid_verbs += self.reverse_irregular_verbs[word]
 
         # Find the longest matching conjugated ending for each matching infinitive ending
         matched_endings = []
         for endtype, endings in self.reverse_endings.items():
             for ending in endings:
                 if word.endswith(ending):
-                    matched_endings.append([ending, endtype])
+                    tense = endings[ending]
+                    matched_endings.append({'old': ending, 'new': endtype, 'tenses': tense})
 
-        valid_verbs = []
         if matched_endings:
-            possible_verbs = [ word[:-len(k[0])]+k[1] for k in matched_endings ]
+            possible_verbs = []
+            for match in matched_endings:
+                for tense in match['tenses']:
+                    possible_verbs.append({"verb": word[:-len(match['old'])]+match['new'], "tense": tense })
 
             # Check the verbs against the dictionary and throw out any we've invented
-            valid_verbs = [ v for v in possible_verbs if self.spanish_words.is_verb(v) ]
+            valid_verbs += [ v for v in possible_verbs if self.spanish_words.is_verb(v['verb']) ]
 
         # No results, try stripping any direct/indirect objects (dime => di)
-        if not len(valid_verbs):
-            endings = [ending for ending in pronouns if word.endswith(ending)]
-            for ending in endings:
-                res = self.reverse_conjugate( word[:len(ending)*-1] )
-                if len(res):
-                    return res
+        # TODO: the results should be filtered to throw out impossible matches (verb forms that don't take pronoun endings)
+        endings = [ending for ending in pronouns if word.endswith(ending)]
+        for ending in endings:
+            valid_verbs += self.reverse_conjugate( word[:len(ending)*-1] )
 
         return valid_verbs
 

@@ -18,7 +18,9 @@ class SpanishLemmas:
             return [ self.nouns.get_base_noun(word) ]
 
         elif pos == "verb":
-            return self.verbs.reverse_conjugate(word)
+
+#            print(self.verbs.reverse_conjugate(word))
+            return [ v['verb'] for v in self.verbs.reverse_conjugate(word) ]
 
         return [ word ]
 
