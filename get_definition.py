@@ -25,7 +25,7 @@ def pretty_print(word, item):
     print("==========================")
 
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/reverse_irregular.json")
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.json")
 
 if (args.syn):
     print("See also: %s" % "$ ".join(words.get_synonyms(args.word)))
