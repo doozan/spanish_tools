@@ -1,266 +1,411 @@
-#import urllib.request
+#import urllib.reest
 import requests
 import json
 import re
 import os
+import argparse
+import sys
 
-FILENAME="irregular_verbs.json"
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
-# list from https://en.wiktionary.org/wiki/Module:es-conj/data/paradigms
-paradigms = {
-  "-ar": {
-    "andar": "andar",
-    "dar": "dar",
-    "errar": "errar",
-    "estar": "estar",
-    "jugar": "jugar",
-#    "-car": "-car",
-    "-car i-í": "-car (i-í)",
-    "-car o-ue": "-car (o-ue)",
-#    "-gar": "-gar",
-    "-gar e-ie": "-gar (e-ie)",
-    "-gar i-í": "-gar (i-í)",
-    "-gar o-ue": "-gar (o-ue)",
-    "-guar": "-guar",
-    "-izar": "-izar",
-    "-eizar": "-eizar",
-#    "-zar": "-zar",
-    "-zar e-ie": "-zar (e-ie)",
-    "-zar go-güe": "-zar (go-güe)",
-    "-zar o-ue": "-zar (o-ue)",
-    "e-ie": "e-ie",
-    "go-güe": "go-güe",
-    "i-í": "i-í",
-    "i-í unstressed": "i-í",
-    "iar-ar": "-iar-ar",
-    "o-hue": "o-hue",
-    "o-ue": "o-ue",
-    "u-ú": "u-ú",
-    "imp": "imp"
-  },
-  "-er": {
-    "atardecer": "atardecer",
-    "atañer": "atañer",
-    "caber": "caber",
-    "caer": "caer",
-    "haber": "haber",
-    "hacer": "hacer",
-    "hacer i-í": "hacer (i-í)",
-    "nacer": "c-zc",
-    "placer": "placer",
-    "poder": "poder",
-    "-poner": "poner",
-    "poner": "poner",
-    "poseer": "-eer",
-    "proveer": "-eer",
-    "querer": "querer",
-    "raer": "raer",
-    "roer": "roer",
-    "romper": "romper",
-    "saber": "saber",
-    "ser": "ser",
-    "soler": "soler",
-    "tener": "tener",
-    "traer": "traer",
-    "valer": "valer",
-    "ver": "ver",
-    "ver e-é": "ver",
-    "yacer": "yacer",
-    "-cer": "-cer",
-    "-cer o-ue": "-cer (o-ue)",
-    "-eer": "-eer",
-    "-ger": "-ger",
-    "-olver": "-olver",
-    "-ñer": "-ñer",
-    "c-zc": "c-zc",
-    "e-ie": "e-ie",
-    "o-hue": "o-hue",
-    "o-ue": "o-ue" ,
-    "-tener": "tener",
-  },
-  "-ir": {
-    "asir": "asir",
-    "aterir": "aterir",
-    "concernir": "e-ie",
-    "decir": "decir",
-    "bendecir": "decir",
-    "maldecir": "decir",
-    "manumitir": "manumitir",
-    "predecir": "decir",
-    "redecir": "decir",
-    "elegir": "-egir",
-    "erguir": "erguir",
-    "imprimir": "imprimir",
-    "morir": "o-ue",
-    "pudrir": "pudrir",
-    "ir": "ir",
-    "rehuir": "rehuir",
-    "salir": "salir",
-    "sustituir": "-uir",
-    "-venir": "venir",
-    "venir": "venir",
-    "-brir": "-brir",
-    "-cir": "-cir",
-    "-ducir": "-ducir", 
-    "-egir": "-egir",
-    "-gir": "-gir",
-    "-guir": "-guir",
-    "-guir (e-i)": "-guir (e-i)",
-    "-güir": "-güir",
-    "-quir": "-quir",
-    "-scribir": "-scribir",
-    "-uir": "-uir",
-    "-ñir": "-ñir",
-    "-ñir e-i": "-ñir (e-i)",
-    "c-zc": "c-zc",
-    "e-i": "e-i",
-    "e-ie": "e-ie",
-    "e-ie-i": "e-ie-i",
-    "i-ie": "i-ie",
-    "i-í": "i-í",
-    "o-ue": "o-ue",
-    "u-ú": "u-ú",
-  },
-  "-ír": {
-    "embaír": "embaír",
-    "oír": "oír",
-    "reír": "-eír",
-    "-eír": "-eír",
-    "freír": "-eír",
-    "refreír": "-eír",
-  }
-}
+def fail(*args, **kwargs):
+    eprint(*args, **kwargs)
+    exit(1)
 
-_json_hash = ""
-def hash_json(data):
-    global _json_hash
-    _json_hash = hash(str(data))
+parser = argparse.ArgumentParser(description='Scrape irregular verb usage from wiktionary')
+parser.add_argument('-p', '--patterns', help="Save pattern usage to specified file")
+parser.add_argument('-v', '--verbs',    help="Save irregular verb list to specified file")
+parser.add_argument('-c', '--cache',    help="Cache file name to use (Default: _cache.json)")
+args = parser.parse_args()
 
-def load_json():
-    if os.path.isfile(FILENAME):
-        with open(FILENAME) as infile:
-            data =  json.load(infile)
-            hash_json(data)
-            return data
+if args.patterns is None and args.verbs is None:
+    parser.error("You must specify either --patterns or --verbs to dump files")
 
-def save_json(data):
-    if hash(str(data)) == _json_hash:
-        print("No save needed")
-        return
-    with open(FILENAME, "w") as outfile:
-        print("saving")
-        json.dump(data, outfile)
+if args.cache is None:
+    args.cache = "_cache.json"
+
+
+_cache = None
+def init_cache():
+    global _cache
+    if _cache is None:
+        _cache = { "hash": {}, "data": {} }
+        if os.path.isfile(args.cache):
+            with open(args.cache) as infile:
+                _cache['data'] = json.load(infile)
+
+def save_cache():
+    global _cache
+    with open(args.cache, "w") as outfile:
+        json.dump(_cache['data'], outfile, ensure_ascii=False)
+
+def has_changed(tag, data):
+    global _cache
+
+    hashvalue = hash(str(data))
+    if tag not in _cache["hash"] or _cache['hash'][tag] != hashvalue:
+        _cache['hash']['tag'] = hashvalue
+        return True
+    return False
+
+def update_data(tag, data):
+    if _cache is None:
+        init_cache()
+    if has_changed(tag, data):
+        _cache['data'][tag] = data
+        save_cache()
+
+def load_data(tag, default=None):
+    global _cache
+    if _cache is None:
+        init_cache()
+    if tag in _cache['data']:
+        return _cache['data'][tag]
+    return default
+
+
+
+#def load_json(filename):
+#    if os.path.isfile(filename):
+#        with open(filename) as infile:
+#            data =  json.load(infile)
+#            is_changed(infile, data)
+#            return data
+
+#def save_json(filename, data):
+#    if not is_changed(filename, data):
+#        return
+#    with open(filename, "w") as outfile:
+#        json.dump(data, outfile, ensure_ascii=False)
+
+
+def lua2python(data, varname):
+
+    dicts = []
+    idx = 0
+    maxidx = len(data)-1
+
+
+    # find all pairs of braces {} and flag those missing any = assignments as lists
+    chunks = []
+    while idx<maxidx:
+        if data[idx] == "{":
+            dicts.append({"start": idx, "is_list": True})
+        elif data[idx] == "}":
+            item = dicts.pop()
+            item["end"] = idx
+            chunks.append(item)
+        elif data[idx] == "=" and len(dicts):
+            dicts[len(dicts)-1]["is_list"] = False
+        idx += 1
+
+    # replace {} with [] in lists
+    replacements = {}
+    for item in chunks:
+        if item['is_list']:
+            replacements[item['start']] = "["
+            replacements[item['end']] = "]"
+
+        else:
+            inquote = False
+            for idx in range(item['start'],item['end']):
+                if data[idx] == '"':    # very simple quote handling, doesn't understand escapes
+                    inquote = not inquote
+                if not inquote and data[idx] == "=":
+                    replacements[idx] = ":"
+
+    replaced = ""
+    strpos = 0
+    for idx in sorted(replacements.keys()):
+        replaced += data[strpos:idx] + replacements[idx]
+        strpos = idx+1
+    replaced += data[strpos:len(data)]
+
+
+    data = replaced
+    # quote unquoted bare items being assigned values
+    # this blows up on items within quotes so skip lines with a single " before the match
+#    pattern = r"([a-zA-Z0-9\-_]+)\s*:"
+#    data = re.sub(pattern, r'"\1":', data)
+
+    # strip [] from items being assigned values
+    pattern = r"""(?x)     #
+               \[          # opening bracket
+               ([^\]]+)    # all chars until the closing bracket
+               \]          # closing bracket
+               \s*:        # whitespace :
+    """
+    data = re.sub(pattern, r'  \1:', data)
+
+
+
+    # Strip anything that isn't part of data assignment
+    newdata = varname + " = {\n"
+    in_data = False
+    depth = 0
+    for line in data.split("\n"):
+        line = line.replace("\t", "    ")
+
+        if in_data:
+            depth += line.count("{") + line.count("[") - line.count("}") - line.count("]")
+            if depth == 0:
+                in_data = False
+                # add a , after the last closing }
+                line = re.sub("}([^}]*)$", r"},\1", line)
+                # add a , after the last closing ]
+                line = re.sub("\]([^\]]*)$", r"],\1", line)
+            if depth < 0:
+                eprint(line)
+                fail("Too many closing brackets")
+
+            elif line.strip() == "":
+                newdata += "\n"
+            else:
+                newdata += line+"\n"
+        elif "=" in line:
+
+            # ignore variable declarations
+            if "local " in line:
+                continue
+
+            line = re.sub(r"""data\[([^\]]+)\]\s+=""", r"\1:", line)
+            depth = line.count("{") + line.count("[") - line.count("}") - line.count("]")
+            if depth:
+                in_data = True
+                newdata += line+"\n"
+            else:
+
+
+                # add a comma to the end of single line assignment items
+                newdata += line+",\n"
+
+        #  permit empty lines, but ignore everything else
+        elif line.strip() == "":
+            newdata += "\n"
+
+    # convert lua string escapes to python strings
+    newdata = re.sub(r"'''", r"'", newdata)
+
+    # convert lua comments to python comments
+    newdata = re.sub(r"--", r"#", newdata)
+
+    # convert lua true to python True
+    newdata = re.sub(r"true", r"True", newdata)
+
+    # convert lua false to python False
+    newdata = re.sub(r"false", r"False", newdata)
+
+    newdata += "}"
+
+    return newdata
+
+
+def get_template_params(template):
+    template = template[2:-2]
+    params = template.split("|")
+    ending =  params[0][len("es-conj"):]
+
+    item = {
+        'pattern': "",
+        'stems': []
+    }
+
+    for param in params[1:]:
+        if "=" in param:
+            if param.startswith("p="):
+                item['pattern'] = param[2:]
+        else:
+            item['stems'].append(param)
+
+    return item
+
+
+def find_templates(wikitext):
+    return re.findall(r"{{es-conj[^}]+}}", wikitext, re.MULTILINE)
+
+def get_patterns(wikitext):
+    patterns = [ get_template_params(x) for x in find_templates(wikitext) ]
+
+    # remove dups and preserve order (requires cpython 3.6+)
+    return list(map(json.loads, dict.fromkeys(map(json.dumps, patterns)).keys()))
+
+
+def load_paradigm_list():
+    data = load_data("paradigm_list")
+    if not data:
+        url = 'https://en.wiktionary.org/w/api.php?action=query&prop=revisions&rvslots=*&rvprop=content&format=json&titles=Module:es-conj/data/paradigms'
+
+        eprint("dl", url)
+        res = requests.get( url )
+        json_data = res.json()
+        data = list(json_data['query']['pages'].values())[0]['revisions'][0]['slots']['main']['*']
+
+        update_data("paradigm_list", data)
+
+
+    global _paradigm_list
+    pydata = lua2python(data, "global _paradigm_list\n_paradigm_list")
+    exec(pydata)
+    return _paradigm_list
+
+def scrape_verb(verb):
+    url = 'https://en.wiktionary.org/w/api.php?action=query&prop=revisions&rvslots=*&rvprop=content|ids&format=json&titles=' + verb
+    niceurl = 'https://en.wiktionary.org/wiki/' + verb
+
+    eprint("dl", url)
+    res = requests.get( url )
+    json_data = res.json()
+    revision = list(json_data['query']['pages'].values())[0]['revisions'][0]['revid']
+    wikitext = list(json_data['query']['pages'].values())[0]['revisions'][0]['slots']['main']['*']
+    return { "wikitext": wikitext, "revision": revision, "url": niceurl }
+
+def scrape_paradigm(ending, paradigm):
+    title = 'Module:es-conj/data/' + ending
+    if paradigm != "":
+        title += "/" + paradigm
+    url = 'https://en.wiktionary.org/w/api.php?action=query&prop=revisions&rvslots=*&rvprop=content|ids&format=json&titles=' + title
+    niceurl = 'https://en.wiktionary.org/wiki/' + title
+
+    eprint("dl", url)
+    res = requests.get( url )
+    json_data = res.json()
+    revision = list(json_data['query']['pages'].values())[0]['revisions'][0]['revid']
+    wikitext = list(json_data['query']['pages'].values())[0]['revisions'][0]['slots']['main']['*']
+    return { "wikitext": wikitext, "revision": revision, "url": niceurl }
+
+def load_verbs():
+    return load_data("verbs", {})
+
+def save_verbs(data):
+    update_data("verbs", data)
+
+def load_verb(verb):
+    data = load_verbs()
+    if not data:
+        data = {}
+    if verb not in data:
+        data[verb] = scrape_verb(verb)
+
+    save_verbs(data)
+    return data[verb]
+
+
+def load_paradigms():
+    return load_data("paradigms", {})
+
+def save_paradigms(data):
+    update_data("paradigms", data)
+
+def load_paradigm(ending, paradigm):
+    paradigms = load_paradigms()
+    if not paradigms:
+        paradigms = {}
+    if ending not in paradigms:
+        paradigms[ending] = {}
+
+    if paradigm not in paradigms[ending]:
+        paradigms[ending][paradigm] = scrape_paradigm(ending, paradigm)
+
+    save_paradigms(paradigms)
+
+    return paradigms[ending][paradigm]
+
+
+def load_category_members(ending, pattern):
+    categories = load_data("categories", {})
+
+    if ending not in categories:
+        categories[ending] = {}
+
+    if pattern not in categories[ending]:
+        url = make_category_link(ending, pattern)
+        eprint("dl ",url)
+        res = requests.get( url )
+        json_data = res.json()
+        if not json_data or 'query' not in json_data or 'categorymembers' not in json_data['query']:
+            eprint("No json data for ", ending, p)
+        else:
+            categories[ending][pattern] = [ verb for verb in [ item['title'] for item in json_data['query']['categorymembers'] ]]
+
+    update_data("categories", categories)
+    return categories[ending][pattern]
+
 
 def make_category_link(ending, paradigm):
-    return "https://en.wiktionary.org/w/api.php?action=query&format=json&list=categorymembers&cmtitle=" \
+    return "https://en.wiktionary.org/w/api.php?action=query&format=json&list=categorymembers&cmlimit=500&cmtitle=" \
            + "Category:Spanish_verbs_ending_in_" + ending + "_(conjugation_" + paradigm.replace(" ", "_") + ")"
 
-def make_template_link(template):
-    template = template[:-2]+"|json=1}}"
-    return "https://en.wiktionary.org/w/api.php?action=expandtemplates&prop=wikitext&format=json&text=" \
-           + template
 
-def make_page_link(verb):
-    return "https://en.wiktionary.org/w/api.php?action=query&prop=revisions&rvslots=*&rvprop=content&format=json&" \
-            + "titles=" + verb
+def dump_patterns(filename):
 
-def scrape_irregular_verb_list():
-    for ending,pgroup in paradigms.items():
-        for p in pgroup:
-            url = make_category_link(ending, p)
-            res = requests.get( url )
-            json_data = res.json()
-            if not json_data or 'query' not in json_data or 'categorymembers' not in json_data['query']:
-                print("No json data for ", ending, p)
+    paradigm_list = load_paradigm_list()
+    paradigms = load_paradigms()
+
+    dump = "paradigms = {}\n"
+    for ending,pgroup in paradigm_list.items():
+        for pattern in pgroup:
+
+            # Scrape the rules for the pattern
+            if ending not in paradigms:
+                luadata = load_paradigm(ending, "")
+                dump += "paradigms['%s'] = {}\n"%(ending)
+                dump += "# Data from: %s (revision: %s)\n"%(luadata["url"],luadata["revision"])
+                dump += lua2python(luadata["wikitext"], "paradigms['%s']['']"%(ending)) +"\n\n"
+                paradigms[ending] = { "": luadata }
+
+            luadata = load_paradigm(ending,pattern)
+            dump += "# Data from: %s (revision: %s)\n"%(luadata["url"],luadata["revision"])
+            dump += lua2python(luadata["wikitext"], "paradigms['%s']['%s']"%(ending,pattern)) +"\n\n"
+            paradigms[ending][pattern] = luadata
+
+    with open(filename, "w") as outfile:
+        outfile.write("# This file is generated automatically, do not hand edit\n#\n")
+        outfile.write(dump)
+
+
+def dump_verbs(filename):
+
+    paradigm_list = load_paradigm_list()
+    paradigms = load_paradigms()
+    verbs = load_verbs()
+
+    dump = "{\n"
+    for ending,pgroup in paradigm_list.items():
+        for pattern in pgroup:
+
+            # Get all the verbs that use the pattern
+            # skip the common irregulars that follow easy rules
+            if ending == "-ar" and pattern in [ "-zar", "-car", "-gar" ]:
                 continue
-            for verb in [ item['title'] for item in json_data['query']['categorymembers'] ]:
-                if verb not in irregular_verbs:
-                    irregular_verbs[verb] = { ending: p }
 
+            category_members = load_category_members(ending, pattern)
+            for verb in category_members:
+                # Skip non-verbs that are included in the category list
+                if verb.startswith("-"):
+                    continue
+                if verb not in verbs:
+                    verbs[verb] = load_verb(verb)
 
-def load_irregular_verb_list():
-    data = load_json()
-    if not data:
-        print("file no existy")
-        exit()
-        data = scrape_irregular_verb_list()
-        save_json(data)
-    return data
-
-
-def scrape_verb_conjugation(verb, template):
-    print("Scraping conjugation for ", verb)
-    url = make_template_link(template)
-    res = requests.get( url )
-    json_data = res.json()
-    if not json_data or 'expandtemplates' not in json_data or 'wikitext' not in json_data['expandtemplates']:
-        print("No json data for ", verb)
-        return
-
-    return json.loads(json_data['expandtemplates']['wikitext'])
-
-def scrape_verb_template(verb):
-    print("Scraping template for ", verb)
-    url = make_page_link(verb)
-    res = requests.get( url )
-    json_data = res.json()
-    if not json_data or 'query' not in json_data or 'pages' not in json_data['query']:
-        print("No json data for ", verb)
-        return
-
-    for pageid,page in json_data['query']['pages'].items():
-        verbname = page['title']
-        wikitext = page['revisions'][0]['slots']['main']['*']
-        res = re.search(r"{{es-conj[^}]+}}", wikitext, re.MULTILINE)
-        return res.group(0)
-
-irregular_verbs = load_irregular_verb_list()
-
-# add the base paradigms into the list (poner, tener, andar, etc)
-for ending,pgroup in paradigms.items():
-    for paradigm in pgroup:
-        if paradigm.endswith("r") and " " not in paradigm and "-" not in paradigm:
-            if paradigm not in irregular_verbs:
-                irregular_verbs[paradigm] = { ending: paradigm }
-
-for verb,verbdata in irregular_verbs.items():
-    if verb.startswith("-"):
-        continue
-    if verb.endswith("se"):
-        # Skip reflexives that are duplicates of non-reflexives
-        if verb[:-2] in irregular_verbs:
+    for verb in verbs:
+        # Skip reflixives if the non-reflexive is on the list
+        if verb.endswith("se") and verb[:-2] in verbs:
             continue
+        data = get_patterns(verbs[verb]['wikitext'])
+        dump += "'%s': %s,\n"%(verb,data)
 
-    if 'template' not in verbdata:
-        template = scrape_verb_template(verb)
-        if not template:
-            print("No template data for", verb)
-        else:
-            verbdata['template'] = template
+    dump += "}"
 
-    if 'conjugation' not in verbdata:
-        conjugation = scrape_verb_conjugation(verb, verbdata['template'])
-        if not conjugation:
-            print("No conjugation data for", verb)
-        else:
-            verbdata['conjugation'] = conjugation
-
-save_json(irregular_verbs)
+    with open(filename, "w") as outfile:
+        outfile.write(dump)
 
 
-reverse_irregular = {}
-for verb,verbdata in irregular_verbs.items():
-    if verb.startswith("-"):
-        continue
-    if verb.endswith("se"):
-        if verb[:-2] in irregular_verbs:
-            continue
+def init():
 
-    for conjugated in verbdata['conjugation'].keys():
-        if conjugated not in reverse_irregular:
-            reverse_irregular[conjugated] = verb
-        else:
-            reverse_irregular[conjugated] += "|"+verb
+    if args.patterns:
+        dump_patterns(args.patterns)
 
-with open("reverse_irregular.json", "w") as outfile:
-    json.dump(reverse_irregular, outfile, ensure_ascii=False)
+    if args.verbs:
+        dump_verbs(args.verbs)
+
+init()

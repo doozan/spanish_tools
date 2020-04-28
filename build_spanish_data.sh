@@ -25,13 +25,11 @@ curl https://github.com/phrozensmoke/LEGACY-Open_Source-Pre2006/raw/master/pytho
   | python3 build_synonyms.py \
   > spanish_data/synonyms.txt
 
-# download the list of irregular verbs
-curl https://github.com/phrozensmoke/LEGACY-Open_Source-Pre2006/raw/master/pythonol/datafiles/irregular_verbs.txt \
-  | iconv -f ISO-8859-1 -t UTF-8 \
-  > spanish_data/irregular_verbs.txt
-
 # Download and tag the sentences
 curl wget http://www.manythings.org/anki/spa-eng.zip \
   | zcat \
   | python3 build_sentences.py \
   > spanish_data/spa-tagged.txt
+
+# Generate the irregular verb list and table
+python3 build_irregular_verbs.py -p spanish_words/verbs.py -v spanish_data/irregular_verbs.json
