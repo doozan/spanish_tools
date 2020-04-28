@@ -1,4 +1,3 @@
-#import urllib.reest
 import requests
 import json
 import re
@@ -44,8 +43,8 @@ def has_changed(tag, data):
     global _cache
 
     hashvalue = hash(str(data))
-    if tag not in _cache["hash"] or _cache['hash'][tag] != hashvalue:
-        _cache['hash']['tag'] = hashvalue
+    if tag not in _cache['hash'] or _cache['hash'][tag] != hashvalue:
+        _cache['hash'][tag] = hashvalue
         return True
     return False
 
@@ -87,7 +86,7 @@ def lua2python(data, varname):
     maxidx = len(data)-1
 
 
-    # find all pairs of braces {} and flag those missing any = assignments as lists
+    # find all pairs of braces {} and flag those missing any = assignments as lists (unless they're empty)
     chunks = []
     while idx<maxidx:
         if data[idx] == "{":
@@ -104,6 +103,9 @@ def lua2python(data, varname):
     replacements = {}
     for item in chunks:
         if item['is_list']:
+            # Empty sets of braces aren't considered lists
+            if (data[item['start']+1:item['end']].strip()) == "":
+                continue
             replacements[item['start']] = "["
             replacements[item['end']] = "]"
 
@@ -344,16 +346,18 @@ def dump_patterns(filename):
 
     dump = "paradigms = {}\n"
     for ending,pgroup in paradigm_list.items():
+
+        # Scrape the rules for the ending
+        luadata = load_paradigm(ending, "")
+        if ending not in paradigms:
+            paradigms[ending] = { "": luadata }
+
+        dump += "paradigms['%s'] = {}\n"%(ending)
+        dump += "# Data from: %s (revision: %s)\n"%(luadata["url"],luadata["revision"])
+        dump += lua2python(luadata["wikitext"], "paradigms['%s']['']"%(ending)) +"\n\n"
+
+        # Scrape the rules for the pattern
         for pattern in pgroup:
-
-            # Scrape the rules for the pattern
-            if ending not in paradigms:
-                luadata = load_paradigm(ending, "")
-                dump += "paradigms['%s'] = {}\n"%(ending)
-                dump += "# Data from: %s (revision: %s)\n"%(luadata["url"],luadata["revision"])
-                dump += lua2python(luadata["wikitext"], "paradigms['%s']['']"%(ending)) +"\n\n"
-                paradigms[ending] = { "": luadata }
-
             luadata = load_paradigm(ending,pattern)
             dump += "# Data from: %s (revision: %s)\n"%(luadata["url"],luadata["revision"])
             dump += lua2python(luadata["wikitext"], "paradigms['%s']['%s']"%(ending,pattern)) +"\n\n"
@@ -387,14 +391,20 @@ def dump_verbs(filename):
                 if verb not in verbs:
                     verbs[verb] = load_verb(verb)
 
+    first = True
     for verb in verbs:
         # Skip reflixives if the non-reflexive is on the list
         if verb.endswith("se") and verb[:-2] in verbs:
             continue
         data = get_patterns(verbs[verb]['wikitext'])
-        dump += "'%s': %s,\n"%(verb,data)
+        if first:
+            dump += '"%s": %s'%(verb,json.dumps(data))
+            first = False
+        else:
+            dump += ',\n"%s": %s'%(verb,json.dumps(data))
 
-    dump += "}"
+
+    dump += "\n}"
 
     with open(filename, "w") as outfile:
         outfile.write(dump)
