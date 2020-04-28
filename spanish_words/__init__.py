@@ -78,12 +78,17 @@ def strip_eng_verb(eng):
         return eng[3:]
     return eng
 
-def should_ignore(item):
-    if {"archaic", "dated", "historical", "obsolete", "rare"} & { tag.lower() for tag in item['tags'] }:
+def should_ignore_tags(tags):
+    if {"archaic", "dated", "historical", "obsolete", "rare"} & { tag.lower() for tag in tags }:
         return True
 
     return False
 
+def should_ignore_def(definition):
+    if definition.startswith("obsolete") and (
+         definition.startswith("obsolete spelling") or
+         definition.startswith("obsolete form of")):
+        return True
 
 el_f_nouns = [ 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia', 'area',
         'arma', 'arpa', 'asma', 'aula', 'habla', 'habla', 'hacha', 'hambre', 'águila']
@@ -119,7 +124,10 @@ def lines_to_usage(items):
     usage = {}
 
     for item in items:
-        if should_ignore(item['esp']):
+        if should_ignore_tags(item['esp']['tags']):
+            continue
+
+        if should_ignore_def(item['eng']):
             continue
 
         pos = item['esp']['pos']
