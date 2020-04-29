@@ -65,20 +65,20 @@ def load_data(tag, default=None):
 
 
 
-#def load_json(filename):
-#    if os.path.isfile(filename):
-#        with open(filename) as infile:
-#            data =  json.load(infile)
-#            is_changed(infile, data)
-#            return data
-
-#def save_json(filename, data):
-#    if not is_changed(filename, data):
-#        return
-#    with open(filename, "w") as outfile:
-#        json.dump(data, outfile, ensure_ascii=False)
+# add a , after the last closing " } or ]
+def add_comma_after_closer(line):
+    pattern = r"""(?x)     #
+         ([}\]"])           # the last } or ]
+         ([^}\]"]*)$        # the rest of the line
+    """
+    return re.sub(pattern, r"\1,\2", line)
 
 
+# Don't let the name deceive you, this function is fragile and only sufficient for converting
+# the lua data structures used by the es-conj template on wikipedia
+# This assumes the lua source consists of multiple assignments to a data structure named "data"
+# In the resulting python code, all the data assignments are morphed into the declaration of the hash
+# variable passed as "varname"
 def lua2python(data, varname):
 
     dicts = []
@@ -124,12 +124,7 @@ def lua2python(data, varname):
         strpos = idx+1
     replaced += data[strpos:len(data)]
 
-
     data = replaced
-    # quote unquoted bare items being assigned values
-    # this blows up on items within quotes so skip lines with a single " before the match
-#    pattern = r"([a-zA-Z0-9\-_]+)\s*:"
-#    data = re.sub(pattern, r'"\1":', data)
 
     # strip [] from items being assigned values
     pattern = r"""(?x)     #
@@ -142,7 +137,11 @@ def lua2python(data, varname):
 
 
 
-    # Strip anything that isn't part of data assignment
+    # Strip anything that isn't part of data, wrap the whole thing in a variable assignment,
+    # and add commas after data items
+    # "data" is defined as any line containing an = sign
+    # and, if there's a brace on the opening line, all lines until a matching closing brace
+    # plus the entirety of the line containing the closing brace
     newdata = varname + " = {\n"
     in_data = False
     depth = 0
@@ -150,37 +149,47 @@ def lua2python(data, varname):
         line = line.replace("\t", "    ")
 
         if in_data:
+
             depth += line.count("{") + line.count("[") - line.count("}") - line.count("]")
+
+            # This is the end a data set, append a comma
             if depth == 0:
                 in_data = False
-                # add a , after the last closing }
-                line = re.sub("}([^}]*)$", r"},\1", line)
-                # add a , after the last closing ]
-                line = re.sub("\]([^\]]*)$", r"],\1", line)
+                line = add_comma_after_closer(line)
+
             if depth < 0:
                 eprint(line)
                 fail("Too many closing brackets")
 
-            elif line.strip() == "":
-                newdata += "\n"
             else:
+                if line.strip() == "": line = ""  # preserve empty lines, but strip trailing spaces
                 newdata += line+"\n"
+
         elif "=" in line:
 
             # ignore variable declarations
             if "local " in line:
                 continue
 
-            line = re.sub(r"""data\[([^\]]+)\]\s+=""", r"\1:", line)
+            #line = re.sub(r"""data\[([^\]]+)\]\s+=""", r"\1:", line)
+            # old: data[blah] = { mydata }
+            # new: blah: { mydata }
+
+            pattern = r"""(?x)
+                data\[            # assume all variables are named data[
+                ([^\]]+)          # time
+                \]\s+=            # closing bracket ] followed by =
+            """
+            line = re.sub(pattern, r"\1:", line)
+
             depth = line.count("{") + line.count("[") - line.count("}") - line.count("]")
-            if depth:
+            if depth:  # If there are more opening than closing braces, assume we're in a multi-line assignment
                 in_data = True
                 newdata += line+"\n"
             else:
-
-
+                #newdata += line+",\n"
                 # add a comma to the end of single line assignment items
-                newdata += line+",\n"
+                newdata += add_comma_after_closer(line) + "\n"
 
         #  permit empty lines, but ignore everything else
         elif line.strip() == "":
