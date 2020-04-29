@@ -39,7 +39,7 @@ compare () {
     MISSING=$(grep "^-" $comparefile | wc -l)
     CHANGED=$(grep "^~" $comparefile | wc -l)
     ADDED=$(grep "^+" $comparefile | wc -l)
-    CHANGES=$((MISSING + CHANGED + NEW))
+    CHANGES=$((MISSING + CHANGED + ADDED))
 
     echo "$CHANGES changes from $1 ($CHANGED changed, $MISSING removed, $ADDED new)"
     head -5 $comparefile

@@ -7,7 +7,7 @@ class SpanishLemmas:
         self.verbs = verbs.SpanishVerbs(spanish_words, irregular_verbs)
         self.nouns = nouns.SpanishNouns(spanish_words)
 
-    def get_lemmas(self, word, pos):
+    def get_lemmas(self, word, pos, debug=False):
         word = word.lower().strip()
         pos = pos.lower()
 
@@ -19,13 +19,13 @@ class SpanishLemmas:
 
         elif pos == "verb":
 
-#            print(self.verbs.reverse_conjugate(word))
+            if debug: print(self.verbs.reverse_conjugate(word))
             return [ v['verb'] for v in self.verbs.reverse_conjugate(word) ]
 
         return [ word ]
 
-    def get_lemma(self, word, pos):
-        lemmas = self.get_lemmas(word,pos)
+    def get_lemma(self, word, pos, debug=False):
+        lemmas = self.get_lemmas(word,pos,debug)
 
         if not len(lemmas):
             return word
@@ -37,4 +37,5 @@ class SpanishLemmas:
         lemmas = list(dict.fromkeys(lemmas)) # Requires cpython 3.6 or python 3.7
         return "|".join(lemmas)
 
-
+    def conjugate(self, verb, forms=None, debug=False):
+        return self.verbs.conjugate(verb, forms, debug)

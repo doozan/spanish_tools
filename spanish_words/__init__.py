@@ -422,9 +422,11 @@ class SpanishWords:
         analysis = self.do_analysis(word, filtered)
         return analysis
 
-    def get_lemma(self, word, pos):
-        return self.lemmas.get_lemma(word, pos)
+    def get_lemma(self, word, pos, debug=False):
+        return self.lemmas.get_lemma(word, pos, debug)
 
+    def conjugate(self, verb, form=None, debug=False):
+        return self.lemmas.conjugate(verb, form, debug)
 
     def is_feminized_noun(self, word, masculine):
         if not word.endswith("a"):

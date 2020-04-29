@@ -2,6 +2,7 @@ import treetaggerwrapper
 import spanish_words
 
 tagger = treetaggerwrapper.TreeTagger(TAGLANG='es')#,TAGDIR="~/Downloads/treetagger/")
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.json")
 
 tag2pos = {
 'ACRNM': "", # acronym (ISO, CEI)
@@ -94,14 +95,14 @@ def tag_to_pos(tag):
     pos = tag2pos[usage]
     if pos:
         pos = pos.lower()
-        lemma = spanish_words.get_lemma(word, pos)
+        lemma = words.get_lemma(word, pos)
         if oldlemma != lemma:
             mismatch[oldlemma] = lemma
         if pos != "propnoun":
             word = word.lower()
             lemma = lemma.lower()
 
-        return pos+":"+lemma+"|@"+word
+        return pos+":"+lemma+"|@"+word+"|#"+usage
 
 
 def get_tags(spanish):
@@ -120,14 +121,14 @@ with open("spa.txt") as infile:
         if "__BADTAG__" in tags:
             continue
 
-        words = spanish.count(" ")+1
+        wordcount = spanish.count(" ")+1
 
         # ignore simple sentences
         if len(tags) < 2:
             continue
 
         # ignore sentences with less than 6 or more than 15 spanish words
-        if words < 5 or words > 15:
+        if wordcount < 5 or wordcount > 15:
             continue
 
         # ignore duplicates
