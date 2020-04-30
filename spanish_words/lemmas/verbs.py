@@ -104,7 +104,7 @@ class SpanishVerbs:
 
 
     # Returns a list of dicts containing all possible matches [ { 'verb': "infinitive", 'form': X } ]
-    def reverse_conjugate(self, word):
+    def reverse_conjugate(self, word, check_pronouns=True):
         word = word.lower().strip()
 
         valid_verbs =[]
@@ -145,9 +145,10 @@ class SpanishVerbs:
 
         # No results, try stripping any direct/indirect objects (dime => di)
         # pronouns can only be atteched to infinitive (1), gerund (2) and affirmative commands (63-68)
-        endings = [ending for ending in pronouns if word.endswith(ending)]
-        for ending in endings:
-            valid_verbs += [ v for v in self.reverse_conjugate( word[:len(ending)*-1] ) if v['form'] in [ 1, 2, 63, 64, 65, 66, 67, 68 ] ]
+        if check_pronouns:
+            endings = [ending for ending in pronouns if word.endswith(ending)]
+            for ending in endings:
+                valid_verbs += [ v for v in self.reverse_conjugate( word[:len(ending)*-1], check_pronouns =  False ) if v['form'] in [ 1, 2, 63, 64, 65, 66, 67, 68 ] ]
 
         return valid_verbs
 
@@ -173,8 +174,14 @@ class SpanishVerbs:
         res = {}
         if verb in self.irregular_verbs or \
             (verb.endswith("se") and verb[:-2] in irregular_verbs):
-            for item in self.irregular_verbs[verb]:
-                res = self.do_conjugate( item['stems'], ending, item['pattern'], debug=debug )
+            for paradigm in self.irregular_verbs[verb]:
+                forms = self.do_conjugate( paradigm['stems'], ending, paradigm['pattern'], debug=debug )
+                for k,v in forms.items():
+                    if k not in res:
+                        res[k] = v
+                    else:
+                        res[k] += [i for i in v if i not in res[k]]
+
 
         else:
             stem = verb[:-4] if verb.endswith("se") else verb[:-2]
