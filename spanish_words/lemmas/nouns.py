@@ -77,6 +77,7 @@ class SpanishNouns:
         elif len(word) > 4 and word.endswith("ores"):
             lemma = word[:-4] + "or"
 
+        # lapices, narices
         elif len(word) > 3 and word.endswith("ces"):
             lemma = word[:-3] + "z"
 

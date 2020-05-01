@@ -60,23 +60,23 @@ tag2pos = {
 'VCLIger': "verb", #  clitic gerund verb
 'VCLIinf': "verb", #  clitic infinitive verb
 'VCLIfin': "verb", #  clitic finite verb
-'VEadj': "verb", # Verb estar. Past participle
+'VEadj': "adj", # Verb estar. Past participle
 'VEfin': "verb", # Verb estar. Finite
 'VEger': "verb", # Verb estar. Gerund
 'VEinf': "verb", # Verb estar. Infinitive
-'VHadj': "verb", # Verb haber. Past participle
+'VHadj': "adj", # Verb haber. Past participle
 'VHfin': "verb", # Verb haber. Finite
 'VHger': "verb", # Verb haber. Gerund
 'VHinf': "verb", # Verb haber. Infinitive
-'VLadj': "verb", # Lexical verb. Past participle
+'VLadj': "adj", # Lexical verb. Past participle
 'VLfin': "verb", # Lexical verb. Finite
 'VLger': "verb", # Lexical verb. Gerund
 'VLinf': "verb", # Lexical verb. Infinitive
-'VMadj': "verb", # Modal verb. Past participle
+'VMadj': "adj", # Modal verb. Past participle
 'VMfin': "verb", # Modal verb. Finite
 'VMger': "verb", # Modal verb. Gerund
 'VMinf': "verb", # Modal verb. Infinitive
-'VSadj': "verb", # Verb ser. Past participle
+'VSadj': "adj", # Verb ser. Past participle
 'VSfin': "verb", # Verb ser. Finite
 'VSger': "verb", # Verb ser. Gerund
 'VSinf': "verb", # Verb ser. Infinitive

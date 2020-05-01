@@ -14,14 +14,15 @@ def pretty_print(word, item):
         print("==========================")
         print("%s (%s)"%(word, pos))
 
-        for tag in item[pos]:
-            defs = spanish_words.get_best_defs(item[pos][tag],40)
+        for note,defs in item[pos].items():
+#            defs = spanish_words.get_best_defs(item[pos][note],40)
+            defs = spanish_words.split_defs(defs)
             usage = spanish_words.defs_to_string(defs, pos)
 
-            if tag == "x":
+            if note == "":
                 print(usage)
             else:
-                print("%s: %s" % (tag, usage))
+                print("%s: %s" % (note, usage))
     print("==========================")
 
 
@@ -31,4 +32,5 @@ if (args.syn):
     print("See also: %s" % "$ ".join(words.get_synonyms(args.word)))
 else:
     result = words.lookup(args.word, args.pos)
+    print(result)
     pretty_print(args.word, result)
