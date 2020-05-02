@@ -19,8 +19,16 @@ class SpanishLemmas:
 
         elif pos == "verb":
 
-            if debug: print(self.verbs.reverse_conjugate(word))
-            return [ v['verb'] for v in self.verbs.reverse_conjugate(word) ]
+            res = []
+            res = self.verbs.reverse_conjugate(word)
+#            if debug: print(res)
+#            if select_best:
+            res = self.verbs.select_best(res, debug)
+
+            res = [ v['verb'] for v in res ]
+            if debug: print(res)
+            return res
+
 
         return [ word ]
 

@@ -102,6 +102,81 @@ class SpanishVerbs:
                     res[ending].append(conj)
         return res
 
+    def select_best(self, forms, debug=False):
+
+        if not forms:
+            return []
+
+        if len(forms)==1:
+            return forms
+
+        best = []
+        best_score = -2
+        dbg = []
+        for item in forms:
+            score = self.get_score(item)
+            if score == best_score:
+                best.append(item)
+            elif score > best_score:
+                best = [ item ]
+                best_score = score
+            if debug: dbg.append({"score": score, **item})
+
+        if debug: print(dbg)
+
+        return best
+
+    # convert a verb/form to a score of likely usage
+    # scoring cumulative:
+    # 4 = form is irregular
+    #
+    # 50 = infinitive
+    # 8 = gerund
+    # 8 = past participle
+    # 2 = imperative
+    # 2 = indicative
+    #
+    # 1 = not a region specific use (vos/vosotros,etc)
+    # 1 = first person
+    def get_score(self, item):
+        if not item or item['form'] not in inflections:
+            return -1
+
+        score = 0
+        verb = item['verb']
+        if verb in self.irregular_verbs:
+            form = item['form']
+
+            # determine if usage is irregular by checking against what the regular use would be
+            ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
+            stem = verb[:-4] if verb.endswith("se") else verb[:-2]
+            regular_forms = self.do_conjugate( [stem], ending, '' )
+
+            ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
+            for paradigm in self.irregular_verbs[item['verb']]:
+                forms = self.do_conjugate( paradigm['stems'], ending, paradigm['pattern'] )
+                if form in forms and forms[form] != regular_forms[form]:
+                    score += 2
+                    break
+
+        i = inflections[item['form']]
+        if any([ x for x in i if x['mood'] in ['infinitive'] ]):
+            score += 50
+        elif any([ x for x in i if x['mood'] in ['gerund', 'past participle'] ]):
+            score += 8
+        elif any([ x for x in i if x['mood'] in ['imperative'] ]):
+            score += 4
+        elif any([ x for x in i if x['mood'] in ['indicative'] ]):
+            score += 1
+
+        if any([ x for x in i if 'pers' in x and x['pers'] == 1 ]):
+            score += 1
+
+        if any([ x for x in i if 'region' not in x ]):
+            score += 1
+
+        return score
+
 
     # Returns a list of dicts containing all possible matches [ { 'verb': "infinitive", 'form': X } ]
     def reverse_conjugate(self, word, check_pronouns=True):
@@ -109,8 +184,8 @@ class SpanishVerbs:
 
         valid_verbs =[]
 
-        # Check if it's already an infinitive
-        if any(word.endswith(ending) for ending in all_verb_endings):
+        # Check if it's already an infinitive listed in the dictionary
+        if any(word.endswith(ending) for ending in all_verb_endings) and self.spanish_words.is_verb(word):
             return [ { 'verb': word, 'form': 1 } ]
 
         # Check if it's an irregular verb
