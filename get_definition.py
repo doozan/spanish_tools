@@ -10,6 +10,8 @@ args = parser.parse_args()
 
 
 def pretty_print(word, item):
+    if not item:
+        return
     for pos in item:
         print("==========================")
         print("%s (%s)"%(word, pos))
