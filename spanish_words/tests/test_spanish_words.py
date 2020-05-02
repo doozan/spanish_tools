@@ -57,6 +57,14 @@ def test_get_lemma_noun():
     assert words.get_lemma("cubrebocas", "noun") == "cubrebocas"
     assert words.get_lemma("gas", "noun") == "gas"
 
+    assert words.get_lemma("mentirosas", "noun") == "mentiroso"
+
+    assert words.get_lemma("espráis", "noun") == "espray"
+
+    assert words.get_lemma("bordes", "noun") == "borde"
+    assert words.get_lemma("tardes", "noun") == "tarde"
+
+
 def test_get_lemma_adj():
     assert words.get_lemma("notaword", "adj") == "notaword"
 
@@ -90,6 +98,10 @@ def test_get_all_pos():
 def test_is_verb():
     assert words.is_verb("tener") == True
     assert words.is_verb("tenor") == False
+
+def test_is_noun():
+    assert words.is_noun("casa") == True
+    assert words.is_noun("tener") == False
 
 def test_do_analysis():
 
@@ -347,3 +359,73 @@ def test_filter_defs():
 
     # deleting all entries should clear out the list
     assert spanish_words.filter_defs(defs, 'adj', 'usage') == {}
+
+
+def test_get_score():
+    # prefer the infinitive
+    assert words.lemmas.verbs.get_score({'verb': 'ver', 'form': 1}) > words.lemmas.verbs.get_score({'verb': 'ver', 'form': 10})
+
+    # ve, both imperative but ir wins for being irregular
+    assert words.lemmas.verbs.get_score({'verb': 'ir', 'form': 63}) > words.lemmas.verbs.get_score({'verb': 'ver', 'form': 63})
+
+    # comido, prefer past participle over irregular indicative
+    assert words.lemmas.verbs.get_score({'verb': 'comer', 'form': 3}) > words.lemmas.verbs.get_score({'verb': 'comedir', 'form': 7})
+
+
+def test_reverse_conjugate():
+    assert words.lemmas.verbs.reverse_conjugate("podría") == [{'verb': 'poder', 'form': 32}, {'verb': 'poder', 'form': 34}, {'verb': 'podrir', 'form': 14}, {'verb': 'podrir', 'form': 16}]
+    assert words.lemmas.verbs.reverse_conjugate("comido") == [{'verb': 'comedir', 'form': 7}, {'verb': 'comer', 'form': 3}]
+    assert words.lemmas.verbs.reverse_conjugate("volaste") == [{'verb': 'volar', 'form': 21}]
+
+
+def test_select_best():
+    v = words.lemmas.verbs.reverse_conjugate("podría")
+    res = words.lemmas.verbs.select_best(v)
+    assert len(res) == 1 and res[0]['verb'] == 'poder'
+
+    v = []
+    assert words.lemmas.verbs.select_best(v) == []
+
+    v = [{'verb': 'volar', 'form': 21}]
+    assert words.lemmas.verbs.select_best(v) == [{'verb': 'volar', 'form': 21}]
+
+    # comido
+    #v = [{'verb': 'comedir', 'form': 7}, {'verb': 'comer', 'form': 3}]
+    v = words.lemmas.verbs.reverse_conjugate("comido")
+    res = words.lemmas.verbs.select_best(v)
+    assert len(res) == 1 and res[0]['verb'] == 'comer'
+
+    #v = [{'verb': 'ir', 'form': 63}, {'verb': 'ver', 'form': 10}, {'verb': 'ver', 'form': 63}]
+    v = words.lemmas.verbs.reverse_conjugate("ve")
+    res = words.lemmas.verbs.select_best(v)
+    assert len(res) == 1 and res[0]['verb'] == 'ir'
+
+    v = words.lemmas.verbs.reverse_conjugate("sé")
+    res = words.lemmas.verbs.select_best(v)
+    assert len(res) == 1 and res[0]['verb'] == 'ser'
+
+    v = words.lemmas.verbs.reverse_conjugate("haciendo")
+    res = words.lemmas.verbs.select_best(v)
+    assert len(res) == 1 and res[0]['verb'] == 'hacer'
+
+    v = words.lemmas.verbs.reverse_conjugate("vete")
+    res = words.lemmas.verbs.select_best(v)
+    assert len(res) == 1 and res[0]['verb'] == 'ir'
+
+    v = words.lemmas.verbs.reverse_conjugate("vengan")
+    res = words.lemmas.verbs.select_best(v)
+    assert len(res) == 1 and res[0]['verb'] == 'venir'
+
+    v = words.lemmas.verbs.reverse_conjugate("volaste")
+    res = words.lemmas.verbs.select_best(v)
+    assert len(res) == 1 and res[0]['verb'] == 'volar'
+
+    v = words.lemmas.verbs.reverse_conjugate("temes")
+    res = words.lemmas.verbs.select_best(v)
+    assert len(res) == 1 and res[0]['verb'] == 'temar'
+
+#    v = words.lemmas.verbs.reverse_conjugate("viste")
+#    res = words.lemmas.verbs.select_best(v)
+#    assert len(res) == 1 and res[0]['verb'] == 'ver'
+
+
