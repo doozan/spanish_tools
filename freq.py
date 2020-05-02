@@ -6,7 +6,7 @@ import sys
 import argparse
 import spanish_words
 import spanish_sentences
-import get_best_pos
+from get_best_pos import get_best_pos
 
 parser = argparse.ArgumentParser(description='Lemmatize frequency list')
 parser.add_argument('file', help="Frequency list")
@@ -24,6 +24,13 @@ def add_count(word, pos, count, origword):
 
     freq[tag]['count'] += int(count)
     freq[tag]['usage'].append(count+":"+origword)
+
+def get_count(word,pos):
+    tag = pos+":"+word
+    if tag not in freq:
+        return -1
+    return freq[tag]['count']
+
 
 flags_defs = {
     'UNKNOWN': "Word does not appear in lemma database or dictionary",
@@ -142,19 +149,49 @@ def build_wordlist():
         if "adj" in popular_pos and "noun" in popular_pos:
             wordlist["noun:"+word]['flags'].append(flag("DUPLICATE-ADJ-NOUN"))
 
+lines = {}
+
+def get_best_lemma(strlemma, pos):
+    if "|" not in strlemma:
+        return strlemma
+
+    best = "_NOLEMMA"
+    best_count = -1
+
+    lemmas = strlemma.split("|")
+    for lemma in lemmas:
+        if lemma in lines:
+            if get_count(lemma, pos) > best_count:
+                best = lemma
+
+    return best
 
 
-with open(args.file) as infile, open(args.file+".lemmas.csv",'w') as outfile:
-#with open(args.file) as infile, open(args.outfile,'w') as outfile:
-    csvwriter = csv.writer(outfile)
-    csvwriter.writerow(["count", "word", "lemma", "pos"])
+# Read all the lines and do an initial lookup of lemmas
+with open(args.file) as infile:
     for line in infile:
         word, count = line.strip().split(' ')
 
-        pos = get_best_pos.get_best_pos(word, words, sentences)
+        pos = get_best_pos(word, words, sentences)
         lemma = words.get_lemma(word, pos)
-        add_count(lemma, pos, count, word)
+        lines[word] = {'pos':pos, 'count':count, 'lemma':lemma}
+        if "|" not in lemma:
+            add_count(lemma, pos, count, word)
 
+
+# Run throuh the lines again and use the earlier counts to
+# pick best lemmas from words with multiple lemmas
+with open(args.file+".lemmas.csv",'w') as outfile:
+    csvwriter = csv.writer(outfile)
+    csvwriter.writerow(["count", "word", "lemma", "pos"])
+
+    for word,item in lines.items():
+        lemma = item['lemma']
+        pos = item['pos']
+        count = item['count']
+        if "|" in lemma:
+            lemma = get_best_lemma(lemma,pos)
+            add_count(lemma, pos, count, word)
         csvwriter.writerow([count,word,lemma,pos])
 
 #exit()
