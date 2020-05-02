@@ -403,6 +403,11 @@ class SpanishWords:
             return False
         return any( pos_is_verb(k) for k in self.allwords[word].keys())
 
+    def is_noun(self, word):
+        if word not in self.allwords:
+            return False
+        return any( pos_is_noun(k) for k in self.allwords[word].keys())
+
     def do_analysis(self, word, alldefs):
 
         if len( {"m","f","mf"} & alldefs.keys() ) > 1:

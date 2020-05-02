@@ -6,7 +6,6 @@ irregular_nouns = {
     "noes": "no",
     "yoes": "yos",
     "volúmenes": "volumen",
-    "cracs": "crac",
     "albalaes": "albalá",
     "faralaes": "faralá",
     "clubes": "club",
@@ -14,7 +13,6 @@ irregular_nouns = {
     "jerséis": "jersey",
     "especímenes": "espécimen",
     "caracteres": "carácter",
-    "menús": "menú",
     "regímenes": "régimen",
     "currículos": "curriculum",
     "ultimatos": "ultimátum",
@@ -68,6 +66,11 @@ class SpanishNouns:
 
         elif word in noplural_nouns:
             lemma = word
+
+
+        # try dropping the s first and seeing if the result is a known word (catches irregulars like bordes/borde)
+        elif len(word) > 2 and word.endswith("s") and self.spanish_words.is_noun(word[:-1]):
+            lemma = word[:-1]
 
         # canciones, coleciones
         elif len(word) > 5 and word.endswith("iones"):
