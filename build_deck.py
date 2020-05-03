@@ -40,14 +40,14 @@ if not args.json:
     args.json = args.deckname + ".json"
 
 if not os.path.isdir(args.mediadir):
-    fail("Deck directory does not exist: %s"%args.mediadir)
+    fail(f"Deck directory does not exist: {args.mediadir}")
 
 for wordlist in args.wordlist:
     if not os.path.isfile(wordlist):
-        fail("Wordlist file does not exist: %s"%wordlist)
+        fail(f"Wordlist file does not exist: {wordlist}")
 
 if not os.path.isfile(args.json):
-    fail("Deck JSON does not exist: %s"%args.json)
+    fail(f"Deck JSON does not exist: {args.json}")
 
 
 noun_articles = {
@@ -62,7 +62,7 @@ noun_articles = {
 }
 
 def format_sentences(sentences):
-    return "<br>\n".join( '<span class="spa">%s</span><br><span class="eng">%s</span>' % pair[:2] for pair in sentences )
+    return "<br>\n".join( f'<span class="spa">{pair[0]}</span><br><span class="eng">{pair[1]}</span>' for pair in sentences )
 
 def get_sentences(word, pos, count):
 
@@ -146,19 +146,16 @@ class MyNote(genanki.Note):
 def format_sound(filename):
     if not filename:
         return ""
-    return "[sound:%s]"%filename
+    return f"[sound:{filename}]"
 
 def format_image(filename):
     if not filename:
         return ""
-    return '<img src="%s" />'%filename
+    return f'<img src="{filename}" />'
 
 def get_article(pos):
     return noun_articles[pos]
 
-
-#def format_spanish(item):
-#    return "%s (%s)" % (item['spanish'], item['pos'])
 
 def format_def(item):
 
@@ -166,7 +163,7 @@ def format_def(item):
     for pos in item:
         pos_tag = ""
         if len(item.keys()) > 1:
-            pos_tag = '<span class="pos pos-%s">{%s} </span>'%(pos,pos)
+            pos_tag = f'<span class="pos pos-{pos}">{{pos}} </span>'
 
         for tag in item[pos]:
             if result != "":
@@ -178,10 +175,10 @@ def format_def(item):
 #            defs = spanish_words.get_best_defs(item[pos][tag],40)
 #            usage = spanish_words.defs_to_string(defs, pos)
 
-            if tag != "x":
-                result += '<span class="usage-type usage-tag">[%s]: </span>'%tag
+            if tag != "":
+                result += f'<span class="usage-type usage-tag">[{tag}]: </span>'
 
-            result += '<span class="usage">%s</span>'%usage
+            result += f'<span class="usage">{usage}</span>'
 
     return result
 
@@ -190,13 +187,13 @@ guidseen = {}
 def validate_note(item):
 
     if item['guid'] in guidseen:
-       eprint("Duplicate %s from %s" % (key, item))
+       eprint(f"Duplicate {key} from {item}")
     else:
         guidseen[item['guid']] = 1
 
     for key in [ "Spanish", "English", "Part of Speech", "Audio" ]:
         if item[key] == "":
-            eprint("Missing %s from %s" % (key, item))
+            eprint(f"Missing {key} from {item}")
             return False
 
     return True
@@ -204,6 +201,56 @@ def validate_note(item):
 def get_synonyms(word, pos):
     items = words.synonyms.get_synonyms(word)
     return [ k for k in items if pos+":"+k in allwords ]
+
+#_FEMALE1 = "Lupe"
+_FEMALE1 = "Penelope"
+_FEMALE2 = "Penelope"
+_MALE1   = "Miguel"
+
+def get_phrase(word, pos, noun_type, femnoun):
+    voice = ""
+    phrase = ""
+    display = None
+
+    if noun_type:
+        if noun_type == "f":
+            voice = _FEMALE2
+            phrase = f"la {word}"
+        elif noun_type == "fp":
+            voice = _FEMALE2
+            phrase = f"las {word}"
+        elif noun_type == "f-el":
+            voice = _FEMALE2
+            phrase = f"el {word}"
+        elif noun_type == "m-f":
+            voice = _FEMALE1
+            phrase = f"la {word}. el {word}"
+            display = f"la/el {word}"
+        elif noun_type == "m":
+            voice = _MALE1
+            phrase = f"el {word}"
+        elif noun_type == "mf":
+            voice = _MALE1
+            phrase = f"el {word}. la {word}"
+            display = f"el/la {word}"
+        elif noun_type == "mp":
+            voice = _MALE1
+            phrase = f"los {word}"
+        elif noun_type == "m/f":
+            voice = _MALE1
+            phrase = f"la {femnoun}. el {word}"
+            display = f"la {femnoun}/el {word}"
+        else:
+            raise ValueError("Unknown noun type", noun_type)
+    else:
+        voice = _FEMALE1
+        phrase = word
+
+    if not display:
+        display = phrase
+
+    return { "voice": voice, "phrase": phrase, "display": display }
+
 
 
 def build_item(row):
@@ -222,8 +269,9 @@ def build_item(row):
         print(row)
         exit()
 
-    speech_res = spanish_speech.get_speech(spanish,pos,noun_type,args.mediadir)
-    sound = speech_res['filename']
+    femnoun = words.wordlist.get_feminine_noun(spanish) if pos == "noun" else None
+    tts_data = get_phrase(spanish,pos,noun_type,femnoun)
+    sound = spanish_speech.get_speech(tts_data['voice'], tts_data['phrase'], args.mediadir)
 
     item = {
 #            'Picture': format_image(image),
@@ -233,7 +281,7 @@ def build_item(row):
         'Synonyms': ", ".join(syns),
         'English': english,
         'Sentences': get_sentences(spanish, pos, 3),
-        'Article': get_article(noun_type) if pos == "noun" else "",
+        'Display': tts_data['display'],
         'Audio':   format_sound(sound),
     }
 
@@ -298,7 +346,7 @@ for wordlist in args.wordlist:
         csvreader = csv.DictReader(csvfile)
         for reqfield in ["pos", "spanish"]:
             if reqfield not in csvreader.fieldnames:
-                fail("No '%s' field specified in file %s"%(reqfield,wordlist))
+                raise ValueError(f"No '{reqfield}' field specified in file {wordlist}")
 
         for row in csvreader:
 
@@ -355,7 +403,7 @@ card_model = genanki.Model(model_guid,
   css=data['model'][model_guid]['css']
 )
 
-_fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Article", "Audio" ]
+_fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Display", "Audio" ]
 
 with open('notes_rebuild.csv', 'w', newline='') as outfile:
     csvwriter = csv.writer(outfile)
