@@ -284,6 +284,7 @@ class SpanishWordlist:
         self.allwords = {}
         if dictionary:
             self.load_dictionary(dictionary)
+        self._trantab = str.maketrans("áéíóú", "aeiou")
 
     def remove_def(self, item):
         word = item['word']
@@ -444,11 +445,13 @@ class SpanishWordlist:
         alldefs = self.allwords[word]
         alldefs = filter_defs(alldefs, pos)
 
+        alldefs = self.do_analysis(word, alldefs)
+
         for pos,notes in alldefs.items():
             for note, defs in notes.items():
                 notes[note] = defs_to_string(pos, split_defs(pos, defs))
 
-        return self.do_analysis(word, alldefs)
+        return alldefs
 
 
     def is_feminized_noun(self, word, masculine):
@@ -460,18 +463,35 @@ class SpanishWordlist:
             return False
 
         # Only search the first {f} note definitions (eliminates secondary uses like hamburguesa as a lady from Hamburg)
-        if "feminine noun of "+masculine in list(alldefs['f'].values())[0][0]:
+        if "feminine noun of "+masculine in list(alldefs['f'].values())[0][0] or \
+           "(female" in list(alldefs['f'].values())[0][0]:
             return True
 
         return False
 
-    def get_feminine_noun(self, word):
-        if not word.endswith("o"):
-            return
 
-        feminine = word[:-1]+"a"
-        if self.is_feminized_noun(feminine, word):
-            return feminine
+    def unstress(self, word):
+        return word.translate(self._trantab)
+
+    def get_feminine_noun(self, word):
+        femnoun = None
+
+        # hermano/a  jefe/a  tigre/tigresa
+        if word.endswith("o") or word.endswith("e"):
+            femnoun = word[:-1]+"a"
+            if self.is_feminized_noun(femnoun, word):
+                return femnoun
+
+            femnoun = self.unstress(word)+"sa"
+
+        # bailarín / bailarina
+        else:
+            femnoun = self.unstress(word)+"a"
+
+        if self.is_feminized_noun(femnoun, word):
+            return femnoun
+
+        return None
 
 
     def get_masculine_noun(self, word):

@@ -215,7 +215,7 @@ def test_lookup():
     assert res == {'m/f': {'': 'pupil, student'}}
 
     res = worddb.lookup("abuelo", "noun")
-    assert res == {'m/f': {'f, Mexico': ['a kind of flying ant '], 'f, colloquial': ['old woman'], 'm': "grandfather; loose tufts of hair in the nape when one's hair is messed up", 'm, colloquial, affectionate': 'an elderly person'}}
+    assert res == {'m/f': {'f, Mexico': 'a kind of flying ant', 'f, colloquial': 'old woman', 'm': "grandfather; loose tufts of hair in the nape when one's hair is messed up", 'm, colloquial, affectionate': 'an elderly person'}}
 
     # f-el detection
     res = worddb.lookup("alma", "noun")
@@ -235,14 +235,17 @@ def test_lookup():
 
 
 
-def xtest_is_feminized_noun():
+def test_is_feminized_noun():
     assert worddb.is_feminized_noun("hermana", "hermano") == True
     assert worddb.is_feminized_noun("hermano", "hermano") == False
     assert worddb.is_feminized_noun("casa", "caso") == False
     assert worddb.is_feminized_noun("hamburguesa", "hamburgueso") == False
+    assert worddb.is_feminized_noun("profesora", "profesor") == True
+    assert worddb.is_feminized_noun("alcaldesa", "alcalde") == True
+    assert worddb.is_feminized_noun("campeona", "campeón") == True
 
 
-def xtest_get_feminine_noun():
+def test_get_feminine_noun():
     assert worddb.get_feminine_noun("hermano") == "hermana"
 #    assert worddb.get_feminine_noun("camarero") == "camarera"
     assert worddb.get_feminine_noun("hermana") == None
@@ -254,15 +257,18 @@ def xtest_get_feminine_noun():
 
 
     # Other word endings
-#    assert worddb.get_feminine_noun("jefe") == "jefa"
-#    assert worddb.get_feminine_noun("doctor") == "doctora"
+    assert worddb.get_feminine_noun("jefe") == "jefa"
+    assert worddb.get_feminine_noun("doctor") == "doctora"
+    assert worddb.get_feminine_noun("alcalde") == "alcaldesa"
+    assert worddb.get_feminine_noun("tigre") == "tigresa"
 
     # feminine loses accent on last vowel
-#    assert worddb.get_feminine_noun("campeón") == "campeona"
+    assert worddb.get_feminine_noun("campeón") == "campeona"
+    assert worddb.get_feminine_noun("taiwanés") == "taiwanesa"
 
 
 
-def xtest_get_masculine_noun():
+def test_get_masculine_noun():
     assert worddb.get_masculine_noun("hermana") == "hermano"
     assert worddb.get_masculine_noun("casa") == None
     assert worddb.get_masculine_noun("hamburguesa") == None
