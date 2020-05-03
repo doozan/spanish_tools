@@ -53,7 +53,7 @@ class SpanishVerbs:
         }
 
         self.build_reverse_inflections()
-
+        self._trantab = str.maketrans("áéíóú", "aeiou")
 
     def build_reverse_inflections(self):
         self._reverse_inflections = {}
@@ -218,10 +218,12 @@ class SpanishVerbs:
         if check_pronouns:
             endings = [ending for ending in pronouns if word.endswith(ending)]
             for ending in endings:
-                valid_verbs += [ v for v in self.reverse_conjugate( word[:len(ending)*-1], check_pronouns =  False ) if v['form'] in [ 1, 2, 63, 64, 65, 66, 67, 68 ] ]
+                valid_verbs += [ v for v in self.reverse_conjugate( self.unstress(word[:len(ending)*-1]), check_pronouns =  False ) if v['form'] in [ 1, 2, 63, 64, 65, 66, 67, 68 ] ]
 
         return valid_verbs
 
+    def unstress(self, word):
+        return word.translate(self._trantab)
 
     # Returns True if a verb is irregular in the specified form
     def is_irregular(self, verb, form):
