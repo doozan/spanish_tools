@@ -10,7 +10,7 @@ class SpanishSynonyms:
 
     def load_data(self, datafile):
         if not os.path.isfile(datafile):
-            raise FileNotFoundError("Cannot open synonyms: '%s'"%datafile)
+            raise FileNotFoundError(f"Cannot open synonyms: '{datafile}'")
 
         with open(datafile) as infile:
             for line in infile:

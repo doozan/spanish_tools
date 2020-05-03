@@ -339,7 +339,7 @@ class SpanishWordlist:
 
     def load_dictionary(self, datafile):
         if not os.path.isfile(datafile):
-            raise FileNotFoundError("Cannot open dictionary: '%s'"%datafile)
+            raise FileNotFoundError(f"Cannot open dictionary: '{datafile}'")
 
         with open(datafile) as infile:
             for line in infile:

@@ -4,7 +4,7 @@ import get_best_pos
 
 
 def test_get_best_pos():
-    words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.json")
+    words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
     sentences = spanish_sentences.sentences("spanish_data/spa-tagged.txt")
 
     test_words = {
