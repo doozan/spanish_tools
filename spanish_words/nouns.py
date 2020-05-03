@@ -51,17 +51,17 @@ noplural_nouns = [
 # and the list of nouns ending with -s
 
 class SpanishNouns:
-    def __init__(self, spanish_words):
-        self.spanish_words = spanish_words
+    def __init__(self, parent):
+        self.parent = parent
 
-    def get_base_noun(self, word):
+    def get_lemma(self, word):
         word = word.lower()
         lemma = word
 
         if word in irregular_nouns:
             lemma = irregular_nouns[word]
 
-        elif word in self.spanish_words.nouns_ending_s:
+        elif self.parent.wordlist.has_noun(word) or self.parent.wordlist.has_word(word, "num"):
             lemma = word
 
         elif word in noplural_nouns:
@@ -69,7 +69,7 @@ class SpanishNouns:
 
 
         # try dropping the s first and seeing if the result is a known word (catches irregulars like bordes/borde)
-        elif len(word) > 2 and word.endswith("s") and self.spanish_words.is_noun(word[:-1]):
+        elif len(word) > 2 and word.endswith("s") and self.parent.wordlist.has_noun(word[:-1]):
             lemma = word[:-1]
 
         # canciones, coleciones
@@ -95,7 +95,7 @@ class SpanishNouns:
 
         # Check definitions for "feminine of word-o" and use word-o as lemma (mentiroso/a)
         if lemma.endswith("a"):
-            masculine = self.spanish_words.get_masculine_noun(lemma)
+            masculine = self.parent.wordlist.get_masculine_noun(lemma)
             if masculine:
                 lemma = masculine
 

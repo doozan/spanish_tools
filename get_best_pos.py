@@ -10,7 +10,7 @@ def dprint(*args, **kwargs):
     if _debug:
         print(*args, file=sys.stderr, **kwargs)
 
-def get_best_pos(word, spanish_words, spanish_sentences, debug=False):
+def get_best_pos(word, spanish, spanish_sentences, debug=False):
     set_debug(debug)
 
     # get all possible POS usage for this word
@@ -18,8 +18,8 @@ def get_best_pos(word, spanish_words, spanish_sentences, debug=False):
     # show up in the dictionary, but the lemma "casa" does
     all_pos = []
     for pos in ["", "adj", "noun", "verb"]:
-        lemma = spanish_words.get_lemma(word, pos).split("|")[0]
-        all_pos +=  spanish_words.get_all_pos(lemma)
+        lemma = spanish.get_lemma(word, pos).split("|")[0]
+        all_pos +=  spanish.wordlist.get_all_pos(lemma)
 
     all_pos = list(dict.fromkeys(all_pos))
 

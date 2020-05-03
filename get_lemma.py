@@ -7,6 +7,6 @@ parser.add_argument('word', help="Word to get lemma for")
 parser.add_argument('pos',  help="part of speech")
 args = parser.parse_args()
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.json")
+spanish = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
 
-print(words.get_lemma(args.word, args.pos.lower(), debug=True))
+print(spanish.get_lemma(args.word, args.pos.lower(), debug=True))

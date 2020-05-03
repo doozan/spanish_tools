@@ -1,9 +1,11 @@
 from .paradigms import paradigms
 from .inflections import inflections
+from .irregular_verbs import irregular_verbs
 import re
 import os
 import json
 import sys
+#import weakref
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -13,10 +15,8 @@ def fail(*args, **kwargs):
     exit(1)
 
 all_verb_endings = [
-    'ar', 'er', 'ir',
-    'arse', 'erse', 'irse',
-    'ár', 'ér', 'ír',
-    'árse', 'érse', 'írse',
+    'ar', 'er', 'ir', 'ír',
+    'arse', 'erse', 'irse', 'írse'
 ]
 
 # object endings
@@ -37,12 +37,11 @@ pronouns = [
 ]
 
 class SpanishVerbs:
-    def __init__(self, spanish_words, iverbs):
-        self.irregular_verbs = {}
+    def __init__(self, parent):
+        self.parent = parent #weakref.ref(parent)
         self.reverse_irregular_verbs = {}
-        self.spanish_words = spanish_words
 
-        self.build_reverse_conjugations(iverbs)
+        self.build_reverse_conjugations()
         self.reverse_endings = {
             'ar':  self.get_endings('-ar', ''),
             'er':  self.get_endings('-er', ''),
@@ -62,23 +61,19 @@ class SpanishVerbs:
             for criteria in clist:
                 key = ";".join( sorted( [ str(k)+":"+str(v) for k,v in criteria.items() ] ) ).lower()
                 if key not in self._reverse_inflections:
-                    self._reverse_inflections[key] = [ num ]
+                    self._reverse_inflections[key] = num
                 else:
-                    self._reverse_inflections[key].append(num)
+                    raise ValueError("dup inflection", key, num, self._reverse_inflections[key])
 
-    def get_inflection_id(criteria):
+    def get_inflection_id(self, criteria):
         if not self._reverse_inflections:
             build_reverse_inflections()
         key = ";".join( sorted( [ str(k)+":"+str(v) for k,v in criteria.items() ] ) ).lower()
         return self._reverse_inflections[key]
 
-    def build_reverse_conjugations(self, filename):
-        if not os.path.isfile(filename):
-            fail("Cannot open irregular verbs:", filename)
-        with open(filename, encoding='utf-8') as infile:
-            self.irregular_verbs = json.load(infile)
+    def build_reverse_conjugations(self):
 
-        for verb, vdata in self.irregular_verbs.items():
+        for verb, vdata in irregular_verbs.items():
             ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
             for item in vdata:
                 conjugations = self.do_conjugate( item['stems'], ending, item['pattern'], only_pattern=True )
@@ -144,7 +139,7 @@ class SpanishVerbs:
 
         score = 0
         verb = item['verb']
-        if verb in self.irregular_verbs:
+        if verb in irregular_verbs:
             form = item['form']
 
             # determine if usage is irregular by checking against what the regular use would be
@@ -153,7 +148,7 @@ class SpanishVerbs:
             regular_forms = self.do_conjugate( [stem], ending, '' )
 
             ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
-            for paradigm in self.irregular_verbs[item['verb']]:
+            for paradigm in irregular_verbs[item['verb']]:
                 forms = self.do_conjugate( paradigm['stems'], ending, paradigm['pattern'] )
                 if form in forms and forms[form] != regular_forms[form]:
                     score += 2
@@ -185,7 +180,7 @@ class SpanishVerbs:
         valid_verbs =[]
 
         # Check if it's already an infinitive listed in the dictionary
-        if any(word.endswith(ending) for ending in all_verb_endings) and self.spanish_words.is_verb(word):
+        if any(word.endswith(ending) for ending in all_verb_endings) and self.parent.wordlist.has_verb(word):
             return [ { 'verb': word, 'form': 1 } ]
 
         # Check if it's an irregular verb
@@ -211,10 +206,10 @@ class SpanishVerbs:
 
             # Check the verbs against the dictionary and throw out any we've invented
             for v in possible_verbs:
-                if self.spanish_words.is_verb(v['verb']):
+                if self.parent.wordlist.has_verb(v['verb']):
                     valid_verbs.append(v)
                 # Check for reflexive only verbs
-                elif self.spanish_words.is_verb(v['verb']+"se"):
+                elif self.parent.wordlist.has_verb(v['verb']+"se"):
                     v['verb'] += "se"
                     valid_verbs.append(v)
 
@@ -230,9 +225,9 @@ class SpanishVerbs:
 
     # Returns True if a verb is irregular in the specified form
     def is_irregular(self, verb, form):
-        if verb in self.irregular_verbs:
+        if verb in irregular_verbs:
             ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
-            for item in self.irregular_verbs[verb]:
+            for item in irregular_verbs[verb]:
                 pattern = item['pattern']
                 if form in paradigms[ending][pattern]['patterns']:
                     return True
@@ -247,9 +242,9 @@ class SpanishVerbs:
         ending = "-"+ending
 
         res = {}
-        if verb in self.irregular_verbs or \
+        if verb in irregular_verbs or \
             (verb.endswith("se") and verb[:-2] in irregular_verbs):
-            for paradigm in self.irregular_verbs[verb]:
+            for paradigm in irregular_verbs[verb]:
                 forms = self.do_conjugate( paradigm['stems'], ending, paradigm['pattern'], debug=debug )
                 for k,v in forms.items():
                     if k not in res:

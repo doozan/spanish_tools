@@ -10,7 +10,7 @@ import spanish_sentences
 import spanish_speech
 import argparse
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.json")
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
 spanish_sentences = spanish_sentences.sentences("spanish_data/spa-tagged.txt")
 
 allwords = {}
@@ -50,31 +50,6 @@ if not os.path.isfile(args.json):
     fail("Deck JSON does not exist: %s"%args.json)
 
 
-# check that we don't have any unknown pos types
-# squash nouns into generic "noun" lookup
-# squash verbs into generic "verb" lookup
-pos_types = {
-    'adj': 'adj',
-    'adv': 'adv',
-    'art': 'art',
-    'conj': 'conj',
-    'interj': 'interj',
-
-    "m": "noun",
-    "f": "noun",
-    "mf": "noun",
-    "f-el": "noun",
-    "m-f": "noun",
-    "m/f": "noun",
-
-    'num': 'num',
-    'prep': 'prep',
-    'pron': 'pron',
-    'v': 'verb',
-
-    'phrase': 'phrase'
-}
-
 noun_articles = {
     "m": "el",
     "mp": "los",
@@ -85,9 +60,6 @@ noun_articles = {
     "m-f": "el",
     "m/f": "el"
 }
-pos_nouns = list(noun_articles.keys())
-
-
 
 def format_sentences(sentences):
     return "<br>\n".join( '<span class="spa">%s</span><br><span class="eng">%s</span>' % pair[:2] for pair in sentences )
@@ -181,9 +153,6 @@ def format_image(filename):
         return ""
     return '<img src="%s" />'%filename
 
-def is_noun(pos):
-    return pos in pos_nouns
-
 def get_article(pos):
     return noun_articles[pos]
 
@@ -205,8 +174,9 @@ def format_def(item):
 
             result += pos_tag
 
-            defs = spanish_words.get_best_defs(item[pos][tag],40)
-            usage = spanish_words.defs_to_string(defs, pos)
+            usage = item[pos][tag]
+#            defs = spanish_words.get_best_defs(item[pos][tag],40)
+#            usage = spanish_words.defs_to_string(defs, pos)
 
             if tag != "x":
                 result += '<span class="usage-type usage-tag">[%s]: </span>'%tag
@@ -232,7 +202,7 @@ def validate_note(item):
     return True
 
 def get_synonyms(word, pos):
-    items = words.get_synonyms(word)
+    items = words.synonyms.get_synonyms(word)
     return [ k for k in items if pos+":"+k in allwords ]
 
 
@@ -241,7 +211,7 @@ def build_item(row):
     english = ""
     noun_type = ""
     pos = row['pos'].lower()
-    usage = words.lookup(spanish, pos)
+    usage = words.wordlist.lookup(spanish, pos)
     syns = get_synonyms(spanish, pos)
     if usage and len(usage):
         english = format_def(usage)
@@ -313,7 +283,6 @@ def make_tag(word, pos):
 media = []
 notes = []
 all_items = []
-
 
 guids = {}
 if args.guids:
@@ -401,7 +370,6 @@ with open('notes_rebuild.csv', 'w', newline='') as outfile:
         note._order = int(item['Rank'])
         my_deck.add_note( note )
         csvwriter.writerow(row)
-
 
 my_package = genanki.Package(my_deck)
 my_package.media_files = media

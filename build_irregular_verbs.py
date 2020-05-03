@@ -383,7 +383,7 @@ def dump_verbs(filename):
     paradigms = load_paradigms()
     verbs = load_verbs()
 
-    dump = "{\n"
+    dump = "irregular_verbs = {\n"
     for ending,pgroup in paradigm_list.items():
         for pattern in pgroup:
 
@@ -407,10 +407,10 @@ def dump_verbs(filename):
             continue
         data = get_patterns(verbs[verb]['wikitext'])
         if first:
-            dump += '"%s": %s'%(verb,json.dumps(data))
+            dump += '"%s": %s'%(verb,data)
             first = False
         else:
-            dump += ',\n"%s": %s'%(verb,json.dumps(data))
+            dump += ',\n"%s": %s'%(verb,data)
 
 
     dump += "\n}"
