@@ -189,6 +189,10 @@ def test_filter_defs():
     assert spanish_words.wordlist.filter_defs(defs, 'adj', 'usage') == {}
 
 
+def test_get_all_pos():
+    assert worddb.get_all_pos("casa") == ["noun"]
+
+
 def test_has_word():
     assert worddb.has_word("casa", "noun") == True
     assert worddb.has_word("tener", "verb") == True

@@ -8,7 +8,7 @@ parser.add_argument('pos', nargs="?", default="", help="part of speech")
 parser.add_argument('count', nargs="?", default=3, type=int, help="Max sentences to retrieve")
 args = parser.parse_args()
 
-spanish_sentences = spanish_sentences.sentences("spanish_data/spa-tagged.txt")
+spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 
 def format_sentences(sentences):
     return "\n".join('spa: %s\neng: %s' % pair[:2] for pair in sentences )

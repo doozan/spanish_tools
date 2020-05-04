@@ -14,7 +14,7 @@ parser.add_argument('outfile', help="CSV file to create")
 args = parser.parse_args()
 
 spanish = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
-sentences = spanish_sentences.sentences("spanish_data/spa-tagged.txt")
+sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 
 freq = {}
 def add_count(word, pos, count, origword):
@@ -148,6 +148,8 @@ def build_wordlist():
         if "adj" in popular_pos and "noun" in popular_pos:
             wordlist["noun:"+word]['flags'].append(flag("DUPLICATE-ADJ-NOUN"))
 
+
+
 lines = {}
 
 def get_best_lemma(strlemma, pos):
@@ -171,15 +173,46 @@ with open(args.file) as infile:
     for line in infile:
         word, count = line.strip().split(' ')
 
+#        posrank = get_ranked_usage(word, spanish, sentences)
+#        pos = posrank[0]['pos'] if posrank else "none"
         pos = get_best_pos(word, spanish, sentences)
         lemma = spanish.get_lemma(word, pos)
-        lines[word] = {'pos':pos, 'count':count, 'lemma':lemma}
+        lines[word] = {'pos':pos, 'count':count, 'lemma':lemma}#, 'posrank':posrank}
         if "|" not in lemma:
             add_count(lemma, pos, count, word)
 
-
 # Run throuh the lines again and use the earlier counts to
 # pick best lemmas from words with multiple lemmas
+for word,item in lines.items():
+    lemma = item['lemma']
+    pos = item['pos']
+    count = item['count']
+    if "|" in lemma:
+        lemma = get_best_lemma(lemma,pos)
+        add_count(lemma, pos, count, word)
+
+# Look through the lemmas to find verbs with overwhelming usage of
+# forms that could be interj, nouns, or adjectives
+
+if False: #for tag,item in freq.items():
+    if not tag.startswith("verb"):
+        continue
+
+    count = item['count']
+    uses = item['usage']
+    wordcount,word = uses[0].split(":")
+
+    if len(uses) == 1:
+        pos,verb = tag.split(":")
+        if word != verb:
+            print(f"Single use of verb {uses[0]} -> {tag}")
+    else:
+        if int(wordcount) > (int(count)*.8):
+            pos,verb = tag.split(":")
+            if word != verb:
+                print(f"Majority use of verb {uses[0]} -> {tag} {count} :: ")#, lines[word]['posrank'])
+
+#exit(1)
 with open(args.file+".lemmas.csv",'w') as outfile:
     csvwriter = csv.writer(outfile)
     csvwriter.writerow(["count", "word", "lemma", "pos"])
@@ -188,10 +221,9 @@ with open(args.file+".lemmas.csv",'w') as outfile:
         lemma = item['lemma']
         pos = item['pos']
         count = item['count']
-        if "|" in lemma:
-            lemma = get_best_lemma(lemma,pos)
-            add_count(lemma, pos, count, word)
         csvwriter.writerow([count,word,lemma,pos])
+
+
 
 #exit()
 

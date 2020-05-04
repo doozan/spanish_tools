@@ -66,6 +66,7 @@ def test_get_lemma_noun():
     assert words.get_lemma("bordes", "noun") == "borde"
     assert words.get_lemma("tardes", "noun") == "tarde"
 
+    assert words.get_lemma("meses", "noun") == "mes"
 
 def test_get_lemma_adj():
     assert words.get_lemma("notaword", "adj") == "notaword"

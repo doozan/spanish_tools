@@ -45,4 +45,7 @@ def test_get_best_pos():
 
     for word,pos in test_words.items():
         res = get_best_pos.get_best_pos(word, words, sentences, debug=False)
-        assert res == pos
+        assert [word, res] == [word, pos]
+
+    res = get_best_pos.get_best_pos("notaword", words, sentences, debug=False) == None
+

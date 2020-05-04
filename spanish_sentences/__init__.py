@@ -2,6 +2,7 @@ import sys
 import math
 import re
 import os
+import json
 
 class sentences:
 
@@ -13,7 +14,7 @@ class sentences:
         self.tagfixes = {}
 
         if not os.path.isfile(datafile):
-            print("Cannot find data file:", datafile)
+            raise FileNotFoundError(f"Cannot open file: '{datafile}'")
 
         # Tagfixes must be loaded before the main file
         datafixes = datafile + ".tagfixes"
@@ -31,58 +32,42 @@ class sentences:
 
         index=0
         with open(datafile) as infile:
-            for line in infile:
-                english, spanish, tagged, extras = line.split("\t",4)
+            data = json.load(infile)
+            for line in data:
+                extras, english, spanish, tags = line
                 stripped = self.strip_sentence(spanish).strip()
-                tagged = tagged.strip()
 
-                self.tag_interjections(spanish, index)
                 self.sentencedb.append( (spanish, english) )
                 self.grepdb.append(stripped)
 
-                for tag in tagged.split(" "):
-                    self.add_tag_to_db(tag,index)
+                self.add_tags_to_db(tags,index)
                 index+=1
-
 
     def strip_sentence(self, string):
         stripped = re.sub('[^ a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+', '', string).lower()
         return re.sub(' +', ' ', stripped)
 
-    def get_interjections(self, string):
+    # tags are in the form:
+    # { pos: [word1, word2] }
+    # past participles use "x" as the pos and need to be expanded to "adj" "noun" "verb"
+    def add_tags_to_db(self, tags, index):
+        for tagpos,words in tags.items():
+            allpos = [ "adj", "noun", "verb" ] if tagpos == "x" else [ tagpos ]
 
-        pattern = r"""(?x)(?=          # use lookahead as the separators may overlap (word1. word2, blah blah) should match word1 and word2 using "." as a separator
-            (?:^|[:;,.¡!¿]\ ?)         # Punctuation (followed by an optional space) or the start of the line
-            ([a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+)  # the interjection
-            (?:[;,.!?]|$)              # punctuation or the end of the line
-        )"""
-        return re.findall(pattern, string, re.IGNORECASE)
+            for pos in allpos:
+                for word in words:
 
+                    if word not in self.tagdb:
+                        self.tagdb[word] = {}
 
-    # tags usually look like noun:word
-    # but can also look look noun:word1|word1|word2
+                    if word in self.tagfixes and pos in self.tagfixes[word]:
+                        pos = self.tagfixes[word][pos]
 
-    def add_tag_to_db(self, tag, index):
-        pos,word = tag.split(":")
+                    if pos not in self.tagdb[word]:
+                        self.tagdb[word][pos] = []
 
-        for word in list(dict.fromkeys(word.split("|"))):
-            word = word.lower()
-            if word not in self.tagdb:
-                self.tagdb[word] = {}
+                    self.tagdb[word][pos].append(index)
 
-            if word in self.tagfixes and pos in self.tagfixes[word]:
-                pos = self.tagfixes[word][pos]
-
-            if pos not in self.tagdb[word]:
-                self.tagdb[word][pos] = []
-
-            self.tagdb[word][pos].append(index)
-
-
-
-    def tag_interjections(self, sentence, index):
-        for word in self.get_interjections(sentence):
-            self.add_tag_to_db("interj:"+word, index)
 
     def get_ids_from_phrase(self, phrase):
         pattern = r"\b" + phrase.strip().lower() + r"\b"
@@ -181,25 +166,8 @@ class sentences:
             return list(self.tagdb[word].keys())
         return []
 
-
-    def get_best_pos(self, word, all_pos=None, debug=False):
-        word = word.lower()
-
-        best_pos = ""
-        best_count = -1
-        if word in self.tagdb:
-            if not all_pos:
-                all_pos = self.tagdb[word]
-            for pos in all_pos:
-                pos = pos.lower()
-                if pos in self.tagdb[word]:
-                    count = len(self.tagdb[word][pos])
-                    if debug:
-                        print(count,word,pos)
-                    if count > best_count:
-                        best_pos = pos
-                        best_count = count
-                elif debug:
-                    print(0,word,pos)
-
-        return { 'count': best_count, 'pos': best_pos }
+    def get_usage_count(self, word, pos):
+        if word in self.tagdb and pos in self.tagdb[word]:
+            return len(self.tagdb[word][pos])
+        else:
+            return 0

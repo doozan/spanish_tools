@@ -10,6 +10,7 @@ def dprint(*args, **kwargs):
     if _debug:
         print(*args, file=sys.stderr, **kwargs)
 
+
 def get_best_pos(word, spanish, spanish_sentences, debug=False):
     set_debug(debug)
 
@@ -22,23 +23,38 @@ def get_best_pos(word, spanish, spanish_sentences, debug=False):
         all_pos +=  spanish.wordlist.get_all_pos(lemma)
 
     all_pos = list(dict.fromkeys(all_pos))
-
     if not len(all_pos):
         return "none"
 
-    # If there's only one, use it
-    if len(all_pos) == 1:
-        dprint("Only one use found")
+    usage = []
+    for pos in all_pos:
+        usage.append({ 'word': "@"+word, 'pos': pos })
+    pos_rank = get_ranked_usage(usage, spanish, spanish_sentences, debug)
+    dprint(pos_rank)
+
+    # No results, but multiple results, try again using lemma instead of word
+    if (pos_rank[0]['count'] == 0 and len(pos_rank)>1):
+        dprint("No usage, checking lemmas")
+        usage = []
+        for pos in all_pos:
+            usage.append({ 'word': spanish.get_lemma(word, pos), 'pos': pos })
+        pos_rank = get_ranked_usage(usage, spanish, spanish_sentences, debug)
+        dprint(pos_rank)
+
+    # still no results, take the first pos
+    if (pos_rank[0]['count'] == 0):
         return all_pos[0]
 
-    # Get usage count of word as each possible POS
-    dprint("Searching best use of %s in %s"%(word, all_pos))
-    best_pos = spanish_sentences.get_best_pos("@"+word, all_pos, _debug)
-    if best_pos and best_pos['count'] > 0:
-        return best_pos['pos']
+    return pos_rank[0]['pos']
 
-    dprint("No usage available")
 
-    # There is no overlapping usage between dictionary and lemmadb
-    return all_pos[0]
+def get_ranked_usage(usage, spanish, sentences, debug=False):
+    set_debug(debug)
 
+    res = []
+    for item in usage:
+        word = item['word']
+        pos = item['pos']
+        count = sentences.get_usage_count(item['word'], item['pos'])
+        res.append({'word': word, 'pos': pos, 'count': count})
+    return sorted(res, key=lambda k: k['count'], reverse=True)
