@@ -53,6 +53,10 @@ noplural_nouns = [
 class SpanishNouns:
     def __init__(self, parent):
         self.parent = parent
+        self._trantab = str.maketrans("áéíóú", "aeiou")
+
+    def unstress(self, word):
+        return word.translate(self._trantab)
 
     def get_lemma(self, word):
         word = word.lower()
@@ -93,6 +97,8 @@ class SpanishNouns:
 
         elif len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "ses", "xes", "yes", "íes" ]:
             lemma = word[:-2]
+            if not self.parent.has_word(lemma, "noun") and self.parent.has_word(self.unstress(lemma), "noun"):
+                lemma = self.unstress(lemma)
 
         elif len(word) > 2 and word[-2:] in [ "as", "bs", "cs", "ds", "es", "fs", "gs", "ks", "ls", "ms", "ns", "os", "ps", "rs", "ts", "vs", "ás", "ís", "ós", "ús" ]:
             lemma = word[:-1]

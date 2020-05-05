@@ -36,3 +36,6 @@ def test_get_lemma():
     assert get_lemma("escocés") == "escocés"
     assert get_lemma("ratones") == "ratón"
 
+    assert get_lemma("órdenes") == "orden"
+
+
