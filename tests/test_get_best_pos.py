@@ -5,7 +5,7 @@ import get_best_pos
 
 def test_get_best_pos():
     words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
-    sentences = spanish_sentences.sentences("spanish_data/spa-tagged.txt")
+    sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 
     test_words = {
     "pesos": "noun",
@@ -17,7 +17,7 @@ def test_get_best_pos():
     "apenas": "adv",
     "veras": "noun",
     "adelanto": "noun",
-    "entendido": "adj",
+    "entendido": "noun",
     "lamento": "verb",
     "contento": "adj",
     "placer": "noun",

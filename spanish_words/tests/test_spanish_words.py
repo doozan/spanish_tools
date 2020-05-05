@@ -68,12 +68,17 @@ def test_get_lemma_noun():
 
     assert words.get_lemma("meses", "noun") == "mes"
 
+    assert words.get_lemma("escocés", "noun") == "escocés"
+    assert words.get_lemma("ratones", "noun") == "ratón"
+
 def test_get_lemma_adj():
     assert words.get_lemma("notaword", "adj") == "notaword"
 
     assert words.get_lemma("bellos", "adj") == "bello"
     assert words.get_lemma("bellas", "adj") == "bello"
     assert words.get_lemma("bella", "adj") == "bello"
+
+    assert words.get_lemma("escocés", "adj") == "escocés"
 
 def test_get_all_pos():
     assert words.wordlist.get_all_pos("notaword") == []

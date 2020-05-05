@@ -219,7 +219,7 @@ def test_lookup():
     assert res == {'m/f': {'': 'pupil, student'}}
 
     res = worddb.lookup("abuelo", "noun")
-    assert res == {'m/f': {'f, Mexico': 'a kind of flying ant', 'f, colloquial': 'old woman', 'm': "grandfather; loose tufts of hair in the nape when one's hair is messed up", 'm, colloquial, affectionate': 'an elderly person'}}
+    assert res == {'m/f': {'f': 'grandmother', 'm': "grandfather; loose tufts of hair in the nape when one's hair is messed up", 'm, colloquial, affectionate': 'an elderly person'}}
 
     # f-el detection
     res = worddb.lookup("alma", "noun")
@@ -276,4 +276,9 @@ def test_get_masculine_noun():
     assert worddb.get_masculine_noun("hermana") == "hermano"
     assert worddb.get_masculine_noun("casa") == None
     assert worddb.get_masculine_noun("hamburguesa") == None
+
+    assert worddb.get_masculine_noun("jefa") == "jefe"
+    assert worddb.get_masculine_noun("campeona") == "campeón"
+    assert worddb.get_masculine_noun("alcaldesa") == "alcalde"
+    assert worddb.get_masculine_noun("doctora") == "doctor"
 
