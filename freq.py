@@ -6,7 +6,7 @@ import sys
 import argparse
 import spanish_words
 import spanish_sentences
-from get_best_pos import get_best_pos
+from get_best_pos import get_ranked_pos
 
 parser = argparse.ArgumentParser(description='Lemmatize frequency list')
 parser.add_argument('file', help="Frequency list")
@@ -173,11 +173,10 @@ with open(args.file) as infile:
     for line in infile:
         word, count = line.strip().split(' ')
 
-#        posrank = get_ranked_usage(word, spanish, sentences)
-#        pos = posrank[0]['pos'] if posrank else "none"
-        pos = get_best_pos(word, spanish, sentences)
+        posrank = get_ranked_pos(word, spanish, sentences)
+        pos = posrank[0]['pos'] if posrank else "none"
         lemma = spanish.get_lemma(word, pos)
-        lines[word] = {'pos':pos, 'count':count, 'lemma':lemma}#, 'posrank':posrank}
+        lines[word] = {'pos':pos, 'count':count, 'lemma':lemma, 'posrank':posrank}
         if "|" not in lemma:
             add_count(lemma, pos, count, word)
 
@@ -193,26 +192,26 @@ for word,item in lines.items():
 
 # Look through the lemmas to find verbs with overwhelming usage of
 # forms that could be interj, nouns, or adjectives
+#    for tag,item in freq.items():
+#    if not tag.startswith("verb"):
+#        continue
+#
+#    count = item['count']
+#    uses = item['usage']
+#    wordcount,word = uses[0].split(":")
+#
+#    if len(uses) == 1:
+#        pos,verb = tag.split(":")
+#        if word != verb:
+#            print(f"Single use of verb {uses[0]} -> {tag}")
+#    else:
+#        if int(wordcount) > (int(count)*.8):
+#            pos,verb = tag.split(":")
+#            if word != verb:
+#                print(f"Majority use of verb {uses[0]} -> {tag} {count} :: ")#, lines[word]['posrank'])
+#
+#    exit(1)
 
-if False: #for tag,item in freq.items():
-    if not tag.startswith("verb"):
-        continue
-
-    count = item['count']
-    uses = item['usage']
-    wordcount,word = uses[0].split(":")
-
-    if len(uses) == 1:
-        pos,verb = tag.split(":")
-        if word != verb:
-            print(f"Single use of verb {uses[0]} -> {tag}")
-    else:
-        if int(wordcount) > (int(count)*.8):
-            pos,verb = tag.split(":")
-            if word != verb:
-                print(f"Majority use of verb {uses[0]} -> {tag} {count} :: ")#, lines[word]['posrank'])
-
-#exit(1)
 with open(args.file+".lemmas.csv",'w') as outfile:
     csvwriter = csv.writer(outfile)
     csvwriter.writerow(["count", "word", "lemma", "pos"])
@@ -223,9 +222,6 @@ with open(args.file+".lemmas.csv",'w') as outfile:
         count = item['count']
         csvwriter.writerow([count,word,lemma,pos])
 
-
-
-#exit()
 
 build_wordlist()
 
@@ -240,6 +236,3 @@ with open(args.outfile,'w') as outfile:
         if not len(item['flags']):
             item['flags'].append("CLEAR")
         csvwriter.writerow([item['count'],item['word'],item['pos'],"; ".join(item['flags']),"|".join(item['usage'])])
-
-#print(str(v).rjust(12) + "  " + k) 
-
