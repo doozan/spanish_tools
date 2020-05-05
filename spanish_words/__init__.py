@@ -14,7 +14,7 @@ class SpanishWords:
         self.synonyms = SpanishSynonyms(synonyms)
         self.verb = SpanishVerbs(self)
         self.nouns = SpanishNouns(self)
-        self.adjectives = SpanishAdjectives()
+        self.adjectives = SpanishAdjectives(self)
 
 
     def get_lemmas(self, word, pos, debug=False):
@@ -39,6 +39,11 @@ class SpanishWords:
             if debug: print(res)
             return res
 
+        elif pos == "x": # past participles
+            if word.endswith("s"):
+                word = word[:-1]
+            if word.endswith("a"):
+                word = word[:-1]+"o"
 
         return [ word ]
 
