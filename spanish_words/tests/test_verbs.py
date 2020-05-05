@@ -78,7 +78,10 @@ def test_reverse_conjugate():
     assert reverse_conjugate("daloslos") == []
 
 
-def xtest_select_best():
+def test_select_best():
+    reverse_conjugate = verb.reverse_conjugate
+    select_best = verb.select_best
+
     v = reverse_conjugate("podría")
     res = select_best(v)
     assert len(res) == 1 and res[0]['verb'] == 'poder'
@@ -89,44 +92,23 @@ def xtest_select_best():
     v = [{'verb': 'volar', 'form': 21}]
     assert select_best(v) == [{'verb': 'volar', 'form': 21}]
 
-    # comido
-    #v = [{'verb': 'comedir', 'form': 7}, {'verb': 'comer', 'form': 3}]
-    v = verb.reverse_conjugate("comido")
-    res = verb.select_best(v)
-    assert len(res) == 1 and res[0]['verb'] == 'comer'
+    pairs = {
+        "comido": "comer",
+        "ve": "ir",
+        "sé": "ser",
+        "haciendo": "hacer",
+        "vete": "ir",
+        "vengan": "venir",
+        "volaste": "volar",
+        "temes": "temar",
+        #"viste": "ver"
+    }
 
-    #v = [{'verb': 'ir', 'form': 63}, {'verb': 'ver', 'form': 10}, {'verb': 'ver', 'form': 63}]
-    v = verb.reverse_conjugate("ve")
-    res = verb.select_best(v)
-    assert len(res) == 1 and res[0]['verb'] == 'ir'
-
-    v = verb.reverse_conjugate("sé")
-    res = verb.select_best(v)
-    assert len(res) == 1 and res[0]['verb'] == 'ser'
-
-    v = verb.reverse_conjugate("haciendo")
-    res = verb.select_best(v)
-    assert len(res) == 1 and res[0]['verb'] == 'hacer'
-
-    v = verb.reverse_conjugate("vete")
-    res = verb.select_best(v)
-    assert len(res) == 1 and res[0]['verb'] == 'ir'
-
-    v = verb.reverse_conjugate("vengan")
-    res = verb.select_best(v)
-    assert len(res) == 1 and res[0]['verb'] == 'venir'
-
-    v = verb.reverse_conjugate("volaste")
-    res = verb.select_best(v)
-    assert len(res) == 1 and res[0]['verb'] == 'volar'
-
-    v = verb.reverse_conjugate("temes")
-    res = verb.select_best(v)
-    assert len(res) == 1 and res[0]['verb'] == 'temar'
-
-#    v = verb.reverse_conjugate("viste")
-#    res = verb.select_best(v)
-#    assert len(res) == 1 and res[0]['verb'] == 'ver'
+    for k,v in pairs.items():
+        item = reverse_conjugate(k)
+        res = select_best(item)
+        assert len(res) == 1
+        assert [k, res[0]['verb']] == [k, v]
 
 
 def test_is_irregular():
@@ -139,4 +121,13 @@ def test_is_irregular():
     assert is_irregular("tener", 1) == False
 
     assert is_irregular("hablar", 7) == False
+
+def test_unstress():
+    unstress = verb.unstress
+    assert unstress("tést") == "test"
+
+def test_do_conjugate():
+    do_conjugate = verb.do_conjugate
+    assert do_conjugate( ['cr', ''], '-ar', 'i-í unstressed') == {1: ['criar'], 2: ['criando'], 3: ['criado'], 4: ['criada'], 5: ['criados'], 6: ['criadas'], 7: ['crío'], 8: ['crías'], 9: ['crias', 'criás'], 10: ['cría'], 11: ['criamos'], 12: ['criais', 'criáis'], 13: ['crían'], 14: ['criaba'], 15: ['criabas'], 16: ['criaba'], 17: ['criábamos'], 18: ['criabais'], 19: ['criaban'], 20: ['crie', 'crié'], 21: ['criaste'], 22: ['crio', 'crió'], 23: ['criamos'], 24: ['criasteis'], 25: ['criaron'], 26: ['criaré'], 27: ['criarás'], 28: ['criará'], 29: ['criaremos'], 30: ['criaréis'], 31: ['criarán'], 32: ['criaría'], 33: ['criarías'], 34: ['criaría'], 35: ['criaríamos'], 36: ['criaríais'], 37: ['criarían'], 38: ['críe'], 39: ['críes'], 40: ['criéis', 'crieis'], 41: ['críe'], 42: ['criemos'], 43: ['crieis'], 44: ['críen'], 45: ['criara'], 46: ['criaras'], 47: ['criara'], 48: ['criáramos'], 49: ['criarais'], 50: ['criaran'], 51: ['criase'], 52: ['criases'], 53: ['criase'], 54: ['criásemos'], 55: ['criaseis'], 56: ['criasen'], 57: ['criare'], 58: ['criares'], 59: ['criare'], 60: ['criáremos'], 61: ['criareis'], 62: ['criaren'], 63: ['cría'], 64: ['criá', 'cria'], 65: ['críe'], 66: ['criemos'], 67: ['criad'], 68: ['críen'], 69: ['críes'], 70: ['críe'], 71: ['criemos'], 72: ['crieis'], 73: ['críen']}
+    assert do_conjugate(['habl'], '-ar', '') == {1: ['hablar'], 2: ['hablando'], 3: ['hablado'], 4: ['hablada'], 5: ['hablados'], 6: ['habladas'], 7: ['hablo'], 8: ['hablas'], 9: ['hablás'], 10: ['habla'], 11: ['hablamos'], 12: ['habláis'], 13: ['hablan'], 14: ['hablaba'], 15: ['hablabas'], 16: ['hablaba'], 17: ['hablábamos'], 18: ['hablabais'], 19: ['hablaban'], 20: ['hablé'], 21: ['hablaste'], 22: ['habló'], 23: ['hablamos'], 24: ['hablasteis'], 25: ['hablaron'], 26: ['hablaré'], 27: ['hablarás'], 28: ['hablará'], 29: ['hablaremos'], 30: ['hablaréis'], 31: ['hablarán'], 32: ['hablaría'], 33: ['hablarías'], 34: ['hablaría'], 35: ['hablaríamos'], 36: ['hablaríais'], 37: ['hablarían'], 38: ['hable'], 39: ['hables'], 40: ['hablés'], 41: ['hable'], 42: ['hablemos'], 43: ['habléis'], 44: ['hablen'], 45: ['hablara'], 46: ['hablaras'], 47: ['hablara'], 48: ['habláramos'], 49: ['hablarais'], 50: ['hablaran'], 51: ['hablase'], 52: ['hablases'], 53: ['hablase'], 54: ['hablásemos'], 55: ['hablaseis'], 56: ['hablasen'], 57: ['hablare'], 58: ['hablares'], 59: ['hablare'], 60: ['habláremos'], 61: ['hablareis'], 62: ['hablaren'], 63: ['habla'], 64: ['hablá'], 65: ['hable'], 66: ['hablemos'], 67: ['hablad'], 68: ['hablen'], 69: ['hables'], 70: ['hable'], 71: ['hablemos'], 72: ['habléis'], 73: ['hablen']}
 
