@@ -153,34 +153,28 @@ def format_image(filename):
         return ""
     return f'<img src="{filename}" />'
 
-def get_article(pos):
-    return noun_articles[pos]
-
-
 def format_def(item):
 
-    result = ""
+    results = []
     for pos in item:
         pos_tag = ""
         if len(item.keys()) > 1:
-            pos_tag = f'<span class="pos pos-{pos}">{{pos}} </span>'
+            pos_tag = f'<span class="pos pos-{pos}">{pos} </span>'
 
         for tag in item[pos]:
-            if result != "":
-                result += "<br>\n"
+            if len(results):
+                results.append("<br>\n"
 
-            result += pos_tag
+            results.append(pos_tag)
 
             usage = item[pos][tag]
-#            defs = spanish_words.get_best_defs(item[pos][tag],40)
-#            usage = spanish_words.defs_to_string(defs, pos)
 
             if tag != "":
-                result += f'<span class="usage-type usage-tag">[{tag}]: </span>'
+                results.append(f'<span class="usage-type usage-tag">[{tag}]: </span>')
 
-            result += f'<span class="usage">{usage}</span>'
+            results.append(f'<span class="usage">{usage}</span>')
 
-    return result
+    return "".join(results)
 
 
 guidseen = {}
