@@ -29,7 +29,7 @@ curl https://github.com/phrozensmoke/LEGACY-Open_Source-Pre2006/raw/master/pytho
 curl wget http://www.manythings.org/anki/spa-eng.zip \
   | zcat \
   | python3 build_sentences.py \
-  > spanish_data/spa-tagged.txt
+  > spanish_data/sentences.json
 
 # Generate the irregular verb list and table
-python3 build_irregular_verbs.py -p spanish_words/verbs.py -v spanish_data/irregular_verbs.json
+python3 build_irregular_verbs.py -p spanish_words/verbs.py -v spanish_words/irregular_verbs.py

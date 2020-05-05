@@ -351,30 +351,25 @@ def make_category_link(ending, paradigm):
 def dump_patterns(filename):
 
     paradigm_list = load_paradigm_list()
-    paradigms = load_paradigms()
+    paradigms = {}
 
-    dump = "paradigms = {}\n"
+    dump = ["paradigms = {}\n"]
     for ending,pgroup in paradigm_list.items():
+        paradigms[ending] = {}
+        dump.append(f"paradigms['{ending}'] = {{}}\n")
 
-        # Scrape the rules for the ending
-        luadata = load_paradigm(ending, "")
-        if ending not in paradigms:
-            paradigms[ending] = { "": luadata }
-
-        dump += "paradigms['%s'] = {}\n"%(ending)
-        dump += "# Data from: %s (revision: %s)\n"%(luadata["url"],luadata["revision"])
-        dump += lua2python(luadata["wikitext"], "paradigms['%s']['']"%(ending)) +"\n\n"
-
-        # Scrape the rules for the pattern
-        for pattern in pgroup:
+        # Scrape the rules for the patterns
+        patterns = [""] + list(pgroup.keys())
+        for pattern in patterns:
             luadata = load_paradigm(ending,pattern)
-            dump += "# Data from: %s (revision: %s)\n"%(luadata["url"],luadata["revision"])
-            dump += lua2python(luadata["wikitext"], "paradigms['%s']['%s']"%(ending,pattern)) +"\n\n"
+            dump.append(f"# Data from: {luadata['url']} (revision: {luadata['revision']})\n")
+            dump.append(lua2python(luadata["wikitext"], f"paradigms['{ending}']['{pattern}']"))
+            dump.append("\n\n")
             paradigms[ending][pattern] = luadata
 
     with open(filename, "w") as outfile:
         outfile.write("# This file is generated automatically, do not hand edit\n#\n")
-        outfile.write(dump)
+        outfile.write(''.join(dump))
 
 
 def dump_verbs(filename):
@@ -383,7 +378,7 @@ def dump_verbs(filename):
     paradigms = load_paradigms()
     verbs = load_verbs()
 
-    dump = "irregular_verbs = {\n"
+    dump = [ "irregular_verbs = {\n" ]
     for ending,pgroup in paradigm_list.items():
         for pattern in pgroup:
 
@@ -406,17 +401,19 @@ def dump_verbs(filename):
         if verb.endswith("se") and verb[:-2] in verbs:
             continue
         data = get_patterns(verbs[verb]['wikitext'])
-        if first:
-            dump += '"%s": %s'%(verb,data)
-            first = False
+        if not first:
+            dump.append(",\n")
         else:
-            dump += ',\n"%s": %s'%(verb,data)
+            first = False
+
+        dump.append(f'"{verb}": {data}')
 
 
-    dump += "\n}"
+    dump.append("\n}")
 
     with open(filename, "w") as outfile:
-        outfile.write(dump)
+        outfile.write("# This file is generated automatically, do not hand edit\n#\n")
+        outfile.write(''.join(dump))
 
 
 def init():
