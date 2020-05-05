@@ -1,6 +1,11 @@
 class SpanishAdjectives:
+    def __init__(self, parent):
+        self.parent = parent
 
     def get_lemma(self, word):
+        if self.parent.wordlist.has_word(word, "adj"):
+            return word
+
         if word.endswith("s"):
             word = word[:-1]
 
