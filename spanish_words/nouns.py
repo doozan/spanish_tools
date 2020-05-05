@@ -61,7 +61,7 @@ class SpanishNouns:
         if word in irregular_nouns:
             lemma = irregular_nouns[word]
 
-        elif self.parent.wordlist.has_noun(word) or self.parent.wordlist.has_word(word, "num"):
+        elif self.parent.has_word(word, "noun") or self.parent.has_word(word, "num"):
             lemma = word
 
         elif word in noplural_nouns:
@@ -69,11 +69,11 @@ class SpanishNouns:
 
 
         # try dropping the s first and seeing if the result is a known word (catches irregulars like bordes/borde)
-        elif len(word) > 2 and word.endswith("s") and self.parent.wordlist.has_noun(word[:-1]):
+        elif len(word) > 2 and word.endswith("s") and self.parent.has_word(word[:-1], "noun"):
             lemma = word[:-1]
 
         # ratones -> ratón
-        elif len(word) > 4 and word.endswith("ones") and self.parent.wordlist.has_noun(word[:-4]+"ón"):
+        elif len(word) > 4 and word.endswith("ones") and self.parent.has_word(word[:-4]+"ón", "noun"):
             lemma = word[:-4] + "ón"
 
         # canciones, coleciones

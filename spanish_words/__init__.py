@@ -16,6 +16,11 @@ class SpanishWords:
         self.nouns = SpanishNouns(self)
         self.adjectives = SpanishAdjectives(self)
 
+    def has_word(self, word, pos):
+        return self.wordlist.has_word(word, pos)
+
+    def get_defs(self, word):
+        return self.wordlist.get_defs(word)
 
     def get_lemmas(self, word, pos, debug=False):
         word = word.lower().strip()

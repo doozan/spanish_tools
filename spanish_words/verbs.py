@@ -180,7 +180,7 @@ class SpanishVerbs:
         valid_verbs =[]
 
         # Check if it's already an infinitive listed in the dictionary
-        if any(word.endswith(ending) for ending in all_verb_endings) and self.parent.wordlist.has_verb(word):
+        if any(word.endswith(ending) for ending in all_verb_endings) and self.parent.has_word(word, "verb"):
             return [ { 'verb': word, 'form': 1 } ]
 
         # Check if it's an irregular verb
@@ -206,10 +206,10 @@ class SpanishVerbs:
 
             # Check the verbs against the dictionary and throw out any we've invented
             for v in possible_verbs:
-                if self.parent.wordlist.has_verb(v['verb']):
+                if self.parent.has_word(v['verb'], "verb"):
                     valid_verbs.append(v)
                 # Check for reflexive only verbs
-                elif self.parent.wordlist.has_verb(v['verb']+"se"):
+                elif self.parent.has_word(v['verb']+"se", "verb"):
                     v['verb'] += "se"
                     valid_verbs.append(v)
 

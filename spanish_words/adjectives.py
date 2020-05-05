@@ -3,7 +3,7 @@ class SpanishAdjectives:
         self.parent = parent
 
     def get_lemma(self, word):
-        if self.parent.wordlist.has_word(word, "adj"):
+        if self.parent.has_word(word, "adj"):
             return word
 
         if word.endswith("s"):
