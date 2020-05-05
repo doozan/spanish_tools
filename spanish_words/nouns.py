@@ -72,6 +72,10 @@ class SpanishNouns:
         elif len(word) > 2 and word.endswith("s") and self.parent.wordlist.has_noun(word[:-1]):
             lemma = word[:-1]
 
+        # ratones -> ratón
+        elif len(word) > 4 and word.endswith("ones") and self.parent.wordlist.has_noun(word[:-4]+"ón"):
+            lemma = word[:-4] + "ón"
+
         # canciones, coleciones
         elif len(word) > 5 and word.endswith("iones"):
             lemma = word[:-5] + "ión"
@@ -87,16 +91,15 @@ class SpanishNouns:
         elif len(word) > 3 and word[-3:] in [ "éis", "áis", "óis", "úis" ]:
             lemma = word[:-3] + "y"
 
-        elif len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "xes", "yes", "íes" ]:
+        elif len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "ses", "xes", "yes", "íes" ]:
             lemma = word[:-2]
 
         elif len(word) > 2 and word[-2:] in [ "as", "bs", "cs", "ds", "es", "fs", "gs", "ks", "ls", "ms", "ns", "os", "ps", "rs", "ts", "vs", "ás", "ís", "ós", "ús" ]:
             lemma = word[:-1]
 
         # Check definitions for "feminine of word-o" and use word-o as lemma (mentiroso/a)
-        if lemma.endswith("a"):
-            masculine = self.parent.wordlist.get_masculine_noun(lemma)
-            if masculine:
-                lemma = masculine
+        masculine = self.parent.wordlist.get_masculine_noun(lemma)
+        if masculine:
+            lemma = masculine
 
         return lemma
