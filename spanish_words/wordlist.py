@@ -318,6 +318,15 @@ class SpanishWordlist:
             for d in self.allwords[word][pos][note]:
                 if d.startswith(definition):
                     self.allwords[word][pos][note].remove(d)
+            if not len(self.allwords[word][pos][note]):
+                del self.allwords[word][pos][note]
+
+        # cleanup if we've deleted all of something
+        if not len(self.allwords[word][pos]):
+            del self.allwords[word][pos]
+            if not len(self.allwords[word]):
+                del self.allwords[word]
+
 
     def add_def(self, item):
         word = item['word']
@@ -385,7 +394,7 @@ class SpanishWordlist:
             return False
         return any( pos_is_noun(k) for k in self.allwords[word].keys())
 
-    def has_word(self, word, pos):
+    def has_word(self, word, pos=None):
         if not word or word not in self.allwords:
             return False
 
@@ -454,7 +463,7 @@ class SpanishWordlist:
         return alldefs
 
 
-    def is_feminized_noun(self, word, masculine):
+    def is_feminized_noun(self, word, masculine=""):
         if word not in self.allwords:
             return False
 
@@ -464,7 +473,8 @@ class SpanishWordlist:
 
         # Only search the first {f} note definitions (eliminates secondary uses like hamburguesa as a lady from Hamburg)
         if "feminine noun of "+masculine in list(alldefs['f'].values())[0][0] or \
-           "(female" in list(alldefs['f'].values())[0][0]:
+           "(female" in list(alldefs['f'].values())[0][0] or \
+           "female " in list(alldefs['f'].values())[0][0]:
             return True
 
         return False
@@ -495,10 +505,42 @@ class SpanishWordlist:
 
 
     def get_masculine_noun(self, word):
+        if word not in self.allwords or 'f' not in self.allwords[word]:
+            return
+
+        maindef = list(self.allwords[word]['f'].values())[0][0]
+        res = re.match('feminine noun of ([^;,:]*)', maindef)
+        if res:
+            return res.group(1)
+
+        if not maindef.startswith("female ") and "(female" not in maindef:
+            return
+
+        # if it doesn't end with a there are no good rules
         if not word.endswith("a"):
             return
 
+        # hermana -> hermano
         masculine = word[:-1]+"o"
+        if self.has_word(masculine, "m"):
+            return masculine
+
+        # jefa -> jefe
+        masculine = word[:-1]+"e"
+        if self.has_word(masculine, "m"):
+            return masculine
+
+        # doctora / doctor
+        masculine = word[:-1]
+        if self.has_word(masculine, "m"):
+            return masculine
+
+        # tigresa -> tigre
+        if word.endswith("sa"):
+            masculine = word[:-2]
+            if self.has_word(masculine, "m"):
+                return masculine
+
         if self.is_feminized_noun(word, masculine):
             return masculine
 
