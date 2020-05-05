@@ -47,7 +47,7 @@ def get_speech(voice, phrase, path):
     destfile = path + "/" + filename
 
     if not os.path.isfile(destfile):
-        print("Generating {voice}: {phrase}")
+        print(f"Generating {voice}: {phrase}")
         text_to_mp3(voice, phrase, destfile)
 
     return filename
