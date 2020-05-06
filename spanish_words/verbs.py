@@ -122,21 +122,22 @@ class SpanishVerbs:
         return best
 
     # convert a verb/form to a score of likely usage
-    # scoring cumulative:
-    # 4 = form is irregular
-    #
-    # 50 = infinitive
-    # 8 = gerund
-    # 8 = past participle
-    # 2 = imperative
-    # 2 = indicative
-    #
-    # 1 = not a region specific use (vos/vosotros,etc)
-    # 1 = first person
     def get_score(self, item):
         if not item or item['form'] not in inflections:
             return -1
 
+        scoring = {
+            "infinitive" : 50,  # infinitives should always be themselves
+            "gerund":      50,  # likewise, gerund and past participles
+            "pastpart":    50,
+            "tu-past-ind":  6,  # tu past indicative is pretty common
+            "irregular":    4,  # prefer irregular usage over regular usage
+            "indicative":   4,  # prefer indicative
+            "imperative":   2,  # prefer imperative
+            "not-region":   2,  # prefer non-regional use
+            "first-person": 1,  # prefer first person use
+#           "present":      1,  # prefer present tense
+        }
         score = 0
         verb = item['verb']
         if verb in irregular_verbs:
@@ -151,24 +152,33 @@ class SpanishVerbs:
             for paradigm in irregular_verbs[item['verb']]:
                 forms = self.do_conjugate( paradigm['stems'], ending, paradigm['pattern'] )
                 if form in forms and forms[form] != regular_forms[form]:
-                    score += 2
+                    score += scoring['irregular']
                     break
 
         i = inflections[item['form']]
+        if item['form'] == 21: # tu fuiste
+            score += scoring['tu-past-ind']
+
         if any([ x for x in i if x['mood'] in ['infinitive'] ]):
-            score += 50
-        elif any([ x for x in i if x['mood'] in ['gerund', 'past participle'] ]):
-            score += 8
+            score += scoring['infinitive']
+        elif any([ x for x in i if x['mood'] in ['gerund'] ]):
+            score += scoring['gerund']
+        elif any([ x for x in i if x['mood'] in ['past participle'] ]):
+            score += scoring['pastpart']
         elif any([ x for x in i if x['mood'] in ['imperative'] ]):
-            score += 4
+            score += scoring['imperative']
         elif any([ x for x in i if x['mood'] in ['indicative'] ]):
-            score += 1
+            score += scoring['indicative']
+
+
+#        if any([ x for x in i if 'tense' in x and x['tense'] == 'present' ]):
+#            score += scoring['present']
 
         if any([ x for x in i if 'pers' in x and x['pers'] == 1 ]):
-            score += 1
+            score += scoring['first-person']
 
         if any([ x for x in i if 'region' not in x ]):
-            score += 1
+            score += scoring['not-region']
 
         return score
 
