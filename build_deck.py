@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- python-mode -*-
+
 import genanki
 import csv
 import os
@@ -159,11 +162,11 @@ def format_def(item):
     for pos in item:
         pos_tag = ""
         if len(item.keys()) > 1:
-            pos_tag = f'<span class="pos pos-{pos}">{pos} </span>'
+            pos_tag = f'<span class="pos pos-{pos}">{{{pos}}} </span>'
 
         for tag in item[pos]:
             if len(results):
-                results.append("<br>\n"
+                results.append("<br>\n")
 
             results.append(pos_tag)
 
@@ -336,6 +339,7 @@ if args.guids:
 
 # read through all the files to populate the synonyms and excludes lists
 for wordlist in args.wordlist:
+    print(f"parsing {wordlist}")
     with open(wordlist, newline='') as csvfile:
         csvreader = csv.DictReader(csvfile)
         for reqfield in ["pos", "spanish"]:
@@ -343,19 +347,63 @@ for wordlist in args.wordlist:
                 raise ValueError(f"No '{reqfield}' field specified in file {wordlist}")
 
         for row in csvreader:
+            if not row:
+                continue
+
+            # Rank that is another word will replace pos:word specified
+            # or the first occurance of the word if the pos: is not specified
+            if 'rank' in row and not row['rank'][0].isdigit() and not row['rank'][0] == "-":
+                old_word = row['rank']
+                old_pos = ""
+                if ":" in row['rank']:
+                    old_word, old_pos = row['rank'].lower().split(":")
+                new_word = row['spanish'].lower()
+                new_pos = row['pos'].lower()
+                new_tag = make_tag(new_word, new_pos)
+
+                if old_pos:
+                    old_tag = make_tag(old_word, old_pos)
+                    item = allwords.pop(old_tag)
+                    item['spanish'] = new_word
+                    item['pos'] = new_pos
+                    allwords[newtag] = item
+                    #print(f"replaced {old_tag} with {new_word} ({new_pos})")
+                else:
+                    replaced=False
+                    for wordtag in list(allwords.keys()):
+                        item = allwords[wordtag]
+                        if item['spanish'].lower() == old_word:
+                            item = allwords.pop(wordtag)
+                            item['spanish'] = new_word
+                            item['pos'] = new_pos
+                            allwords[new_tag] = item
+                            #print(f"replaced {old_word} with {new_word} ({new_pos})")
+                            replaced=True
+                            break
+                    if not replaced:
+                        raise ValueError(f"{old_word} not found, unable to replace with {new_word} ({new_pos}) from {wordlist}")
+#                        allwords[newtag] = { 'spanish': new_word, 'pos': new_pos }
+
 
             # Negative rank indicates that all previous instances of this word should be removed
-            if 'rank' in row and int(row['rank']) < 0:
+            elif 'rank' in row and int(row['rank']) < 0:
                 exclude_word = row['spanish'].lower()
                 exclude_pos = row['pos'].lower() if 'pos' in row and row['pos'] != "" else None
                 if exclude_pos:
                     exclude_tag = make_tag(row['spanish'],row['pos'])
-                    allwords.pop(exclude_tag)
+                    if exclude_tag in allwords:
+                        allwords.pop(exclude_tag)
+                    else:
+                        print(f"{exclude_tag} was not removed because it is not in the wordlist")
                 else:
+                    found=False
                     for wordtag in list(allwords.keys()):
                         item = allwords[wordtag]
                         if item['spanish'].lower() == exclude_word:
+                            found=True
                             allwords.pop(wordtag)
+                    if not found:
+                        print(f"{exclude_word} was not removed because it is not in the wordlist")
 
             else:
                 wordtag = make_tag(row['spanish'],row['pos'])
