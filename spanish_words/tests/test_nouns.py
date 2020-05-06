@@ -3,9 +3,9 @@ import pytest
 
 noun = None
 
-def test_init():
+def test_init(spanish):
     global noun
-    noun = SpanishNouns(pytest._spanish)
+    noun = SpanishNouns(spanish)
 
 def test_get_lemma():
     get_lemma = noun.get_lemma

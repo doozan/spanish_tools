@@ -31,7 +31,7 @@ def test_get_best_pos():
 #    "salvo": "adv",
     "alrededor": "adv",
     "vete": "verb",
-    "rosa": "adj",
+    "rosa": "noun",
     "noticias": "noun",
 #    "doble": "adj",
     "comida": "noun",

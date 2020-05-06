@@ -21,263 +21,6 @@ noun_tags = set([
     "m/f"   # part of a masculine/feminine noun pair (amigo/amiga)
 ])
 
-def parse_line(data):
-    #re.match("^([^{]+)(?:{([a-z]+)})?", line) #}
-
-    pattern = r"""(?x)
-         (?P<word>[^{:]+)             # The word (anything not an opening brace)
-
-         ([ ]{                        # (optional) a space
-           (?P<pos>[^}]*)             #    and then the the part of speech, enclosed in curly braces
-         \})*                         #    (this may be specified more than once)
-
-         ([ ]\[                       # (optional) a space
-           (?P<note>[^\]]*)           #    and then the note, enclosed in square brackets
-         \])?
-
-         (                            # this whole bit can be optional
-           [ ]*::[ ]                  #   :: optionally preceded by whitespace and followed by a mandatory space
-
-           (?P<def>.*)                #   the definition
-         )?
-         \n                           # newline
-    """
-    res = re.match(pattern, data)
-
-    # This only applies to one entry in the 4/20/2020 wiktionary dump
-    if not res:
-#        print("DOES NOT MATCH REGEX: '%s'"% data.strip())
-        return {'word':'', 'pos':'', 'note': '', 'def': ''}
-
-    word = res.group('word').strip()
-    #tags = [ item.strip() for item in res.group('tags').split(',') ] if res.group('tags') else []
-    note = res.group('note') if res.group('note') else ''
-    pos = res.group('pos') if res.group('pos') else ''
-    definition = res.group('def') if res.group('def') else ''
-
-    return {
-        'word': word,
-        'pos': pos,
-        'note': note,
-        'def': definition
-    }
-
-def pos_is_verb(pos):
-    return pos.startswith("v")
-
-def pos_is_noun(pos):
-    if pos in noun_tags:
-        return True
-    return False
-
-def common_pos(pos):
-    if not pos:
-        return ""
-
-    if pos_is_verb(pos):
-        return "verb"
-    if pos_is_noun(pos):
-        return "noun"
-
-    return pos.lower()
-
-
-def should_ignore_note(note):
-    if {"archaic", "dated", "historical", "obsolete", "rare"} & { n.strip().lower() for n in note.split(',') }:
-        return True
-
-    return False
-
-def should_ignore_def(definition):
-    if definition.startswith("obsolete") and (
-         definition.startswith("obsolete spelling") or
-         definition.startswith("obsolete form of")):
-        return True
-    return False
-
-
-# splits a list by comma, but with awareness of ()
-# split_defs("one, two (2, II), three") will result in
-# [ "one", "two (2, II)", "three" ]
-# probably doable as a regex
-def split_sep(data, separator):
-    if not data or data == "":
-        return []
-
-    splits=[]
-    nested=0
-
-    last_split=0
-
-    openers = ["(", "[", "{"]
-    closers = [")", "]", "}"]
-    separators = [","]
-
-    for idx in range(0,len(data)):
-        c = data[idx]
-        if c in openers:
-            nested += 1
-        elif c in closers:
-            nested = nested-1 if nested else 0
-        elif not nested and c == separator:
-            splits.append(data[last_split:idx].strip())
-            last_split=idx+1
-
-    if idx>last_split:
-        splits.append(data[last_split:idx+1].strip())
-
-    return splits
-
-
-def clean_def(pos, d):
-    if pos_is_verb(pos):
-        if d.startswith("to "):
-            return d[3:]
-    return d
-
-def split_defs(pos, defs):
-    res = []
-    for d in defs:
-        for main in split_sep(d, ';'):
-            res.append([ clean_def(pos, sub) for sub in split_sep(main, ',') ])
-    return res
-
-def get_split_defs(alldefs):
-
-    res = []
-    for pos,notes in alldefs.items():
-        for note, defs in notes.items():
-            res += split_defs(pos, defs)
-
-    return res
-
-def get_best_defs(defs,limit):
-    return defs
-
-""" # This is old code
-
-# "primary" defs start with a ';' and synonyms follow
-# for word with many definitons this can be too much info
-
-# given the following input:
-# [ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ]
-# limit=2 gives [ ";def1", ";def2" ]
-# limit=4 gives [ ";def1", "syn1-1", ";def2", ";def3" ]
-# limit=5 gives [ ";def1", "syn1-1", ";def2", ";def3", "def3-syn1" ]
-
-
-def get_best_defs(defs,limit):
-    best = []
-
-    if len(defs) <= limit:
-        return defs
-
-    #primary_defs = [ x[1:] for x in defs if x.startswith(';') ]
-
-    # number of primary defs >= limit just return first limit defs
-    #if len(primary_defs) >= limit:
-    #    return primary_defs[:limit]
-
-    # only one primary def, just return the first limit defs
-    #elif len(primary_defs) == 1:
-    #    return defs[:limit]
-
-    # otherwise, build a list of defs to keep starting with primary defs
-    # then the first syn of each def
-    # then the second...
-    # until we've hit the limit of keepers
-    # Since it's important to keep the primary def and the synonyms together
-    # we build a list of keepers by their index and then sort that index to
-    # get things in the correct order
-
-
-#    # TODO: split the defs
-#        # TODO: Move this to get_best_def
-#        # Definitions are separated by commas and semicolons
-#        for defs in item['def'].split("; "):
-#            is_new_def=True
-#            for eng in split_def(defs):
-#                if pos_is_verb(pos):
-#                    eng = strip_eng_verb(eng)
-#                if is_new_def:
-#                    eng = ";" + eng
-#
-#                if eng not in usage[pos][note]:
-#                    usage[pos][note].append(eng)
-#                is_new_def = False
-
-    keepidx = []
-    keep_depth = 0
-
-    while len(keepidx) < limit:
-        cur_depth=0
-        index=0
-        for item in defs:
-            if item.startswith(';'):
-                cur_depth=0
-            else:
-                cur_depth += 1
-
-            if cur_depth == keep_depth:
-                keepidx.append(index)
-                if len(keepidx) >= int(limit):
-                    break
-            index += 1
-        keep_depth += 1
-        if keep_depth > 3:
-            break;
-
-    keepers = []
-    for idx in sorted(keepidx):
-        keepers.append(defs[idx])
-
-    return keepers
-""" and None
-
-def defs_to_string(pos, defs):
-    if not defs:
-        return defs
-
-    usage = ""
-    if pos_is_verb(pos):
-        usage = "to "
-
-    return "; ".join( [ usage + ", ".join(subs) for subs in defs ] )
-
-
-def filter_defs(alldefs, filter_pos=None, filter_phrase=None):
-    res = {}
-    if filter_pos: filter_pos = filter_pos.lower()
-
-    for pos,notes in alldefs.items():
-
-        # Remove all defs that don't match the filter_pos
-        if filter_pos and filter_pos != "":
-            if filter_pos == "verb":
-                if not pos_is_verb(pos):
-                    continue
-            elif filter_pos == "noun":
-                if not pos_is_noun(pos):
-                    continue
-            elif filter_pos != pos:
-                continue
-
-        # Filter out all defs that contain the filter_phrase
-        for note, defs in notes.items():
-
-            for d in defs:
-                if filter_phrase and filter_phrase in d:
-                    continue
-                if pos not in res:
-                    res[pos] = {}
-                if note not in res[pos]:
-                    res[pos][note] = []
-                if d not in res[pos][note]:
-                    res[pos][note].append(d)
-
-    return res
-
-
 
 class SpanishWordlist:
     def __init__(self, dictionary=None):
@@ -352,27 +95,27 @@ class SpanishWordlist:
 
         with open(datafile) as infile:
             for line in infile:
-                res = parse_line(line)
-                if should_ignore_def(res['def']) or should_ignore_note(res['note']):
+                res = self.parse_line(line)
+                if self.should_ignore_def(res['def']) or self.should_ignore_note(res['note']):
                     continue
                 word = res['word']
                 pos = res['pos']
 
                 self.add_def(res)
 
-        if not os.path.isfile(datafile + ".custom"):
+        if not os.path.isfile(str(datafile) + ".custom"):
             return
 
-        with open(datafile+".custom") as infile:
+        with open(str(datafile)+".custom") as infile:
             for line in infile:
                 if line.strip().startswith("#") or line.strip() == "":
                     continue
 
                 if line.startswith("-"):
-                    res = parse_line(line[1:])
+                    res = self.parse_line(line[1:])
                     self.remove_def(res)
                 else:
-                    res = parse_line(line)
+                    res = self.parse_line(line)
                     self.add_def(res)
 
 
@@ -381,18 +124,18 @@ class SpanishWordlist:
         if word not in self.allwords:
             return []
 
-        return list(dict.fromkeys([common_pos(k) for k in self.allwords[word].keys() ]))
+        return list(dict.fromkeys([self.common_pos(k) for k in self.allwords[word].keys() ]))
 
 
     def has_verb(self, word):
         if word not in self.allwords:
             return False
-        return any( pos_is_verb(k) for k in self.allwords[word].keys())
+        return any( self.pos_is_verb(k) for k in self.allwords[word].keys())
 
     def has_noun(self, word):
         if word not in self.allwords:
             return False
-        return any( pos_is_noun(k) for k in self.allwords[word].keys())
+        return any( self.pos_is_noun(k) for k in self.allwords[word].keys())
 
     def has_word(self, word, pos=None):
         if not word or word not in self.allwords:
@@ -412,7 +155,7 @@ class SpanishWordlist:
 
         if len( {"m","f","mf"} & alldefs.keys() ) > 1:
             alldefs['m-f'] = {}
-            for oldpos in ['m', 'f', 'mf']:
+            for oldpos in ['f', 'mf', 'm']:
                 if oldpos in alldefs:
                     for oldnote,use in alldefs[oldpos].items():
                         newnote = oldpos + ", " + oldnote if oldnote != "" else oldpos
@@ -429,13 +172,14 @@ class SpanishWordlist:
             femnoun = self.get_feminine_noun(word)
             if femnoun:
                 femdefs = self.allwords[femnoun]
-                femdefs = filter_defs(femdefs, 'f', "feminine noun of "+word)
+                femdefs = self.filter_defs(femdefs, 'f', "feminine noun of "+word)
+                femdefs = self.filter_defs(femdefs, 'f', "female equivalent of "+word)
 
                 if len(femdefs):
                     alldefs['f'] = femdefs['f']
                     alldefs['m/f'] = {}
 
-                    for oldpos in ['m', 'f']:
+                    for oldpos in ['f', 'm']:
                         for oldnote,defs in alldefs[oldpos].items():
                             newnote = oldpos + ", " + oldnote if oldnote != "" else oldpos
                             alldefs['m/f'][newnote] = defs
@@ -452,13 +196,13 @@ class SpanishWordlist:
             return
 
         alldefs = self.allwords[word]
-        alldefs = filter_defs(alldefs, pos)
+        alldefs = self.filter_defs(alldefs, pos)
 
         alldefs = self.do_analysis(word, alldefs)
 
         for pos,notes in alldefs.items():
             for note, defs in notes.items():
-                notes[note] = defs_to_string(pos, split_defs(pos, defs))
+                notes[note] = self.defs_to_string(pos, self.split_defs(pos, defs))
 
         return alldefs
 
@@ -509,15 +253,16 @@ class SpanishWordlist:
             return
 
         maindef = list(self.allwords[word]['f'].values())[0][0]
-        res = re.match('feminine noun of ([^;,:]*)', maindef)
+        res = re.match('fem(?:inine noun|ale equivalent) of ([^;,:]*)', maindef)
         if res:
             return res.group(1)
 
-        if not maindef.startswith("female ") and "(female" not in maindef:
-            return
-
         # if it doesn't end with a there are no good rules
         if not word.endswith("a"):
+            return
+
+        # only check words that have a hint of being female in their primary definition
+        if not maindef.startswith("female ") and "(female" not in maindef:
             return
 
         # hermana -> hermano
@@ -543,4 +288,278 @@ class SpanishWordlist:
 
         if self.is_feminized_noun(word, masculine):
             return masculine
+
+    @staticmethod
+    def parse_line(data):
+        #re.match("^([^{]+)(?:{([a-z]+)})?", line) #}
+
+        pattern = r"""(?x)
+             (?P<word>[^{:]+)             # The word (anything not an opening brace)
+
+             ([ ]{                        # (optional) a space
+               (?P<pos>[^}]*)             #    and then the the part of speech, enclosed in curly braces
+             \})*                         #    (this may be specified more than once)
+
+             ([ ]\[                       # (optional) a space
+               (?P<note>[^\]]*)           #    and then the note, enclosed in square brackets
+             \])?
+
+             (                            # this whole bit can be optional
+               [ ]*::[ ]                  #   :: optionally preceded by whitespace and followed by a mandatory space
+
+               (?P<def>.*)                #   the definition
+             )?
+             \n?$                         # an optional newline at the end
+        """
+        res = re.match(pattern, data)
+
+        # This only applies to one entry in the 4/20/2020 wiktionary dump
+        if not res:
+    #        print("DOES NOT MATCH REGEX: '%s'"% data.strip())
+            return {'word':'', 'pos':'', 'note': '', 'def': ''}
+
+        word = res.group('word').strip()
+        #tags = [ item.strip() for item in res.group('tags').split(',') ] if res.group('tags') else []
+        note = res.group('note') if res.group('note') else ''
+        pos = res.group('pos') if res.group('pos') else ''
+        definition = res.group('def') if res.group('def') else ''
+
+        return {
+            'word': word,
+            'pos': pos,
+            'note': note,
+            'def': definition
+        }
+
+    @staticmethod
+    def pos_is_verb(pos):
+        return pos.startswith("v")
+
+    @staticmethod
+    def pos_is_noun(pos):
+        if pos in noun_tags:
+            return True
+        return False
+
+    @staticmethod
+    def common_pos(pos):
+        if not pos:
+            return ""
+
+        if SpanishWordlist.pos_is_verb(pos):
+            return "verb"
+        if SpanishWordlist.pos_is_noun(pos):
+            return "noun"
+
+        return pos.lower()
+
+
+    @staticmethod
+    def should_ignore_def(definition):
+        if definition.startswith("obsolete") and (
+             definition.startswith("obsolete spelling") or
+             definition.startswith("obsolete form of")):
+            return True
+        return False
+
+    @staticmethod
+    def should_ignore_note(note):
+        if {"archaic", "dated", "historical", "obsolete", "rare"} & { n.strip().lower() for n in note.split(',') }:
+            return True
+
+        return False
+
+
+
+    # splits a list by comma, but with awareness of ()
+    # split_defs("one, two (2, II), three") will result in
+    # [ "one", "two (2, II)", "three" ]
+    # probably doable as a regex
+    @staticmethod
+    def split_sep(data, separator):
+        if not data or data == "":
+            return []
+
+        splits=[]
+        nested=0
+
+        last_split=0
+
+        openers = ["(", "[", "{"]
+        closers = [")", "]", "}"]
+        separators = [","]
+
+        for idx in range(0,len(data)):
+            c = data[idx]
+            if c in openers:
+                nested += 1
+            elif c in closers:
+                nested = nested-1 if nested else 0
+            elif not nested and c == separator:
+                splits.append(data[last_split:idx].strip())
+                last_split=idx+1
+
+        if idx>last_split:
+            splits.append(data[last_split:idx+1].strip())
+
+        return splits
+
+
+    @staticmethod
+    def clean_def(pos, d):
+        if SpanishWordlist.pos_is_verb(pos):
+            if d.startswith("to "):
+                return d[3:]
+        return d
+
+    @staticmethod
+    def split_defs(pos, defs):
+        res = []
+        for d in defs:
+            for main in SpanishWordlist.split_sep(d, ';'):
+                res.append([ SpanishWordlist.clean_def(pos, sub) for sub in SpanishWordlist.split_sep(main, ',') ])
+        return res
+
+    @staticmethod
+    def get_split_defs(alldefs):
+
+        res = []
+        for pos,notes in alldefs.items():
+            for note, defs in notes.items():
+                res += SpanishWordlist.split_defs(pos, defs)
+
+        return res
+
+    @staticmethod
+    def get_best_defs(defs,limit):
+        return defs
+
+    """ # This is old code
+
+    # "primary" defs start with a ';' and synonyms follow
+    # for word with many definitons this can be too much info
+
+    # given the following input:
+    # [ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ]
+    # limit=2 gives [ ";def1", ";def2" ]
+    # limit=4 gives [ ";def1", "syn1-1", ";def2", ";def3" ]
+    # limit=5 gives [ ";def1", "syn1-1", ";def2", ";def3", "def3-syn1" ]
+
+
+    @staticmethod
+    def get_best_defs(defs,limit):
+        best = []
+
+        if len(defs) <= limit:
+            return defs
+
+        #primary_defs = [ x[1:] for x in defs if x.startswith(';') ]
+
+        # number of primary defs >= limit just return first limit defs
+        #if len(primary_defs) >= limit:
+        #    return primary_defs[:limit]
+
+        # only one primary def, just return the first limit defs
+        #elif len(primary_defs) == 1:
+        #    return defs[:limit]
+
+        # otherwise, build a list of defs to keep starting with primary defs
+        # then the first syn of each def
+        # then the second...
+        # until we've hit the limit of keepers
+        # Since it's important to keep the primary def and the synonyms together
+        # we build a list of keepers by their index and then sort that index to
+        # get things in the correct order
+
+
+    #    # TODO: split the defs
+    #        # TODO: Move this to get_best_def
+    #        # Definitions are separated by commas and semicolons
+    #        for defs in item['def'].split("; "):
+    #            is_new_def=True
+    #            for eng in split_def(defs):
+    #                if self.pos_is_verb(pos):
+    #                    eng = strip_eng_verb(eng)
+    #                if is_new_def:
+    #                    eng = ";" + eng
+    #
+    #                if eng not in usage[pos][note]:
+    #                    usage[pos][note].append(eng)
+    #                is_new_def = False
+
+        keepidx = []
+        keep_depth = 0
+
+        while len(keepidx) < limit:
+            cur_depth=0
+            index=0
+            for item in defs:
+                if item.startswith(';'):
+                    cur_depth=0
+                else:
+                    cur_depth += 1
+
+                if cur_depth == keep_depth:
+                    keepidx.append(index)
+                    if len(keepidx) >= int(limit):
+                        break
+                index += 1
+            keep_depth += 1
+            if keep_depth > 3:
+                break;
+
+        keepers = []
+        for idx in sorted(keepidx):
+            keepers.append(defs[idx])
+
+        return keepers
+    """ and None
+
+    @staticmethod
+    def defs_to_string(pos, defs):
+        if not defs:
+            return defs
+
+        usage = ""
+        if SpanishWordlist.pos_is_verb(pos):
+            usage = "to "
+
+        return "; ".join( [ usage + ", ".join(subs) for subs in defs ] )
+
+
+    @staticmethod
+    def filter_defs(alldefs, filter_pos=None, filter_phrase=None):
+        res = {}
+        if filter_pos: filter_pos = filter_pos.lower()
+
+        for pos,notes in alldefs.items():
+
+            # Remove all defs that don't match the filter_pos
+            if filter_pos and filter_pos != "":
+                if filter_pos == "verb":
+                    if not SpanishWordlist.pos_is_verb(pos):
+                        continue
+                elif filter_pos == "noun":
+                    if not SpanishWordlist.pos_is_noun(pos):
+                        continue
+                elif filter_pos != pos:
+                    continue
+
+            # Filter out all defs that contain the filter_phrase
+            for note, defs in notes.items():
+
+                for d in defs:
+                    if filter_phrase and filter_phrase in d:
+                        continue
+                    if pos not in res:
+                        res[pos] = {}
+                    if note not in res[pos]:
+                        res[pos][note] = []
+                    if d not in res[pos][note]:
+                        res[pos][note].append(d)
+
+        return res
+
+
+
 

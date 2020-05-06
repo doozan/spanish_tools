@@ -1,11 +1,10 @@
 from spanish_words.verbs import SpanishVerbs
-import pytest
 
 verb = None
 
-def test_init():
+def test_init(spanish):
     global verb
-    verb = SpanishVerbs(pytest._spanish.wordlist)
+    verb = SpanishVerbs(spanish)
 
 def test_conjugate():
     conjugate = verb.conjugate
@@ -95,13 +94,17 @@ def test_select_best():
     pairs = {
         "comido": "comer",
         "ve": "ir",
-        "sé": "ser",
+        "sé": "saber",
         "haciendo": "hacer",
         "vete": "ir",
         "vengan": "venir",
         "volaste": "volar",
-        "temes": "temar",
-        #"viste": "ver"
+        "temes": "temer",
+        "viste": "ver",
+        "podemos": "poder",
+        "suelen": "soler",
+        "viven": "vivir",
+        "diste": "dar",
     }
 
     for k,v in pairs.items():

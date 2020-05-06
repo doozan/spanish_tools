@@ -1,8 +1,59 @@
+import pytest
 from spanish_words.wordlist import SpanishWordlist
 import spanish_words.wordlist
-import pytest
+import os
 
 obj = None
+
+
+def test_general(tmp_path):
+    wordlist = SpanishWordlist()
+
+    datafile = tmp_path / "dictionary.txt"
+    print(datafile)
+    with open(datafile, "w") as outfile:
+        outfile.write(
+"""amigo {m} :: friend
+amiga {f} :: feminine noun of amigo, friend
+enemigo {m} :: foe, enemy
+casa {f} :: house
+chico {adj} :: small
+chico {m} :: boy; kid
+chica {f} :: feminine noun of chico, girl
+chica {f} [colloquial] :: gal, chick
+cura {f} :: cure (something that restores good health)
+cura {m} :: priest
+cura {f} [Colombia, dated] :: avocado"""
+        )
+    wordlist.load_dictionary(datafile)
+
+    assert wordlist.has_word("amigo") == True
+    assert wordlist.has_word("amigo", "noun") == True
+    assert wordlist.has_word("amigo", "verb") == False
+    assert wordlist.has_word("myword", "noun") == False
+
+    test_def = wordlist.parse_line("myword {m} :: my def1, def2; def 3\n")
+    test_def2 = wordlist.parse_line("myword {m} :: def 4\n")
+    assert test_def == {'word': 'myword', 'pos': 'm', 'note': '', 'def': 'my def1, def2; def 3'}
+
+    wordlist.add_def(test_def)
+    wordlist.add_def(test_def2)
+    assert wordlist.has_word("myword", "noun") == True
+
+    rm_def = wordlist.parse_line("myword")
+    wordlist.remove_def(rm_def)
+    assert wordlist.has_word("myword", "noun") == False
+
+    wordlist.add_def(test_def)
+    assert wordlist.has_word("myword", "noun") == True
+
+    rm_def = wordlist.parse_line("myword {m}")
+    wordlist.remove_def(rm_def)
+    assert wordlist.has_word("myword", "noun") == False
+
+
+    #test_remove_def():
+    #test_add_def():
 
 def test_init():
     global obj
@@ -175,25 +226,25 @@ def xtest_init_syns():
 
 
 def test_parse_line():
-    res = spanish_words.wordlist.parse_line("abanderada {f} :: feminine noun of abanderado\n")
+    res = obj.parse_line("abanderada {f} :: feminine noun of abanderado\n")
     assert res['word'] == 'abanderada'
     assert res['pos'] == 'f'
     assert res['note'] == ''
     assert res['def'] == 'feminine noun of abanderado'
 
-    res = spanish_words.wordlist.parse_line("abandonamiento {m} [rare] :: abandonment\n")
+    res = obj.parse_line("abandonamiento {m} [rare] :: abandonment\n")
     assert res['word'] == 'abandonamiento'
     assert res['pos'] == 'm'
     assert res['note'] == 'rare'
     assert res['def'] == 'abandonment'
 
-    res = spanish_words.wordlist.parse_line("otólogo  :: otologist\n")
+    res = obj.parse_line("otólogo  :: otologist\n")
     assert res['word'] == 'otólogo'
     assert res['pos'] == ''
     assert res['note'] == ''
     assert res['def'] == 'otologist'
 
-    res = spanish_words.wordlist.parse_line("cliente {mf} {m} [computing] :: client\n")
+    res = obj.parse_line("cliente {mf} {m} [computing] :: client\n")
     assert res['word'] == 'cliente'
     assert res['pos'] == 'm'
     assert res['note'] == 'computing'
@@ -201,69 +252,71 @@ def test_parse_line():
 
 
 def test_pos_is_noun():
-    assert spanish_words.wordlist.pos_is_noun("m") == True
-    assert spanish_words.wordlist.pos_is_noun("m/f") == True
-    assert spanish_words.wordlist.pos_is_noun("f-el") == True
-    assert spanish_words.wordlist.pos_is_noun("f") == True
-    assert spanish_words.wordlist.pos_is_noun("vt") == False
-    assert spanish_words.wordlist.pos_is_noun("") == False
+    assert obj.pos_is_noun("m") == True
+    assert obj.pos_is_noun("m/f") == True
+    assert obj.pos_is_noun("f-el") == True
+    assert obj.pos_is_noun("f") == True
+    assert obj.pos_is_noun("vt") == False
+    assert obj.pos_is_noun("") == False
 
 
 def test_pos_is_verb():
-    assert spanish_words.wordlist.pos_is_verb("v") == True
-    assert spanish_words.wordlist.pos_is_verb("vt") == True
-    assert spanish_words.wordlist.pos_is_verb("vr") == True
-    assert spanish_words.wordlist.pos_is_verb("m") == False
-    assert spanish_words.wordlist.pos_is_verb("") == False
+    assert obj.pos_is_verb("v") == True
+    assert obj.pos_is_verb("vt") == True
+    assert obj.pos_is_verb("vr") == True
+    assert obj.pos_is_verb("m") == False
+    assert obj.pos_is_verb("") == False
 
 
 def test_common_pos():
-    assert spanish_words.wordlist.common_pos("m") == "noun"
-    assert spanish_words.wordlist.common_pos("m/f") == "noun"
-    assert spanish_words.wordlist.common_pos("f-el") == "noun"
-    assert spanish_words.wordlist.common_pos("f") == "noun"
-    assert spanish_words.wordlist.common_pos("v") == "verb"
-    assert spanish_words.wordlist.common_pos("vt") == "verb"
-    assert spanish_words.wordlist.common_pos("vr") == "verb"
-    assert spanish_words.wordlist.common_pos("xxxx") == "xxxx"
-    assert spanish_words.wordlist.common_pos("adj") == "adj"
-    assert spanish_words.wordlist.common_pos("") == ""
+    assert obj.common_pos("m") == "noun"
+    assert obj.common_pos("m/f") == "noun"
+    assert obj.common_pos("f-el") == "noun"
+    assert obj.common_pos("f") == "noun"
+    assert obj.common_pos("v") == "verb"
+    assert obj.common_pos("vt") == "verb"
+    assert obj.common_pos("vr") == "verb"
+    assert obj.common_pos("xxxx") == "xxxx"
+    assert obj.common_pos("adj") == "adj"
+    assert obj.common_pos("") == ""
 
 def test_clean_def():
-    assert spanish_words.wordlist.clean_def("v", "to be") == "be"
-    assert spanish_words.wordlist.clean_def("n", "to be") == "to be"
-    assert spanish_words.wordlist.clean_def("v", "together") == "together"
-    assert spanish_words.wordlist.clean_def("v", "have to go") == "have to go"
+    assert obj.clean_def("v", "to be") == "be"
+    assert obj.clean_def("n", "to be") == "to be"
+    assert obj.clean_def("v", "together") == "together"
+    assert obj.clean_def("v", "have to go") == "have to go"
 
 
 def test_should_ignore_note():
-    assert spanish_words.wordlist.should_ignore_note("obsolete") == True
-    assert spanish_words.wordlist.should_ignore_note("new, obsolete") == True
-    assert spanish_words.wordlist.should_ignore_note("new, obsolete, test") == True
-    assert spanish_words.wordlist.should_ignore_note("not yet obsolete") == False
+    should_ignore_note = obj.should_ignore_note
+    assert should_ignore_note("obsolete") == True
+    assert should_ignore_note("new, obsolete") == True
+    assert should_ignore_note("new, obsolete, test") == True
+    assert should_ignore_note("not yet obsolete") == False
 
 def test_should_ignore_def():
-    assert spanish_words.wordlist.should_ignore_def("obsolete spelling of isla") == True
-    assert spanish_words.wordlist.should_ignore_def("obsolete form of isla") == True
-    assert spanish_words.wordlist.should_ignore_def("obsolete is the meaning of the word") == False
-    assert spanish_words.wordlist.should_ignore_def("obsolete") == False
+    should_ignore_def = obj.should_ignore_def
+    assert should_ignore_def("obsolete spelling of isla") == True
+    assert should_ignore_def("obsolete form of isla") == True
+    assert should_ignore_def("obsolete is the meaning of the word") == False
+    assert should_ignore_def("obsolete") == False
 
 def test_split_sep():
-    assert spanish_words.wordlist.split_sep(None, ",") == []
-    assert spanish_words.wordlist.split_sep("", ",") == []
-    assert spanish_words.wordlist.split_sep("one", ",") == ["one"]
-    assert spanish_words.wordlist.split_sep("one,", ",") == ["one"]
-    assert spanish_words.wordlist.split_sep("one, two", ",") == ["one", "two"]
-    assert spanish_words.wordlist.split_sep("one; two, three", ",") == ["one; two", "three"]
-    assert spanish_words.wordlist.split_sep("one; two, three", ";") == ["one", "two, three"]
-    assert spanish_words.wordlist.split_sep("one, two (2, II), three", ",") == [ "one", "two (2, II)", "three" ]
-    assert spanish_words.wordlist.split_sep("one, two (2, II), three ([(nested, deep)]), four", ",") == [ "one", "two (2, II)", "three ([(nested, deep)])", "four" ]
+    assert obj.split_sep(None, ",") == []
+    assert obj.split_sep("", ",") == []
+    assert obj.split_sep("one", ",") == ["one"]
+    assert obj.split_sep("one,", ",") == ["one"]
+    assert obj.split_sep("one, two", ",") == ["one", "two"]
+    assert obj.split_sep("one; two, three", ",") == ["one; two", "three"]
+    assert obj.split_sep("one; two, three", ";") == ["one", "two, three"]
+    assert obj.split_sep("one, two (2, II), three", ",") == [ "one", "two (2, II)", "three" ]
+    assert obj.split_sep("one, two (2, II), three ([(nested, deep)]), four", ",") == [ "one", "two (2, II)", "three ([(nested, deep)])", "four" ]
 
 
 
 def test_split_defs():
-     assert spanish_words.wordlist.split_defs("n", [ "a1, a2, a3; b1, b2", "c1, c2, c3" ]) == [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3']]
-     assert spanish_words.wordlist.split_defs("v", [ "a1, to a2, a3; to b1, b2", "c1, c2, c3" ]) == [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3']]
+     assert obj.split_defs("n", [ "a1, a2, a3; b1, b2", "c1, c2, c3" ]) == [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3']]
+     assert obj.split_defs("v", [ "a1, to a2, a3; to b1, b2", "c1, c2, c3" ]) == [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3']]
 
 
 def test_get_split_defs():
@@ -274,22 +327,22 @@ def test_get_split_defs():
             },
     }
 
-    assert spanish_words.wordlist.get_split_defs(defs) == [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3'], ['d1', 'd2'], ['e1', 'e2 (stuff, more; stuff)', 'e3'], ['f1']]
+    assert obj.get_split_defs(defs) == [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3'], ['d1', 'd2'], ['e1', 'e2 (stuff, more; stuff)', 'e3'], ['f1']]
 
 # TODO: Update this when the funcition gets fixed
 def test_get_best_defs():
     defs = [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3'], ['d1', 'd2'], ['e1', 'e2 (stuff, more; stuff)', 'e3'], ['f1']]
-    assert spanish_words.wordlist.get_best_defs(defs, 2) == defs
-#    assert spanish_words.wordlist.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 2) == [ ";def1", ";def2" ]
-#    assert spanish_words.wordlist.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 3) == [ ";def1", ";def2", ";def3" ]
-#    assert spanish_words.wordlist.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 4) == [ ";def1", "def1-syn1", ";def2", ";def3" ]
-#    assert spanish_words.wordlist.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 5) == [ ";def1", "def1-syn1", ";def2", ";def3", "def3-syn1" ]
+    assert obj.get_best_defs(defs, 2) == defs
+#    assert obj.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 2) == [ ";def1", ";def2" ]
+#    assert obj.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 3) == [ ";def1", ";def2", ";def3" ]
+#    assert obj.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 4) == [ ";def1", "def1-syn1", ";def2", ";def3" ]
+#    assert obj.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 5) == [ ";def1", "def1-syn1", ";def2", ";def3", "def3-syn1" ]
 
 #def test_defs_to_string():
 #    defs = [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3'], ['d1', 'd2'], ['e1', 'e2 (stuff, more; stuff)', 'e3'], ['f1']]
-#    assert spanish_words.wordlist.defs_to_string(defs, "noun") == "a1, a2, a3; b1, b2; c1, c2, c3; d1, d2; e1, e2 (stuff, more; stuff), e3; f1"
+#    assert obj.defs_to_string(defs, "noun") == "a1, a2, a3; b1, b2; c1, c2, c3; d1, d2; e1, e2 (stuff, more; stuff), e3; f1"
 #    defs = [["run", "jog"], [ "sprint" ]]
-#    assert spanish_words.wordlist.defs_to_string(defs, "verb") == "to run, jog; to sprint"
+#    assert obj.defs_to_string(defs, "verb") == "to run, jog; to sprint"
 
 def test_filter_defs():
 
@@ -312,21 +365,21 @@ def test_filter_defs():
     }
 
     # no params, shouldn't filter anything
-    assert spanish_words.wordlist.filter_defs(defs) == defs
+    assert obj.filter_defs(defs) == defs
 
-    assert spanish_words.wordlist.filter_defs(defs, 'noun') == {'m': {'': ['new noun usage'], 'test, dated': ['old noun usage']}}
+    assert obj.filter_defs(defs, 'noun') == {'m': {'': ['new noun usage'], 'test, dated': ['old noun usage']}}
 
     # filtering does *not* match notes
-    assert spanish_words.wordlist.filter_defs(defs, 'noun', 'test') == {'m': {'': ['new noun usage'], 'test, dated': ['old noun usage']}}
+    assert obj.filter_defs(defs, 'noun', 'test') == {'m': {'': ['new noun usage'], 'test, dated': ['old noun usage']}}
 
     # but instead matches definitions
-    assert spanish_words.wordlist.filter_defs(defs, 'noun', 'old') == {'m': {'': ['new noun usage']}}
+    assert obj.filter_defs(defs, 'noun', 'old') == {'m': {'': ['new noun usage']}}
 
-    assert spanish_words.wordlist.filter_defs(defs, 'verb') == {'v': {'Spain': ['to a1; to a2', 'to not c1', 'to c2 (clarification, notes)'], '': ['to b1', 'to b2', 'to b3; to b4', 'to b5'], 'vulgar, Chile': ['to d1']}, 'vr': {'': ['to e1']}}
-    assert spanish_words.wordlist.filter_defs(defs, 'vr') == {'vr': {'': ['to e1']}}
-    assert spanish_words.wordlist.filter_defs(defs, 'verb', 'to c') == {'v': {'Spain': ['to a1; to a2', 'to not c1'], '': ['to b1', 'to b2', 'to b3; to b4', 'to b5'], 'vulgar, Chile': ['to d1']}, 'vr': {'': ['to e1']}}
+    assert obj.filter_defs(defs, 'verb') == {'v': {'Spain': ['to a1; to a2', 'to not c1', 'to c2 (clarification, notes)'], '': ['to b1', 'to b2', 'to b3; to b4', 'to b5'], 'vulgar, Chile': ['to d1']}, 'vr': {'': ['to e1']}}
+    assert obj.filter_defs(defs, 'vr') == {'vr': {'': ['to e1']}}
+    assert obj.filter_defs(defs, 'verb', 'to c') == {'v': {'Spain': ['to a1; to a2', 'to not c1'], '': ['to b1', 'to b2', 'to b3; to b4', 'to b5'], 'vulgar, Chile': ['to d1']}, 'vr': {'': ['to e1']}}
 
-    assert spanish_words.wordlist.filter_defs(defs, 'adj') == {'adj': {'obsolete': ['adj usage']}}
+    assert obj.filter_defs(defs, 'adj') == {'adj': {'obsolete': ['adj usage']}}
 
     # deleting all entries should clear out the list
-    assert spanish_words.wordlist.filter_defs(defs, 'adj', 'usage') == {}
+    assert obj.filter_defs(defs, 'adj', 'usage') == {}

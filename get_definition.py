@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- python-mode -*-
+
 import argparse
 from spanish_words import SpanishWords
 

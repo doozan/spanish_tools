@@ -1,12 +1,11 @@
-import pytest
 import spanish_words
 #import spanish_words.wordlist
 
 words = None
 
-def test__init__():
+def test__init__(spanish):
     global words
-    words = pytest._spanish
+    words = spanish
 
 def test_get_lemma():
     assert words.get_lemma("notaword", "verb") == "notaword"
