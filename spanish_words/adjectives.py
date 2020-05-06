@@ -9,6 +9,9 @@ class SpanishAdjectives:
         if word.endswith("s"):
             word = word[:-1]
 
+        if self.parent.has_word(word, "adj"):
+            return word
+
         if word.endswith("ale"):
             return word[:-1]
 
