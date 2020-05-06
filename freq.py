@@ -9,7 +9,7 @@ import sys
 import argparse
 import spanish_words
 import spanish_sentences
-from get_best_pos import get_ranked_pos
+import get_best_pos
 
 parser = argparse.ArgumentParser(description='Lemmatize frequency list')
 parser.add_argument('file', help="Frequency list")
@@ -74,7 +74,7 @@ def get_word_flags(word,pos):
         flags.append(flag("LETTER"))
 
 
-    if not spanish.wordlist.has_word(word, pos):
+    if not spanish.has_word(word, pos):
         flags.append(flag("NODEF"))
 
     res = sentences.get_sentences(word,pos,1)
@@ -176,7 +176,7 @@ with open(args.file) as infile:
     for line in infile:
         word, count = line.strip().split(' ')
 
-        posrank = get_ranked_pos(word, spanish, sentences)
+        posrank = get_best_pos.get_ranked_pos(word, spanish, sentences)
         pos = posrank[0]['pos'] if posrank else "none"
         lemma = spanish.get_lemma(word, pos)
         lines[word] = {'pos':pos, 'count':count, 'lemma':lemma, 'posrank':posrank}

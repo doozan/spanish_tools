@@ -72,6 +72,8 @@ def test_reverse_conjugate():
     assert reverse_conjugate("emparento")[0]['verb'] == "emparentar"
     assert reverse_conjugate("empariento")[0]['verb'] == "emparentar"
 
+    assert reverse_conjugate("suelto")[0]['verb'] == "soltar"
+
     assert reverse_conjugate("damelos")[0]['verb'] == "dar"
     assert reverse_conjugate("dalosme") == []
     assert reverse_conjugate("daloslos") == []
@@ -134,3 +136,9 @@ def test_do_conjugate():
     assert do_conjugate( ['cr', ''], '-ar', 'i-í unstressed') == {1: ['criar'], 2: ['criando'], 3: ['criado'], 4: ['criada'], 5: ['criados'], 6: ['criadas'], 7: ['crío'], 8: ['crías'], 9: ['crias', 'criás'], 10: ['cría'], 11: ['criamos'], 12: ['criais', 'criáis'], 13: ['crían'], 14: ['criaba'], 15: ['criabas'], 16: ['criaba'], 17: ['criábamos'], 18: ['criabais'], 19: ['criaban'], 20: ['crie', 'crié'], 21: ['criaste'], 22: ['crio', 'crió'], 23: ['criamos'], 24: ['criasteis'], 25: ['criaron'], 26: ['criaré'], 27: ['criarás'], 28: ['criará'], 29: ['criaremos'], 30: ['criaréis'], 31: ['criarán'], 32: ['criaría'], 33: ['criarías'], 34: ['criaría'], 35: ['criaríamos'], 36: ['criaríais'], 37: ['criarían'], 38: ['críe'], 39: ['críes'], 40: ['criéis', 'crieis'], 41: ['críe'], 42: ['criemos'], 43: ['crieis'], 44: ['críen'], 45: ['criara'], 46: ['criaras'], 47: ['criara'], 48: ['criáramos'], 49: ['criarais'], 50: ['criaran'], 51: ['criase'], 52: ['criases'], 53: ['criase'], 54: ['criásemos'], 55: ['criaseis'], 56: ['criasen'], 57: ['criare'], 58: ['criares'], 59: ['criare'], 60: ['criáremos'], 61: ['criareis'], 62: ['criaren'], 63: ['cría'], 64: ['criá', 'cria'], 65: ['críe'], 66: ['criemos'], 67: ['criad'], 68: ['críen'], 69: ['críes'], 70: ['críe'], 71: ['criemos'], 72: ['crieis'], 73: ['críen']}
     assert do_conjugate(['habl'], '-ar', '') == {1: ['hablar'], 2: ['hablando'], 3: ['hablado'], 4: ['hablada'], 5: ['hablados'], 6: ['habladas'], 7: ['hablo'], 8: ['hablas'], 9: ['hablás'], 10: ['habla'], 11: ['hablamos'], 12: ['habláis'], 13: ['hablan'], 14: ['hablaba'], 15: ['hablabas'], 16: ['hablaba'], 17: ['hablábamos'], 18: ['hablabais'], 19: ['hablaban'], 20: ['hablé'], 21: ['hablaste'], 22: ['habló'], 23: ['hablamos'], 24: ['hablasteis'], 25: ['hablaron'], 26: ['hablaré'], 27: ['hablarás'], 28: ['hablará'], 29: ['hablaremos'], 30: ['hablaréis'], 31: ['hablarán'], 32: ['hablaría'], 33: ['hablarías'], 34: ['hablaría'], 35: ['hablaríamos'], 36: ['hablaríais'], 37: ['hablarían'], 38: ['hable'], 39: ['hables'], 40: ['hablés'], 41: ['hable'], 42: ['hablemos'], 43: ['habléis'], 44: ['hablen'], 45: ['hablara'], 46: ['hablaras'], 47: ['hablara'], 48: ['habláramos'], 49: ['hablarais'], 50: ['hablaran'], 51: ['hablase'], 52: ['hablases'], 53: ['hablase'], 54: ['hablásemos'], 55: ['hablaseis'], 56: ['hablasen'], 57: ['hablare'], 58: ['hablares'], 59: ['hablare'], 60: ['habláremos'], 61: ['hablareis'], 62: ['hablaren'], 63: ['habla'], 64: ['hablá'], 65: ['hable'], 66: ['hablemos'], 67: ['hablad'], 68: ['hablen'], 69: ['hables'], 70: ['hable'], 71: ['hablemos'], 72: ['habléis'], 73: ['hablen']}
 
+def test_is_past_participle():
+    is_past_participle = verb.is_past_participle
+    assert is_past_participle("notaword") == False
+    assert is_past_participle("abierto") == True
+    assert is_past_participle("rotas") == True
+    assert is_past_participle("aeropuerto") == False

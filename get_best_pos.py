@@ -14,15 +14,11 @@ def dprint(*args, **kwargs):
 def get_best_pos(word, spanish, sentences, debug=False):
     set_debug(debug)
 
-    pos_rank = get_ranked_pos(word, spanish, sentences, debug, False)
+    pos_rank = get_ranked_pos(word, spanish, sentences, debug)
     if not pos_rank or not len(pos_rank):
         return "none"
 
-    # No results, but multiple results, try again using lemma instead of word
-    if len(pos_rank) > 1 and pos_rank[0]['count'] == 0:
-        pos_rank = get_ranked_pos(word, spanish, sentences, debug, True)
-
-    # still no results, take the first pos
+    # no results, take the first pos
     if pos_rank[0]['count'] == 0:
         return get_all_pos(word, spanish)[0]
 
@@ -40,6 +36,7 @@ def get_all_pos(word, spanish):
         all_pos +=  spanish.wordlist.get_all_pos(lemma)
 
     all_pos = list(dict.fromkeys(all_pos))
+
     return all_pos
 
 
@@ -57,6 +54,13 @@ def get_ranked_pos(word, spanish, sentences, debug=False, use_lemma=False):
         else:
             usage.append({ 'word': "@"+word, 'pos': pos })
     pos_rank = rank_usage(usage, spanish, sentences, debug)
+
+    # No count, but multiple results, try again using lemma instead of word
+    # Note: this will blow out a lot of lesser used nouns that may also be verbs
+    if not use_lemma and len(pos_rank) > 1 and pos_rank[0]['count'] == 0:
+        dprint(pos_rank)
+        pos_rank = get_ranked_pos(word, spanish, sentences, debug, True)
+
     dprint(pos_rank)
     return pos_rank
 

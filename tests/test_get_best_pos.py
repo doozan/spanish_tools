@@ -41,6 +41,8 @@ def test_get_best_pos():
     "agencia": "noun",
     "mentiroso": "noun",
     "mira": "verb",
+    "rotas": "adj",
+    "hecho": "noun",
     }
 
     for word,pos in test_words.items():

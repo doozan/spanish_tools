@@ -137,7 +137,7 @@ class SpanishWordlist:
             return False
         return any( self.pos_is_noun(k) for k in self.allwords[word].keys())
 
-    def has_word(self, word, pos=None):
+    def _has_word(self, word, pos=None):
         if not word or word not in self.allwords:
             return False
 
@@ -197,7 +197,6 @@ class SpanishWordlist:
 
         alldefs = self.allwords[word]
         alldefs = self.filter_defs(alldefs, pos)
-
         alldefs = self.do_analysis(word, alldefs)
 
         for pos,notes in alldefs.items():
@@ -267,23 +266,23 @@ class SpanishWordlist:
 
         # hermana -> hermano
         masculine = word[:-1]+"o"
-        if self.has_word(masculine, "m"):
+        if self._has_word(masculine, "m"):
             return masculine
 
         # jefa -> jefe
         masculine = word[:-1]+"e"
-        if self.has_word(masculine, "m"):
+        if self._has_word(masculine, "m"):
             return masculine
 
         # doctora / doctor
         masculine = word[:-1]
-        if self.has_word(masculine, "m"):
+        if self._has_word(masculine, "m"):
             return masculine
 
         # tigresa -> tigre
         if word.endswith("sa"):
             masculine = word[:-2]
-            if self.has_word(masculine, "m"):
+            if self._has_word(masculine, "m"):
                 return masculine
 
         if self.is_feminized_noun(word, masculine):

@@ -52,7 +52,8 @@ class sentences:
     # past participles use "x" as the pos and need to be expanded to "adj" "noun" "verb"
     def add_tags_to_db(self, tags, index):
         for tagpos,words in tags.items():
-            allpos = [ "adj", "noun", "verb" ] if tagpos == "x" else [ tagpos ]
+            allpos = [ "part", "adj", "noun", "verb" ] if tagpos == "part" else [ tagpos ]
+#            allpos = [ tagpos ]
 
             for pos in allpos:
                 for word in words:

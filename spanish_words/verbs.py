@@ -1,6 +1,6 @@
 from .paradigms import paradigms
 from .inflections import inflections
-from .irregular_verbs import irregular_verbs
+from .irregular_verbs import irregular_verbs as _iverbs
 import re
 import os
 import json
@@ -40,6 +40,9 @@ class SpanishVerbs:
     def __init__(self, parent):
         self.parent = parent #weakref.ref(parent)
         self.reverse_irregular_verbs = {}
+        self.irregular_verbs = _iverbs
+        if "solver" in self.irregular_verbs:
+            self.irregular_verbs.pop('solver') # remove obsolete verb
 
         self.build_reverse_conjugations()
         self.reverse_endings = {
@@ -73,7 +76,7 @@ class SpanishVerbs:
 
     def build_reverse_conjugations(self):
 
-        for verb, vdata in irregular_verbs.items():
+        for verb, vdata in self.irregular_verbs.items():
             ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
             for item in vdata:
                 conjugations = self.do_conjugate( item['stems'], ending, item['pattern'], only_pattern=True )
@@ -140,7 +143,7 @@ class SpanishVerbs:
         }
         score = 0
         verb = item['verb']
-        if verb in irregular_verbs:
+        if verb in self.irregular_verbs:
             form = item['form']
 
             # determine if usage is irregular by checking against what the regular use would be
@@ -149,7 +152,7 @@ class SpanishVerbs:
             regular_forms = self.do_conjugate( [stem], ending, '' )
 
             ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
-            for paradigm in irregular_verbs[item['verb']]:
+            for paradigm in self.irregular_verbs[item['verb']]:
                 forms = self.do_conjugate( paradigm['stems'], ending, paradigm['pattern'] )
                 if form in forms and forms[form] != regular_forms[form]:
                     score += scoring['irregular']
@@ -237,9 +240,9 @@ class SpanishVerbs:
 
     # Returns True if a verb is irregular in the specified form
     def is_irregular(self, verb, form):
-        if verb in irregular_verbs:
+        if verb in self.irregular_verbs:
             ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
-            for item in irregular_verbs[verb]:
+            for item in self.irregular_verbs[verb]:
                 pattern = item['pattern']
                 if form in paradigms[ending][pattern]['patterns']:
                     return True
@@ -254,9 +257,9 @@ class SpanishVerbs:
         ending = "-"+ending
 
         res = {}
-        if verb in irregular_verbs or \
-            (verb.endswith("se") and verb[:-2] in irregular_verbs):
-            for paradigm in irregular_verbs[verb]:
+        if verb in self.irregular_verbs or \
+            (verb.endswith("se") and verb[:-2] in self.irregular_verbs):
+            for paradigm in self.irregular_verbs[verb]:
                 forms = self.do_conjugate( paradigm['stems'], ending, paradigm['pattern'], debug=debug )
                 for k,v in forms.items():
                     if k not in res:
@@ -308,3 +311,7 @@ class SpanishVerbs:
                 data[dk] = [ None ]
 
         return data
+
+    def is_past_participle(self, word):
+        forms = self.reverse_conjugate(word, check_pronouns=False)
+        return any( v for v in forms if v['form'] in [ 3,4,5,6 ] )

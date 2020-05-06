@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- python-mode -*-
+
 import argparse
 import os
 import re
@@ -71,23 +74,23 @@ tag2pos = {
 'VCLIger': "verb", #  clitic gerund verb
 'VCLIinf': "verb", #  clitic infinitive verb
 'VCLIfin': "verb", #  clitic finite verb
-'VEadj': "x", # Verb estar. Past participle
+'VEadj': "part", # Verb estar. Past participle
 'VEfin': "verb", # Verb estar. Finite
 'VEger': "verb", # Verb estar. Gerund
 'VEinf': "verb", # Verb estar. Infinitive
-'VHadj': "x", # Verb haber. Past participle
+'VHadj': "part", # Verb haber. Past participle
 'VHfin': "verb", # Verb haber. Finite
 'VHger': "verb", # Verb haber. Gerund
 'VHinf': "verb", # Verb haber. Infinitive
-'VLadj': "x", # Lexical verb. Past participle
+'VLadj': "part", # Lexical verb. Past participle
 'VLfin': "verb", # Lexical verb. Finite
 'VLger': "verb", # Lexical verb. Gerund
 'VLinf': "verb", # Lexical verb. Infinitive
-'VMadj': "x", # Modal verb. Past participle
+'VMadj': "part", # Modal verb. Past participle
 'VMfin': "verb", # Modal verb. Finite
 'VMger': "verb", # Modal verb. Gerund
 'VMinf': "verb", # Modal verb. Infinitive
-'VSadj': "x", # Verb ser. Past participle
+'VSadj': "part", # Verb ser. Past participle
 'VSfin': "verb", # Verb ser. Finite
 'VSger': "verb", # Verb ser. Gerund
 'VSinf': "verb", # Verb ser. Infinitive
@@ -182,7 +185,7 @@ with open(args.infile) as infile:
 
         # ignore sentences with the same adj/adv/noun/verb/pastparticiple combination
         unique_tags = []
-        for n in [ "adj", "adv", "noun", "verb", "x" ]:
+        for n in [ "adj", "adv", "noun", "verb", "part" ]:
             if n not in tags:
                 continue
             unique_tags += [t for t in tags[n] if not t.startswith("@")]

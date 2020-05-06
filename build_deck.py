@@ -251,24 +251,26 @@ def get_phrase(word, pos, noun_type, femnoun):
 
 
 def build_item(row):
-    spanish = row['spanish']
+    spanish = row['spanish'].strip()
     english = ""
     noun_type = ""
     pos = row['pos'].lower()
-    usage = words.wordlist.lookup(spanish, pos)
+    usage = words.lookup(spanish, pos)
     syns = get_synonyms(spanish, pos)
     if usage and len(usage):
         english = format_def(usage)
         if pos == "noun":
             noun_type = list(usage.keys())[0]
     else:
-        print("No english", spanish, pos)
         print(row)
-        exit()
+        raise ValueError("No english", spanish, pos)
 
     femnoun = words.wordlist.get_feminine_noun(spanish) if pos == "noun" else None
     tts_data = get_phrase(spanish,pos,noun_type,femnoun)
     sound = spanish_speech.get_speech(tts_data['voice'], tts_data['phrase'], args.mediadir)
+
+    if pos == "part":
+        pos = "past participle"
 
     item = {
 #            'Picture': format_image(image),
@@ -339,7 +341,6 @@ if args.guids:
 
 # read through all the files to populate the synonyms and excludes lists
 for wordlist in args.wordlist:
-    print(f"parsing {wordlist}")
     with open(wordlist, newline='') as csvfile:
         csvreader = csv.DictReader(csvfile)
         for reqfield in ["pos", "spanish"]:

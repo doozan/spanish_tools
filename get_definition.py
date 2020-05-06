@@ -34,7 +34,7 @@ spanish = SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_da
 if (args.syn):
     print("See also: %s" % ", ".join(spanish.synonyms.get_synonyms(args.word)))
 else:
-    res = spanish.wordlist.lookup(args.word, args.pos)
+    res = spanish.lookup(args.word, args.pos)
 
 #    print(res)
     pretty_print(args.word, res)

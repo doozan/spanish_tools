@@ -16,11 +16,41 @@ class SpanishWords:
         self.nouns = SpanishNouns(self)
         self.adjectives = SpanishAdjectives(self)
 
-    def has_word(self, word, pos):
-        return self.wordlist.has_word(word, pos)
-
     def get_defs(self, word):
         return self.wordlist.get_defs(word)
+
+    def has_word(self, word, pos=None):
+        if pos == "part":
+            if self.wordlist._has_word(word, "adj"):
+                return True
+            elif self.wordlist._has_word(word, "noun"):
+                return True
+            lemma = self.get_lemma(word, "verb")
+            if self.wordlist._has_word(lemma, "verb"):
+                return True
+            return False
+        else:
+            return self.wordlist._has_word(word, pos)
+
+    def lookup(self, word, pos):
+        results = self.wordlist.lookup(word, pos)
+
+        if pos == "adj" and self.has_word(word, "noun"):
+            results.update(self.wordlist.lookup(word,"noun"))
+
+        if pos == "noun" and self.has_word(word, "adj"):
+            results.update(self.wordlist.lookup(word,"adj"))
+
+        if pos != "interj" and self.has_word(word, "interj"):
+            results.update(self.wordlist.lookup(word,"interj"))
+
+        if pos == "adj" and self.verb.is_past_participle(word):
+            lemma = self.get_lemma(word, "verb")
+            results['adj'].update({'verb': f'past particple of {lemma}'})
+
+            results.update(self.wordlist.lookup(lemma,"verb"))
+
+        return results
 
     def get_lemmas(self, word, pos, debug=False):
         word = word.lower().strip()
@@ -44,7 +74,7 @@ class SpanishWords:
             if debug: print(res)
             return res
 
-        elif pos == "x": # past participles
+        elif pos == "part": # past participles
             if word.endswith("s"):
                 word = word[:-1]
             if word.endswith("a"):

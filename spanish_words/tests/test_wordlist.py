@@ -27,10 +27,10 @@ cura {f} [Colombia, dated] :: avocado"""
         )
     wordlist.load_dictionary(datafile)
 
-    assert wordlist.has_word("amigo") == True
-    assert wordlist.has_word("amigo", "noun") == True
-    assert wordlist.has_word("amigo", "verb") == False
-    assert wordlist.has_word("myword", "noun") == False
+    assert wordlist._has_word("amigo") == True
+    assert wordlist._has_word("amigo", "noun") == True
+    assert wordlist._has_word("amigo", "verb") == False
+    assert wordlist._has_word("myword", "noun") == False
 
     test_def = wordlist.parse_line("myword {m} :: my def1, def2; def 3\n")
     test_def2 = wordlist.parse_line("myword {m} :: def 4\n")
@@ -38,18 +38,18 @@ cura {f} [Colombia, dated] :: avocado"""
 
     wordlist.add_def(test_def)
     wordlist.add_def(test_def2)
-    assert wordlist.has_word("myword", "noun") == True
+    assert wordlist._has_word("myword", "noun") == True
 
     rm_def = wordlist.parse_line("myword")
     wordlist.remove_def(rm_def)
-    assert wordlist.has_word("myword", "noun") == False
+    assert wordlist._has_word("myword", "noun") == False
 
     wordlist.add_def(test_def)
-    assert wordlist.has_word("myword", "noun") == True
+    assert wordlist._has_word("myword", "noun") == True
 
     rm_def = wordlist.parse_line("myword {m}")
     wordlist.remove_def(rm_def)
-    assert wordlist.has_word("myword", "noun") == False
+    assert wordlist._has_word("myword", "noun") == False
 
 
     #test_remove_def():
@@ -75,7 +75,7 @@ def test_get_all_pos():
     assert get_all_pos("rojo") == ["adj", "noun"]
 
 def test_has_word():
-    has_word = obj.has_word
+    has_word = obj._has_word
     assert has_word("", "verb") == False
     assert has_word("notaword", "verb") == False
     assert has_word("casa", "noun") == True
