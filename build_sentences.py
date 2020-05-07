@@ -24,7 +24,7 @@ tag2pos = {
 'ADV': "adv", # Adverbs (muy, demasiado, cómo)
 'ALFP': "", # Plural letter of the alphabet (As/Aes, bes)
 'ALFS': "", # Singular letter of the alphabet (A, b)
-'ART': "", # Articles (un, las, la, unas)
+'ART': "art", # Articles (un, las, la, unas)
 'BACKSLASH': "", # backslash (\)
 'CARD': "num", # Cardinals
 'CC': "conj", # Coordinating conjunction (y, o)

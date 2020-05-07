@@ -195,7 +195,7 @@ for word,item in lines.items():
 
 # Look through the lemmas to find verbs with overwhelming usage of
 # forms that could be interj, nouns, or adjectives
-#    for tag,item in freq.items():
+#for tag,item in freq.items():
 #    if not tag.startswith("verb"):
 #        continue
 #
@@ -206,14 +206,16 @@ for word,item in lines.items():
 #    if len(uses) == 1:
 #        pos,verb = tag.split(":")
 #        if word != verb:
-#            print(f"Single use of verb {uses[0]} -> {tag}")
+#            if spanish.has_word(word):
+#                print(f"Single use of verb {verb} -> {word} has alternate uses :: ", uses[0])
 #    else:
 #        if int(wordcount) > (int(count)*.8):
 #            pos,verb = tag.split(":")
 #            if word != verb:
-#                print(f"Majority use of verb {uses[0]} -> {tag} {count} :: ")#, lines[word]['posrank'])
+#                if spanish.has_word(word):
+#                    print(f"Majority use of verb {verb} -> {word} {count} has alternate uses :: ", uses[0])# lines[word]['posrank'])
 #
-#    exit(1)
+#exit(1)
 
 with open(args.file+".lemmas.csv",'w') as outfile:
     csvwriter = csv.writer(outfile)
