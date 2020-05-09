@@ -9,12 +9,15 @@ import os
 
 class SpanishWords:
     def __init__(self, dictionary, synonyms):
-
-        self.wordlist = SpanishWordlist(dictionary)
         self.synonyms = SpanishSynonyms(synonyms)
+        self.adj = SpanishAdjectives(self)
+        self.noun = SpanishNouns(self)
+        self.__wordlist = SpanishWordlist(dictionary, self)
         self.verb = SpanishVerbs(self)
-        self.nouns = SpanishNouns(self)
-        self.adjectives = SpanishAdjectives(self)
+
+    @property
+    def wordlist(self):
+        return self.__wordlist
 
     def get_defs(self, word):
         return self.wordlist.get_defs(word)
@@ -57,10 +60,14 @@ class SpanishWords:
         pos = pos.lower()
 
         if pos == "adj":
-            return [ self.adjectives.get_lemma(word) ]
+            return [ self.adj.get_lemma(word) ]
 
         if pos == "noun":
-            return [ self.nouns.get_lemma(word) ]
+            lemma = self.wordlist.get_lemma(word)
+            if lemma:
+                return [ lemma ]
+
+            return [ self.noun.get_lemma(word) ]
 
         elif pos == "verb":
 

@@ -28,6 +28,8 @@ cura {m} :: priest
 cura {f} [Colombia, dated] :: avocado
 yuso {adv} [obsolete] :: down
 zelo {m} :: obsolete form of celo
+test {m} :: testing
+test {m} :: obsoleto form of terst
 """)
     wordlist.load_dictionary(datafile)
 
@@ -37,6 +39,9 @@ zelo {m} :: obsolete form of celo
     assert wordlist._has_word("myword", "noun") == False
     assert wordlist._has_word("yuso") == False
     assert wordlist._has_word("zelo") == False
+    assert wordlist.get_lemma("zelo") == "celo"
+    assert wordlist._has_word("test") == True
+    assert wordlist.get_lemma("terst") == None
 
     test_def = wordlist.parse_line("myword {m} :: my def1, def2; def 3\n")
     test_def2 = wordlist.parse_line("myword {m} :: def 4\n")
@@ -60,12 +65,13 @@ zelo {m} :: obsolete form of celo
     wordlist.add_def(test_def)
     wordlist.add_nmeta(nmeta_def)
     assert wordlist._has_word("myword") == True
-    assert wordlist._has_word("myworda") == False
+    assert wordlist._has_word("mywordalisa") == False
     assert wordlist._has_word("mywordz") == False
 
-#    assert wordlist.get_lemma("myworda", "noun") == "myword"
-#    assert wordlist.get_lemma("mywordz", "noun") == "myword"
-#    assert wordlist.get_lemma("mywordzzz", "noun") == "myword"
+    print(wordlist.xnouns)
+    assert wordlist.get_lemma("mywordalisa") == "myword"
+    assert wordlist.get_lemma("mywordz") == "myword"
+    assert wordlist.get_lemma("mywordzzz") == "myword"
     assert wordlist.get_feminine_noun("myword") == "mywordalisa"
     assert wordlist.get_masculine_noun("mywordalisa") == None
 
@@ -77,8 +83,6 @@ zelo {m} :: obsolete form of celo
 #    verb = SpanishVerbs(None)
 #    assert verb.conjugate("myverbolver") == {1: ['myverbolver'], 2: ['myverbolviendo'], 3: ['myverbolvido'], 4: ['myverbolvida'], 5: ['myverbolvidos'], 6: ['myverbolvidas'], 7: ['myverbolvo'], 8: ['myverbolves'], 9: ['myverbolvés'], 10: ['myverbolve'], 11: ['myverbolvemos'], 12: ['myverbolvéis'], 13: ['myverbolven'], 14: ['myverbolvía'], 15: ['myverbolvías'], 16: ['myverbolvía'], 17: ['myverbolvíamos'], 18: ['myverbolvíais'], 19: ['myverbolvían'], 20: ['myverbolví'], 21: ['myverbolviste'], 22: ['myverbolvió'], 23: ['myverbolvimos'], 24: ['myverbolvisteis'], 25: ['myverbolvieron'], 26: ['myverbolveré'], 27: ['myverbolverás'], 28: ['myverbolverá'], 29: ['myverbolveremos'], 30: ['myverbolveréis'], 31: ['myverbolverán'], 32: ['myverbolvería'], 33: ['myverbolverías'], 34: ['myverbolvería'], 35: ['myverbolveríamos'], 36: ['myverbolveríais'], 37: ['myverbolverían'], 38: ['myverbolva'], 39: ['myverbolvas'], 40: ['myverbolvás'], 41: ['myverbolva'], 42: ['myverbolvamos'], 43: ['myverbolváis'], 44: ['myverbolvan'], 45: ['myverbolviera'], 46: ['myverbolvieras'], 47: ['myverbolviera'], 48: ['myverbolviéramos'], 49: ['myverbolvierais'], 50: ['myverbolvieran'], 51: ['myverbolviese'], 52: ['myverbolvieses'], 53: ['myverbolviese'], 54: ['myverbolviésemos'], 55: ['myverbolvieseis'], 56: ['myverbolviesen'], 57: ['myverbolviere'], 58: ['myverbolvieres'], 59: ['myverbolviere'], 60: ['myverbolviéremos'], 61: ['myverbolviereis'], 62: ['myverbolvieren'], 63: ['myverbolve'], 64: ['myverbolvé'], 65: ['myverbolva'], 66: ['myverbolvamos'], 67: ['myverbolved'], 68: ['myverbolvan'], 69: ['myverbolvas'], 70: ['myverbolva'], 71: ['myverbolvamos'], 72: ['myverbolváis'], 73: ['myverbolvan']}
 
-    #test_remove_def():
-    #test_add_def():
 
 def test_init():
     global obj
@@ -319,6 +323,14 @@ def test_should_ignore_note():
     assert should_ignore_note("new, obsolete") == True
     assert should_ignore_note("new, obsolete, test") == True
     assert should_ignore_note("not yet obsolete") == False
+
+def test_get_ignored_lemma():
+    get_ignored_lemma = obj.get_ignored_lemma
+    assert get_ignored_lemma("obsolete spelling of isla") == "isla"
+    assert get_ignored_lemma("obsolete form of isla") == "isla"
+    assert get_ignored_lemma("alternative form of isla") == "isla"
+    assert get_ignored_lemma("eye dialect of guapo") == "guapo"
+    assert get_ignored_lemma("eye dialect of two words; another def") == "two words"
 
 def test_should_ignore_def():
     should_ignore_def = obj.should_ignore_def

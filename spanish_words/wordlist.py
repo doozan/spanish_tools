@@ -24,11 +24,14 @@ noun_tags = set([
 
 
 class SpanishWordlist:
-    def __init__(self, dictionary=None):
+    def __init__(self, dictionary=None, parent=None):
         self.irregular_verbs = {}
-        self.plural_nouns = {}
         self.xnouns = {}
+        self.lemmas = {}
         self.allwords = {}
+        self.nmeta_buffer = []
+        self.vmeta_buffer = []
+        self.parent=parent
         if dictionary:
             self.load_dictionary(dictionary)
 #            for verb,vdata in self.irregular_verbs.items():
@@ -107,9 +110,55 @@ class SpanishWordlist:
 
         return tags
 
+
+    # Words that are ignored for being spelling errors or obsolute usage
+    # should be added to the lemma table, but only if the obsolete usage
+    # is in the first definition of the word (ie, the word isn't in the db yet)
+    def buffer_ignored_def(self, data):
+        if self._has_word(data['word']):
+            return
+        lemma = self.get_ignored_lemma(data['def'])
+        if lemma:
+            data['pos'] = 'forced-nmeta'
+            data['def'] = f"lemma:'{lemma}'"
+            self.buffer_nmeta(data)
+
+    def buffer_nmeta(self, data):
+        self.nmeta_buffer.append(data)
+
+    def buffer_vmeta(self, data):
+        self.vmeta_buffer.append(data)
+
+    def apply_meta(self):
+        for data in self.nmeta_buffer:
+            if data['pos'] == "forced-nmeta" or self._has_word(data['word'], "noun"):
+                self.add_nmeta(data)
+#            else:
+#                print(f"Skipping {data['word']}")
+        for data in self.vmeta_buffer:
+            if self._has_word(data['word'], "verb"):
+                self.add_vmeta(data)
+
+    def add_lemma(self, word, lemma):
+#        if word in self.lemmas and self.lemmas[word] != lemma:
+#            print(f"multiple lemmas specified for {word}: {self.lemmas[word]}/{lemma}")
+        self.lemmas[word] = lemma
+##            if plural not in self.plural_nouns:
+##                self.plural_nouns[plural] = word
+##            elif self.plural_nouns[plural] != word:
+##                print(f"dup singular for '{plural}': '{self.plural_nouns[plural]}'/'{word}'")
+
+    def get_lemma(self, word):
+        lemma = None
+        if word in self.lemmas:
+            lemma = self.lemmas[word]
+            if lemma == "-":
+                lemma = word
+        return lemma
+
+
     def add_nmeta(self, item):
         word = item['word']
-
         tags = self.parse_tags(item['def'])
 
         # used for gender neutral terms
@@ -117,24 +166,48 @@ class SpanishWordlist:
 #            print(f"Too many genders specified in {word} {item['def']}")
             return
 
+#        gender = "m"
+#        if " " in word and 'm' in tags:
+#            gender = 'f'
+#        guess_plural = self.parent.noun.make_plural(word, gender)
+
         for k,v in tags.items():
 
             if k == "pl":
+
+#                if guess_plural:
+#                    if (" ".join(sorted(guess_plural)) == " ".join(sorted(v))):
+#                        print(f"Unneeded plural declaration in {word}: {v}")
+#                    else:
+#                        print(f"{guess_plural} != {v}")
+
                 for plural in v:
+                    # some pl: tags have a - to indicate the noun is uncountable
                     if plural == "-":
                         continue
-                    self.plural_nouns[plural] = word
-#                    if plural not in self.plural_nouns:
-#                        self.plural_nouns[plural] = word
-#                    elif self.plural_nouns[plural] != word:
-#                        print(f"dup singular for '{plural}': '{self.plural_nouns[plural]}'/'{word}'")
+                    self.add_lemma(plural, word)
+
 
             elif k in ["f", "m"]:
-                for noun in v:
-                    if noun == "1":
-#                        print("Skipping template with f=1")
+                tag = k+":"+word
+                for xnoun in v:
+
+                    # some f: tags have a 1 to indicate they follow normal rules
+                    if xnoun in ["1", "-"]:
                         continue
-                    self.xnouns[k+":"+word] = noun
+#                    if tag in self.xnouns and self.xnouns[tag] != xnoun:
+#                        print(f"multiple values specified for {tag}: {self.xnouns[tag]}/{xnoun}")
+                    self.xnouns[tag] = xnoun
+
+                    # Masculine nouns that specify a feminine counterpart
+                    # should add a femnoun -> masculine lemma
+                    if k == "f":
+                        self.add_lemma(xnoun, word)
+
+            # explicitly tagged lemmas are generated when words are ignored as being obsolete versions of new words
+            elif k == "lemma":
+                for lemma in v:
+                    self.add_lemma(word, lemma)
 
             else:
                 print(f"unknown nmeta value: {k} in {word}")
@@ -187,11 +260,12 @@ class SpanishWordlist:
 
         res = self.parse_line(line)
         if res['pos'] == "vmeta":
-            self.add_vmeta(res)
+            self.buffer_vmeta(res)
         elif res['pos'] == "nmeta":
-            return
-#            self.add_nmeta(res)
-        elif self.should_ignore_def(res['def']) or self.should_ignore_note(res['note']):
+            self.buffer_nmeta(res)
+        elif self.should_ignore_def(res['def']):
+            self.buffer_ignored_def(res)
+        elif self.should_ignore_note(res['note']):
             return
         else:
             self.add_def(res)
@@ -221,14 +295,14 @@ class SpanishWordlist:
         #print(missing[0], missing[1], missing[2])
         #print(", ".join(missing))
 
-        if not os.path.isfile(str(datafile) + ".custom"):
-            return
+        if os.path.isfile(str(datafile) + ".custom"):
+            with open(str(datafile)+".custom") as infile:
+                for line in infile:
+                    if line.strip().startswith("#") or line.strip() == "":
+                        continue
+                    self.process_line(line)
 
-        with open(str(datafile)+".custom") as infile:
-            for line in infile:
-                if line.strip().startswith("#") or line.strip() == "":
-                    continue
-                self.process_line(line)
+        self.apply_meta()
 
 
 
@@ -483,6 +557,10 @@ class SpanishWordlist:
 
     @staticmethod
     def should_ignore_def(definition):
+        if definition.startswith("eye dialect"):
+            return True
+        if definition.startswith("alternative form"):
+            return True
         if definition.startswith("obsolete") and (
              definition.startswith("obsolete spelling") or
              definition.startswith("obsolete form of")):
@@ -490,8 +568,14 @@ class SpanishWordlist:
         return False
 
     @staticmethod
+    def get_ignored_lemma(definition):
+        res = re.match("(?:obsolete spelling of |obsolete form of |alternative form of |eye dialect of )([^,;]+)", definition)
+        if res:
+            return res.group(1)
+
+    @staticmethod
     def should_ignore_note(note):
-        if {"archaic", "dated", "historical", "obsolete", "rare"} & { n.strip() for n in note.lower().split(',') }:
+        if {"archaic", "dated", "historical", "obsolete", "rare", "eye dialect"} & { n.strip() for n in note.lower().split(',') }:
             return True
 
         return False
@@ -686,7 +770,4 @@ class SpanishWordlist:
                         res[pos][note].append(d)
 
         return res
-
-
-
 
