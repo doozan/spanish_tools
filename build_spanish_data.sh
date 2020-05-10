@@ -15,9 +15,9 @@ curl 'https://en.wiktionary.org/w/api.php?action=query&prop=revisions&rvslots=*&
 # process the wiktionary dump
 curl 'https://dumps.wikimedia.org/enwiktionary/latest/enwiktionary-latest-pages-articles.xml.bz2' \
   | bzcat \
-  | gawk -v LANG=Spanish -v ISO=es -v REMOVE_WIKILINKS="y" -f trans-en-es.awk \
-  | sort -s -d -k 1,1 -t"{" \
+  | gawk -v LANG=Spanish -v ISO=es -v REMOVE_WIKILINKS="y" -v ENABLE_VMETA="y" -v ENABLE_NMETA="y" -f trans-en-es.awk \
   > spanish_data/es-en.txt
+  sort -s -d -k 1,1 -t"{" -o spanish_data/es-en.txt spanish_data/es-en.txt
 
 # process the pythonol dictionary into a list of synonyms
 curl https://github.com/phrozensmoke/LEGACY-Open_Source-Pre2006/raw/master/pythonol/dictionary/data_dict1.txt \

@@ -1,5 +1,7 @@
 import pytest
 from spanish_words.wordlist import SpanishWordlist
+from spanish_words.verbs import SpanishVerbs
+from spanish_words.nouns import SpanishNouns
 import spanish_words.wordlist
 import os
 
@@ -50,7 +52,28 @@ cura {f} [Colombia, dated] :: avocado"""
     rm_def = wordlist.parse_line("myword {m}")
     wordlist.remove_def(rm_def)
     assert wordlist._has_word("myword", "noun") == False
+    nmeta_def = wordlist.parse_line("myword {nmeta} :: f:'mywordalisa' pl:'mywordz' pl:'mywordzzz'\n")
+    wordlist.add_nmeta(nmeta_def)
+    assert wordlist._has_word("myword") == False
+    assert wordlist._has_word("myworda") == False
+    assert wordlist._has_word("mywordz") == False
+    wordlist.add_def(test_def)
+    assert wordlist._has_word("myword") == True
+    assert wordlist._has_word("myworda") == False
 
+#    assert wordlist.get_lemma("myworda", "noun") == "myword"
+#    assert wordlist.get_lemma("mywordz", "noun") == "myword"
+#    assert wordlist.get_lemma("mywordzzz", "noun") == "myword"
+    assert wordlist.get_feminine_noun("myword") == "mywordalisa"
+    assert wordlist.get_masculine_noun("mywordalisa") == "myword"
+
+    verb_def = wordlist.parse_line("myverbolver {v} :: def\n")
+    wordlist.add_def(verb_def)
+    vmeta_def = wordlist.parse_line("myverbolver {vmeta} :: pattern:'-olver' stem:'abs'")
+    wordlist.add_vmeta(vmeta_def)
+    assert wordlist._has_word("myverbolver", "verb") == True
+    verb = SpanishVerbs(None)
+    assert verb.conjugate("myverbolver") == {1: ['myverbolver'], 2: ['myverbolviendo'], 3: ['myverbolvido'], 4: ['myverbolvida'], 5: ['myverbolvidos'], 6: ['myverbolvidas'], 7: ['myverbolvo'], 8: ['myverbolves'], 9: ['myverbolvés'], 10: ['myverbolve'], 11: ['myverbolvemos'], 12: ['myverbolvéis'], 13: ['myverbolven'], 14: ['myverbolvía'], 15: ['myverbolvías'], 16: ['myverbolvía'], 17: ['myverbolvíamos'], 18: ['myverbolvíais'], 19: ['myverbolvían'], 20: ['myverbolví'], 21: ['myverbolviste'], 22: ['myverbolvió'], 23: ['myverbolvimos'], 24: ['myverbolvisteis'], 25: ['myverbolvieron'], 26: ['myverbolveré'], 27: ['myverbolverás'], 28: ['myverbolverá'], 29: ['myverbolveremos'], 30: ['myverbolveréis'], 31: ['myverbolverán'], 32: ['myverbolvería'], 33: ['myverbolverías'], 34: ['myverbolvería'], 35: ['myverbolveríamos'], 36: ['myverbolveríais'], 37: ['myverbolverían'], 38: ['myverbolva'], 39: ['myverbolvas'], 40: ['myverbolvás'], 41: ['myverbolva'], 42: ['myverbolvamos'], 43: ['myverbolváis'], 44: ['myverbolvan'], 45: ['myverbolviera'], 46: ['myverbolvieras'], 47: ['myverbolviera'], 48: ['myverbolviéramos'], 49: ['myverbolvierais'], 50: ['myverbolvieran'], 51: ['myverbolviese'], 52: ['myverbolvieses'], 53: ['myverbolviese'], 54: ['myverbolviésemos'], 55: ['myverbolvieseis'], 56: ['myverbolviesen'], 57: ['myverbolviere'], 58: ['myverbolvieres'], 59: ['myverbolviere'], 60: ['myverbolviéremos'], 61: ['myverbolviereis'], 62: ['myverbolvieren'], 63: ['myverbolve'], 64: ['myverbolvé'], 65: ['myverbolva'], 66: ['myverbolvamos'], 67: ['myverbolved'], 68: ['myverbolvan'], 69: ['myverbolvas'], 70: ['myverbolva'], 71: ['myverbolvamos'], 72: ['myverbolváis'], 73: ['myverbolvan']}
 
     #test_remove_def():
     #test_add_def():
@@ -180,10 +203,10 @@ def test_get_feminine_noun():
 #    assert get_feminine_noun("camarero") == "camarera"
     assert get_feminine_noun("hermana") == None
     assert get_feminine_noun("caso") == None
-    assert get_feminine_noun("hamburgueso") == None
+#    assert get_feminine_noun("hamburgueso") == None
 
     # Has feminine noun, but not for the primary definition
-    assert get_feminine_noun("pato") == None
+#    assert get_feminine_noun("pato") == None
 
 
     # Other word endings

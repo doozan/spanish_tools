@@ -24,6 +24,9 @@ noun_tags = set([
 
 class SpanishWordlist:
     def __init__(self, dictionary=None):
+        self.irregular_verbs = {}
+        self.plural_nouns = {}
+        self.xnouns = {}
         self.allwords = {}
         if dictionary:
             self.load_dictionary(dictionary)
@@ -89,6 +92,68 @@ class SpanishWordlist:
                     self.allwords[word][pos][note].append(definition)
 
 
+    def add_nmeta(self, item):
+        word = item['word']
+        for match in re.finditer(r"([^: ]):'([^']*)'", item['def']):
+            tag = match.group(1)
+            val = match.group(2)
+            if tag == "pl":
+                self.noun_plurals[val] = word
+                if val not in self.noun_plurals:
+                    self.noun_plurals[val] = word
+#                    self.noun_plurals[val] = [ word ]
+                else:
+                    print(f"dup plural {word}:{val}")
+#                    if word not in self.noun_plurals[val]:
+#                        self.noun_plurals[val].append(word)
+
+            elif tag == "m":
+#                mtag = "m:"+val
+#                ftag = "f:"+word
+#                if mtag in self.xnouns and self.xnouns[mtag] != word:
+#                    print(f"duplicate xnoun {mtag} == {self.xnouns[mtag]}, {word}")
+#                if ftag in self.xnouns and self.xnouns[ftag] != val:
+#                    print(f"duplicate xnoun {ftag} == {self.xnouns[ftag]}, {word}")
+                self.xnouns["m:"+val] = word
+                self.xnouns["f:"+word] = val
+            elif tag == "f":
+                if val=="1":
+#                    print("Skipping template with f=1")
+                    return
+#                mtag = "m:"+word
+#                ftag = "f:"+val
+#                if mtag in self.xnouns and self.xnouns[mtag] != val:
+#                    print(f"duplicate xnoun {mtag} == {self.xnouns[mtag]}, {word}")
+#                if ftag in self.xnouns and self.xnouns[ftag] != word:
+#                    print(item)
+#                    print(f"duplicate xnoun {ftag} == {self.xnouns[ftag]}, {word}")
+                self.xnouns["f:"+val] = word
+                self.xnouns["m:"+word] = val
+
+        return
+
+    # def = "pattern:'-gir' stems:['compun']"
+    def add_vmeta(self, item):
+
+        verb = item['word']
+        iverb = {"stems": []}
+
+        for match in re.finditer(r"([^: ]):'([^']*)'", item['def']):
+            tag = match.group(1)
+            val = match.group(2)
+
+            if tag == "pattern":
+                iverb["pattern"] = val
+            if tag == "stem":
+                iverb["stems"].append(tag)
+
+        if verb not in self.irregular_verbs:
+            self.irregular_verbs[verb] = [ iverb ]
+        else:
+            self.irregular_verbs[verb].append(iverb)
+
+        return
+
     def load_dictionary(self, datafile):
         if not os.path.isfile(datafile):
             raise FileNotFoundError(f"Cannot open dictionary: '{datafile}'")
@@ -96,12 +161,14 @@ class SpanishWordlist:
         with open(datafile) as infile:
             for line in infile:
                 res = self.parse_line(line)
-                if self.should_ignore_def(res['def']) or self.should_ignore_note(res['note']):
+                if res['pos'] == "vmeta":
+                    self.add_vmeta(res)
+                elif res['pos'] == "nmeta":
+                    self.add_nmeta(res)
+                elif self.should_ignore_def(res['def']) or self.should_ignore_note(res['note']):
                     continue
-                word = res['word']
-                pos = res['pos']
-
-                self.add_def(res)
+                else:
+                    self.add_def(res)
 
         if not os.path.isfile(str(datafile) + ".custom"):
             return
@@ -171,9 +238,11 @@ class SpanishWordlist:
             # and add any feminine definitions (ignoring the "feminine noun of xxx" def)
             femnoun = self.get_feminine_noun(word)
             if femnoun:
-                femdefs = self.allwords[femnoun]
-                femdefs = self.filter_defs(femdefs, 'f', "feminine noun of "+word)
-                femdefs = self.filter_defs(femdefs, 'f', "female equivalent of "+word)
+                femdefs = []
+                if femnoun in self.allwords:
+                    femdefs = self.allwords[femnoun]
+                    femdefs = self.filter_defs(femdefs, 'f', "feminine noun of "+word)
+                    femdefs = self.filter_defs(femdefs, 'f', "female equivalent of "+word)
 
                 if len(femdefs):
                     alldefs['f'] = femdefs['f']
@@ -227,6 +296,12 @@ class SpanishWordlist:
         return word.translate(self._trantab)
 
     def get_feminine_noun(self, word):
+
+        # If it's been explitly defined, use that
+        tag = "m:"+word
+        if tag in self.xnouns:
+            return self.xnouns[tag]
+
         femnoun = None
 
         # hermano/a  jefe/a  tigre/tigresa
@@ -248,6 +323,12 @@ class SpanishWordlist:
 
 
     def get_masculine_noun(self, word):
+
+        # If it's been explitly defined, use that
+        tag = "f:"+word
+        if tag in self.xnouns:
+            return self.xnouns[tag]
+
         if word not in self.allwords or 'f' not in self.allwords[word]:
             return
 
@@ -318,17 +399,17 @@ class SpanishWordlist:
             return {'word':'', 'pos':'', 'note': '', 'def': ''}
 
         word = res.group('word').strip()
-        #tags = [ item.strip() for item in res.group('tags').split(',') ] if res.group('tags') else []
         note = res.group('note') if res.group('note') else ''
         pos = res.group('pos') if res.group('pos') else ''
         definition = res.group('def') if res.group('def') else ''
 
-        return {
+        res = {
             'word': word,
             'pos': pos,
             'note': note,
             'def': definition
         }
+        return res
 
     @staticmethod
     def pos_is_verb(pos):
@@ -363,7 +444,7 @@ class SpanishWordlist:
 
     @staticmethod
     def should_ignore_note(note):
-        if {"archaic", "dated", "historical", "obsolete", "rare"} & { n.strip().lower() for n in note.split(',') }:
+        if {"archaic", "dated", "historical", "obsolete", "rare"} & { n.strip() for n in note.lower().split(',') }:
             return True
 
         return False
