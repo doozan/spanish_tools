@@ -54,30 +54,30 @@ class SpanishWordlist:
         if pos not in self.allwords[word]:
             return
 
-
-        # TODO: there are unintended consequences having the default note be ''
-        # it makes it impossible to detect if we should delete all notes for a pos
-        # or just the default note.  The current usage is likely counter-intuitive.
-        # since it will leave all definitions with notes when a user specifies just
-        # a word and a pos to remove
-        if note not in self.allwords[word][pos]:
-            return
-
-        if not definition:
-            del self.allwords[word][pos][note]
+        if not note and not definition:
+            del self.allwords[word][pos]
 
         else:
-            for d in self.allwords[word][pos][note]:
-                if d.startswith(definition):
-                    self.allwords[word][pos][note].remove(d)
-            if not len(self.allwords[word][pos][note]):
+
+            if note not in self.allwords[word][pos]:
+                return
+
+            if not definition:
                 del self.allwords[word][pos][note]
 
-        # cleanup if we've deleted all of something
-        if not len(self.allwords[word][pos]):
-            del self.allwords[word][pos]
-            if not len(self.allwords[word]):
-                del self.allwords[word]
+            else:
+                for d in self.allwords[word][pos][note]:
+                    if d.startswith(definition):
+                        self.allwords[word][pos][note].remove(d)
+                if not len(self.allwords[word][pos][note]):
+                    del self.allwords[word][pos][note]
+
+            # cleanup if we've deleted all of something
+            if not len(self.allwords[word][pos]):
+                del self.allwords[word][pos]
+
+        if not len(self.allwords[word]):
+            del self.allwords[word]
 
 
     def add_def(self, item):
@@ -199,10 +199,13 @@ class SpanishWordlist:
 #                        print(f"multiple values specified for {tag}: {self.xnouns[tag]}/{xnoun}")
                     self.xnouns[tag] = xnoun
 
-                    # Masculine nouns that specify a feminine counterpart
+                    # Femine nouns that specify a masculine counterpart
                     # should add a femnoun -> masculine lemma
-                    if k == "f":
-                        self.add_lemma(xnoun, word)
+                    # Note: Do not do this the other ways (m nouns with f parts creating lemmas)
+                    # because it creates incorrect lemmas for words like pata and hambugrguesa which are feminine
+                    # nouns first and feminine pairs of masculine nouns second
+                    if k == "m":
+                        self.add_lemma(word, xnoun)
 
             # explicitly tagged lemmas are generated when words are ignored as being obsolete versions of new words
             elif k == "lemma":
