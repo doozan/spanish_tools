@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- python-mode -*-
+
 import sys
 import spanish_words
 import argparse
@@ -9,4 +12,4 @@ args = parser.parse_args()
 spanish = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
 
 #print(words.get_lemma(args.word, args.pos.lower(), debug=True))
-print(spanish.verb.conjugate(args.verb, debug=True))
+print(spanish.verb.conjugate(args.verb))#, debug=True))

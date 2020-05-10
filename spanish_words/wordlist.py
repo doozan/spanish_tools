@@ -1,3 +1,4 @@
+from .paradigms import paradigms
 import re
 import sys
 import os
@@ -30,6 +31,8 @@ class SpanishWordlist:
         self.allwords = {}
         if dictionary:
             self.load_dictionary(dictionary)
+#            for verb,vdata in self.irregular_verbs.items():
+#                print(f'"{verb}": {vdata},')
         self._trantab = str.maketrans("áéíóú", "aeiou")
 
     def remove_def(self, item):
@@ -92,43 +95,49 @@ class SpanishWordlist:
                     self.allwords[word][pos][note].append(definition)
 
 
+    def parse_tags(self, data):
+        tags = {}
+        for match in re.finditer(r"([^: ]*):'([^']*)'", data):
+            k = match.group(1)
+            v = match.group(2)
+            if k not in tags:
+                tags[k] = [v]
+            else:
+                tags[k].append(v)
+
+        return tags
+
     def add_nmeta(self, item):
         word = item['word']
-        for match in re.finditer(r"([^: ]):'([^']*)'", item['def']):
-            tag = match.group(1)
-            val = match.group(2)
-            if tag == "pl":
-                self.noun_plurals[val] = word
-                if val not in self.noun_plurals:
-                    self.noun_plurals[val] = word
-#                    self.noun_plurals[val] = [ word ]
-                else:
-                    print(f"dup plural {word}:{val}")
-#                    if word not in self.noun_plurals[val]:
-#                        self.noun_plurals[val].append(word)
 
-            elif tag == "m":
-#                mtag = "m:"+val
-#                ftag = "f:"+word
-#                if mtag in self.xnouns and self.xnouns[mtag] != word:
-#                    print(f"duplicate xnoun {mtag} == {self.xnouns[mtag]}, {word}")
-#                if ftag in self.xnouns and self.xnouns[ftag] != val:
-#                    print(f"duplicate xnoun {ftag} == {self.xnouns[ftag]}, {word}")
-                self.xnouns["m:"+val] = word
-                self.xnouns["f:"+word] = val
-            elif tag == "f":
-                if val=="1":
-#                    print("Skipping template with f=1")
-                    return
-#                mtag = "m:"+word
-#                ftag = "f:"+val
-#                if mtag in self.xnouns and self.xnouns[mtag] != val:
-#                    print(f"duplicate xnoun {mtag} == {self.xnouns[mtag]}, {word}")
-#                if ftag in self.xnouns and self.xnouns[ftag] != word:
-#                    print(item)
-#                    print(f"duplicate xnoun {ftag} == {self.xnouns[ftag]}, {word}")
-                self.xnouns["f:"+val] = word
-                self.xnouns["m:"+word] = val
+        tags = self.parse_tags(item['def'])
+
+        # used for gender neutral terms
+        if 'm' in tags and 'f' in tags:
+#            print(f"Too many genders specified in {word} {item['def']}")
+            return
+
+        for k,v in tags.items():
+
+            if k == "pl":
+                for plural in v:
+                    if plural == "-":
+                        continue
+                    self.plural_nouns[plural] = word
+#                    if plural not in self.plural_nouns:
+#                        self.plural_nouns[plural] = word
+#                    elif self.plural_nouns[plural] != word:
+#                        print(f"dup singular for '{plural}': '{self.plural_nouns[plural]}'/'{word}'")
+
+            elif k in ["f", "m"]:
+                for noun in v:
+                    if noun == "1":
+#                        print("Skipping template with f=1")
+                        continue
+                    self.xnouns[k+":"+word] = noun
+
+            else:
+                print(f"unknown nmeta value: {k} in {word}")
 
         return
 
@@ -136,23 +145,57 @@ class SpanishWordlist:
     def add_vmeta(self, item):
 
         verb = item['word']
-        iverb = {"stems": []}
+        ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
 
-        for match in re.finditer(r"([^: ]):'([^']*)'", item['def']):
-            tag = match.group(1)
-            val = match.group(2)
+        tags = self.parse_tags(item['def'])
+        if "pattern" not in tags or "stem" not in tags:
+            print(f"Bad vmeta data for {verb}: {item['def']}")
+            return
 
-            if tag == "pattern":
-                iverb["pattern"] = val
-            if tag == "stem":
-                iverb["stems"].append(tag)
+        iverb = { "pattern": tags["pattern"][0],
+                  "stems": tags["stem"] }
+
+        if ending == iverb["pattern"]:
+#            print(f"Useless pattern declaration {verb}: {item}")
+            return
+
+        if iverb["pattern"] not in paradigms[ending]:
+            print(f"Bad pattern specified in vmeta for {verb}: {item['def']}")
+            return
+
+        # Ignore reflexives if the non-reflexive is in the database
+        if verb.endswith("se") and verb[:-2] in self.irregular_verbs:
+            return
+        # Replace existing reflexive with no-reflexive
+        elif verb+"se" in self.irregular_verbs:
+            self.irregular_verbs.pop(verb+"se")
 
         if verb not in self.irregular_verbs:
             self.irregular_verbs[verb] = [ iverb ]
         else:
             self.irregular_verbs[verb].append(iverb)
 
-        return
+    def process_line(self, line):
+
+        if line.startswith("#"):
+            return
+
+        if line.startswith("-"):
+            res = self.parse_line(line[1:])
+            self.remove_def(res)
+            return
+
+        res = self.parse_line(line)
+        if res['pos'] == "vmeta":
+            self.add_vmeta(res)
+        elif res['pos'] == "nmeta":
+            return
+#            self.add_nmeta(res)
+        elif self.should_ignore_def(res['def']) or self.should_ignore_note(res['note']):
+            return
+        else:
+            self.add_def(res)
+
 
     def load_dictionary(self, datafile):
         if not os.path.isfile(datafile):
@@ -160,15 +203,23 @@ class SpanishWordlist:
 
         with open(datafile) as infile:
             for line in infile:
-                res = self.parse_line(line)
-                if res['pos'] == "vmeta":
-                    self.add_vmeta(res)
-                elif res['pos'] == "nmeta":
-                    self.add_nmeta(res)
-                elif self.should_ignore_def(res['def']) or self.should_ignore_note(res['note']):
-                    continue
-                else:
-                    self.add_def(res)
+                self.process_line(line)
+
+        # Show statistics about mismatched male/female nouns
+        #missing = []
+        #for k,v in self.xnouns.items():
+        #    if v not in self.allwords:
+        #        missing.append(v)
+        #print(f"{len(missing)} missing nouns")
+        #print(missing[0], missing[1], missing[2])
+
+        #missing = []
+        #for k,v in self.allwords.items():
+        #    if self.is_feminized_noun(k) and not "f:"+k in self.xnouns:
+        #        missing.append(k)
+        #print(f"{len(missing)} feminine nouns are not included in their masculine noun's headword")
+        #print(missing[0], missing[1], missing[2])
+        #print(", ".join(missing))
 
         if not os.path.isfile(str(datafile) + ".custom"):
             return
@@ -177,13 +228,8 @@ class SpanishWordlist:
             for line in infile:
                 if line.strip().startswith("#") or line.strip() == "":
                     continue
+                self.process_line(line)
 
-                if line.startswith("-"):
-                    res = self.parse_line(line[1:])
-                    self.remove_def(res)
-                else:
-                    res = self.parse_line(line)
-                    self.add_def(res)
 
 
     # returns a list of all pos usage for a word, normalizing specific verb and noun tags to simply "verb" or "noun"
@@ -275,6 +321,7 @@ class SpanishWordlist:
         return alldefs
 
 
+    #TODO: Use self.xverbs instead
     def is_feminized_noun(self, word, masculine=""):
         if word not in self.allwords:
             return False
@@ -286,7 +333,7 @@ class SpanishWordlist:
         # Only search the first {f} note definitions (eliminates secondary uses like hamburguesa as a lady from Hamburg)
         if "feminine noun of "+masculine in list(alldefs['f'].values())[0][0] or \
            "(female" in list(alldefs['f'].values())[0][0] or \
-           "female " in list(alldefs['f'].values())[0][0]:
+           "female equivalent of " in list(alldefs['f'].values())[0][0]:
             return True
 
         return False
@@ -298,7 +345,7 @@ class SpanishWordlist:
     def get_feminine_noun(self, word):
 
         # If it's been explitly defined, use that
-        tag = "m:"+word
+        tag = "f:"+word
         if tag in self.xnouns:
             return self.xnouns[tag]
 
@@ -325,7 +372,7 @@ class SpanishWordlist:
     def get_masculine_noun(self, word):
 
         # If it's been explitly defined, use that
-        tag = "f:"+word
+        tag = "m:"+word
         if tag in self.xnouns:
             return self.xnouns[tag]
 

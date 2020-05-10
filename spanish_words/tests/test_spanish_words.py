@@ -11,7 +11,7 @@ def test_get_lemma():
     assert words.get_lemma("notaword", "verb") == "notaword"
 
     assert words.get_lemma("hablo", "verb") == "hablar"
-    assert words.get_lemma("fuiste", "verb") == "ser|ir"
+    assert words.get_lemma("fuiste", "verb") == "ir|ser"
 
     assert words.get_lemma("notaword", "noun") == "notaword"
 

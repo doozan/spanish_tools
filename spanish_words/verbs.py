@@ -1,6 +1,5 @@
 from .paradigms import paradigms
 from .inflections import inflections
-from .irregular_verbs import irregular_verbs as _iverbs
 import re
 import os
 import json
@@ -40,9 +39,7 @@ class SpanishVerbs:
     def __init__(self, parent):
         self.parent = parent #weakref.ref(parent)
         self.reverse_irregular_verbs = {}
-        self.irregular_verbs = _iverbs
-        if "solver" in self.irregular_verbs:
-            self.irregular_verbs.pop('solver') # remove obsolete verb
+        self.irregular_verbs = parent.wordlist.irregular_verbs
 
         self.build_reverse_conjugations()
         self.reverse_endings = {
@@ -50,9 +47,6 @@ class SpanishVerbs:
             'er':  self.get_endings('-er', ''),
             'ir':  self.get_endings('-ir', ''),
             'ír':  self.get_endings('-ír', ''),
-            'car':  self.get_endings('-ar', '-car'),
-            'gar':  self.get_endings('-ar', '-gar'),
-            'zar':  self.get_endings('-ar', '-zar'),
         }
 
         self.build_reverse_inflections()
@@ -77,6 +71,10 @@ class SpanishVerbs:
     def build_reverse_conjugations(self):
 
         for verb, vdata in self.irregular_verbs.items():
+            if not self.parent.has_word(verb, "verb"):
+                #print(f"Conjugation pattern specified for non existent verb: {verb}")
+                continue
+
             ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
             for item in vdata:
                 conjugations = self.do_conjugate( item['stems'], ending, item['pattern'], only_pattern=True )

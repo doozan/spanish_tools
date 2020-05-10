@@ -55,10 +55,10 @@ def test_get_inflection_id():
 
 def test_reverse_conjugate():
     reverse_conjugate = verb.reverse_conjugate
-    assert reverse_conjugate("podría") == [{'verb': 'poder', 'form': 32}, {'verb': 'poder', 'form': 34}, {'verb': 'podrir', 'form': 14}, {'verb': 'podrir', 'form': 16}]
+    assert reverse_conjugate("podría") == [{'verb': 'poder', 'form': 32}, {'verb': 'poder', 'form': 34}]
     assert reverse_conjugate("comido") == [{'verb': 'comedir', 'form': 7}, {'verb': 'comer', 'form': 3}]
     assert reverse_conjugate("volaste") == [{'verb': 'volar', 'form': 21}]
-    assert reverse_conjugate("fuiste") == [{'form': 21, 'verb': 'ser'}, {'form': 21, 'verb': 'ir'}]
+    assert reverse_conjugate("fuiste") == [{'form': 21, 'verb': 'ir'}, {'form': 21, 'verb': 'ser'}]
 
     assert reverse_conjugate("notaword") == []
 
@@ -69,6 +69,7 @@ def test_reverse_conjugate():
     assert reverse_conjugate("mirando")[0]['verb'] == "mirar"
     assert reverse_conjugate("mirabais")[0]['verb'] == "mirar"
 
+    # Verb uses two different conjugation patterns
     assert reverse_conjugate("emparento")[0]['verb'] == "emparentar"
     assert reverse_conjugate("empariento")[0]['verb'] == "emparentar"
 
