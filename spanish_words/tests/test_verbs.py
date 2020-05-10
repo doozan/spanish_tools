@@ -108,6 +108,8 @@ def test_select_best():
         "suelen": "soler",
         "viven": "vivir",
         "diste": "dar",
+        "venda": "vender",
+        "sales": "salir",
     }
 
     for k,v in pairs.items():

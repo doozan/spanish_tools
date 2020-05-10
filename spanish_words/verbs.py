@@ -128,16 +128,19 @@ class SpanishVerbs:
             return -1
 
         scoring = {
-            "infinitive" : 50,  # infinitives should always be themselves
-            "gerund":      50,  # likewise, gerund and past participles
-            "pastpart":    50,
-            "tu-past-ind":  6,  # tu past indicative is pretty common
-            "irregular":    4,  # prefer irregular usage over regular usage
-            "indicative":   4,  # prefer indicative
-            "imperative":   2,  # prefer imperative
-            "not-region":   2,  # prefer non-regional use
-            "first-person": 1,  # prefer first person use
-#           "present":      1,  # prefer present tense
+            "infinitive" :  50,  # infinitives should always be themselves
+            "gerund":       50,  # likewise, gerund and past participles
+            "pastpart":     50,
+            "tu-past-ind":   6,  # tu past indicative is pretty common
+            "irregular":     4,  # prefer irregular usage over regular usage
+            "yo-pres-ind":   4,  # strongly prefer first person present indicative
+            "indicative":    4,  # prefer indicative
+            "tu-imperative": 4,  # strongly prefer second person imperative
+            "preterite":     2,  # prefer preterite
+            "imperative":    2,  # prefer imperative
+            "not-region":    2,  # prefer non-regional use
+            "first-person":  1,  # prefer first person use
+#           "present":       1,  # prefer present tense
         }
         score = 0
         verb = item['verb']
@@ -160,6 +163,12 @@ class SpanishVerbs:
         if item['form'] == 21: # tu fuiste
             score += scoring['tu-past-ind']
 
+        if item['form'] == 7: # yo hablo
+            score += scoring['yo-pres-ind']
+
+        if item['form'] in [63, 69]: # tu command
+            score += scoring['tu-imperative']
+
         if any([ x for x in i if x['mood'] in ['infinitive'] ]):
             score += scoring['infinitive']
         elif any([ x for x in i if x['mood'] in ['gerund'] ]):
@@ -170,6 +179,9 @@ class SpanishVerbs:
             score += scoring['imperative']
         elif any([ x for x in i if x['mood'] in ['indicative'] ]):
             score += scoring['indicative']
+
+        if any([ x for x in i if 'tense' in x and x['tense'] in ['preterite'] ]):
+            score += scoring['preterite']
 
 
 #        if any([ x for x in i if 'tense' in x and x['tense'] == 'present' ]):

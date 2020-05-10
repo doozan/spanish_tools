@@ -61,6 +61,8 @@ test {m} :: obsoleto form of terst
     rm_def = wordlist.parse_line("myword {m}")
     wordlist.remove_def(rm_def)
     assert wordlist._has_word("myword", "noun") == False
+
+    # don't use process line
     nmeta_def = wordlist.parse_line("myword {nmeta} :: f:'mywordalisa' pl:'mywordz' pl:'mywordzzz'\n")
     wordlist.add_def(test_def)
     wordlist.add_nmeta(nmeta_def)
@@ -68,12 +70,17 @@ test {m} :: obsoleto form of terst
     assert wordlist._has_word("mywordalisa") == False
     assert wordlist._has_word("mywordz") == False
 
-    print(wordlist.xnouns)
-    assert wordlist.get_lemma("mywordalisa") == "myword"
+    assert wordlist.get_lemma("mywordalisa") == None
     assert wordlist.get_lemma("mywordz") == "myword"
     assert wordlist.get_lemma("mywordzzz") == "myword"
     assert wordlist.get_feminine_noun("myword") == "mywordalisa"
     assert wordlist.get_masculine_noun("mywordalisa") == None
+
+    nmeta_def = wordlist.parse_line("mywordalisa {nmeta} :: m:'myword'\n")
+    wordlist.add_def(test_def)
+    wordlist.add_nmeta(nmeta_def)
+    assert wordlist.get_masculine_noun("mywordalisa") == "myword"
+    assert wordlist.get_lemma("mywordalisa") == "myword"
 
     verb_def = wordlist.parse_line("myverbolver {v} :: def\n")
     wordlist.add_def(verb_def)
@@ -207,14 +214,10 @@ def test_is_feminized_noun():
 def test_get_feminine_noun():
     get_feminine_noun = obj.get_feminine_noun
     assert get_feminine_noun("hermano") == "hermana"
-#    assert get_feminine_noun("camarero") == "camarera"
+    assert get_feminine_noun("camarero") == "camarera"
     assert get_feminine_noun("hermana") == None
     assert get_feminine_noun("caso") == None
 #    assert get_feminine_noun("hamburgueso") == None
-
-    # Has feminine noun, but not for the primary definition
-#    assert get_feminine_noun("pato") == None
-
 
     # Other word endings
     assert get_feminine_noun("jefe") == "jefa"
@@ -239,6 +242,7 @@ def test_get_masculine_noun():
     assert get_masculine_noun("alcaldesa") == "alcalde"
     assert get_masculine_noun("doctora") == "doctor"
 
+    assert get_masculine_noun("pata") == None
 
 
 # TODO:
