@@ -15,7 +15,7 @@ curl 'https://en.wiktionary.org/w/api.php?action=query&prop=revisions&rvslots=*&
 # process the wiktionary dump
 curl 'https://dumps.wikimedia.org/enwiktionary/latest/enwiktionary-latest-pages-articles.xml.bz2' \
   | bzcat \
-  | gawk -v LANG=Spanish -v ISO=es -v REMOVE_WIKILINKS="y" -v ENABLE_VMETA="y" -v ENABLE_NMETA="y" -f trans-en-es.awk \
+  | gawk -v LANG=Spanish -v ISO=es -v REMOVE_WIKILINKS="y" -v DUMP_META="spanish_data/meta.txt" -f trans-en-es.awk \
   > spanish_data/es-en.txt
   sort -s -d -k 1,1 -t"{" -o spanish_data/es-en.txt spanish_data/es-en.txt
 
