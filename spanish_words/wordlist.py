@@ -29,8 +29,7 @@ class SpanishWordlist:
         self.xnouns = {}
         self.lemmas = {}
         self.allwords = {}
-        self.nmeta_buffer = []
-        self.vmeta_buffer = []
+        self.meta_buffer = []
         self.parent=parent
         if dictionary:
             self.load_dictionary(dictionary)
@@ -121,23 +120,22 @@ class SpanishWordlist:
         if lemma:
             data['pos'] = 'forced-nmeta'
             data['def'] = f"lemma:'{lemma}'"
-            self.buffer_nmeta(data)
+            self.buffer_meta(data)
 
-    def buffer_nmeta(self, data):
-        self.nmeta_buffer.append(data)
-
-    def buffer_vmeta(self, data):
-        self.vmeta_buffer.append(data)
+    def buffer_meta(self, data):
+        self.meta_buffer.append(data)
 
     def apply_meta(self):
-        for data in self.nmeta_buffer:
-            if data['pos'] == "forced-nmeta" or self._has_word(data['word'], "noun"):
+        for data in self.meta_buffer:
+            if data['pos'] == "forced-nmeta":
                 self.add_nmeta(data)
-#            else:
-#                print(f"Skipping {data['word']}")
-        for data in self.vmeta_buffer:
-            if self._has_word(data['word'], "verb"):
+            elif data['pos'] == "nmeta" and self._has_word(data['word'], "noun"):
+                self.add_nmeta(data)
+#            elif data['pos'] == "ameta" and self._has_word(data['word'], "adj"):
+#                self.add_ameta(data)
+            elif data['pos'] == "vmeta" and self._has_word(data['word'], "verb"):
                 self.add_vmeta(data)
+
 
     def add_lemma(self, word, lemma):
 #        if word in self.lemmas and self.lemmas[word] != lemma:
@@ -163,24 +161,11 @@ class SpanishWordlist:
 
         # used for gender neutral terms
         if 'm' in tags and 'f' in tags:
-#            print(f"Too many genders specified in {word} {item['def']}")
             return
-
-#        gender = "m"
-#        if " " in word and 'm' in tags:
-#            gender = 'f'
-#        guess_plural = self.parent.noun.make_plural(word, gender)
 
         for k,v in tags.items():
 
             if k == "pl":
-
-#                if guess_plural:
-#                    if (" ".join(sorted(guess_plural)) == " ".join(sorted(v))):
-#                        print(f"Unneeded plural declaration in {word}: {v}")
-#                    else:
-#                        print(f"{guess_plural} != {v}")
-
                 for plural in v:
                     # some pl: tags have a - to indicate the noun is uncountable
                     if plural == "-":
@@ -262,10 +247,8 @@ class SpanishWordlist:
             return
 
         res = self.parse_line(line)
-        if res['pos'] == "vmeta":
-            self.buffer_vmeta(res)
-        elif res['pos'] == "nmeta":
-            self.buffer_nmeta(res)
+        if res['pos'] in ["ameta", "nmeta", "vmeta"]:
+            self.buffer_meta(res)
         elif self.should_ignore_def(res['def']):
             self.buffer_ignored_def(res)
         elif self.should_ignore_note(res['note']):
