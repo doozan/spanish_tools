@@ -44,8 +44,18 @@ test {m} :: obsoleto form of terst
     assert wordlist.get_lemma("terst") == None
 
     test_def = wordlist.parse_line("myword {m} :: my def1, def2; def 3\n")
+    assert test_def == {'word': 'myword', 'pos': 'm', 'note': '', 'syn': '', 'def': 'my def1, def2; def 3'}
+
+    test_def = wordlist.parse_line("myword {m} [note1, note2] :: my def1, def2; def 3\n")
+    assert test_def == {'word': 'myword', 'pos': 'm', 'note': 'note1, note2', 'syn': '',  'def': 'my def1, def2; def 3'}
+
+    test_def = wordlist.parse_line("myword {m} [note1, note2] X syn1; syn2 :: my def1, def2; def 3\n")
+    assert test_def == {'word': 'myword', 'pos': 'm', 'note': 'note1, note2', 'syn': 'syn1; syn2', 'def': 'my def1, def2; def 3'}
+
+    test_def = wordlist.parse_line("myword {m} X syn1; syn2 :: my def1, def2; def 3\n")
+    assert test_def == {'word': 'myword', 'pos': 'm', 'note': '', 'syn': 'syn1; syn2', 'def': 'my def1, def2; def 3'}
+
     test_def2 = wordlist.parse_line("myword {m} :: def 4\n")
-    assert test_def == {'word': 'myword', 'pos': 'm', 'note': '', 'def': 'my def1, def2; def 3'}
 
     wordlist.add_def(test_def)
     wordlist.add_def(test_def2)

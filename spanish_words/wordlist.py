@@ -485,11 +485,15 @@ class SpanishWordlist:
 
              ([ ]{                        # (optional) a space
                (?P<pos>[^}]*)             #    and then the the part of speech, enclosed in curly braces
-             \})*                         #    (this may be specified more than once)
+             \})*                         #    (this may be specified more than once, the last one wins)
 
              ([ ]\[                       # (optional) a space
                (?P<note>[^\]]*)           #    and then the note, enclosed in square brackets
              \])?
+
+             ([ ]X[ ]                    # (optional) a space and then a pipe | and a space
+               (?P<syn>.*?)                #    and then a list of synonyms
+             )?
 
              (                            # this whole bit can be optional
                [ ]*::[ ]                  #   :: optionally preceded by whitespace and followed by a mandatory space
@@ -503,17 +507,19 @@ class SpanishWordlist:
         # This only applies to one entry in the 4/20/2020 wiktionary dump
         if not res:
     #        print("DOES NOT MATCH REGEX: '%s'"% data.strip())
-            return {'word':'', 'pos':'', 'note': '', 'def': ''}
+            return {'word':'', 'pos':'', 'note': 'NOMATCH', 'syn': '', 'def': ''}
 
         word = res.group('word').strip()
-        note = res.group('note') if res.group('note') else ''
         pos = res.group('pos') if res.group('pos') else ''
+        note = res.group('note') if res.group('note') else ''
+        syn = res.group('syn') if res.group('syn') else ''
         definition = res.group('def') if res.group('def') else ''
 
         res = {
             'word': word,
             'pos': pos,
             'note': note,
+            'syn': syn,
             'def': definition
         }
         return res
