@@ -238,7 +238,7 @@ def get_phrase(word, pos, noun_type, femnoun):
             phrase = f"la {femnoun}. el {word}"
             display = f"la {femnoun}/el {word}"
         else:
-            raise ValueError("Unknown noun type", noun_type)
+            raise ValueError(f"Word {word} has unknown noun type {noun_type}")
     else:
         voice = _FEMALE1
         phrase = word
