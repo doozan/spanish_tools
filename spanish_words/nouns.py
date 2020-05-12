@@ -1,57 +1,5 @@
 import re
 
-# Based on GPL code from https://github.com/Neuw84/SpanishInflectorStemmer
-
-irregular_nouns = {
-    "oes": "o",
-    "espráis": "espray",
-    "noes": "no",
-    "yoes": "yos",
-    "volúmenes": "volumen",
-    "albalaes": "albalá",
-    "faralaes": "faralá",
-    "clubes": "club",
-    "países": "país",
-    "jerséis": "jersey",
-    "especímenes": "espécimen",
-    "caracteres": "carácter",
-    "regímenes": "régimen",
-    "currículos": "curriculum",
-    "ultimatos": "ultimátum",
-    "memorandos": "memorándum",
-    "referendos": "referéndum",
-    "sándwiches": "sándwich"
-}
-
-noplural_nouns = [
-    "nada",
-    "nadie",
-    "pereza",
-    "adolescencia",
-    "generosidad",
-    "pánico",
-    "decrepitud",
-    "eternidad",
-    "caos",
-    "yo",
-    "tu",
-    "tú",
-    "el",
-    "él",
-    "ella",
-    "nosotros",
-    "nosotras",
-    "vosotros",
-    "vosotras",
-    "ellos",
-    "ellas",
-    "viescas"
-]
-
-
-# This relies on spanish_words for feminine noun lookups
-# and the list of nouns ending with -s
-
 class SpanishNouns:
     def __init__(self, parent):
         self.parent = parent
@@ -64,31 +12,13 @@ class SpanishNouns:
     def stress(self, word):
         return word.translate(self._stresstab)
 
-    def get_lemma(self, word):
+    def old_get_lemma(self, word):
         word = word.lower()
 
         lemma = word
 
-        if word in irregular_nouns:
-            lemma = irregular_nouns[word]
-
-        elif self.parent.has_word(word, "noun") or self.parent.has_word(word, "num"):
-            lemma = word
-
-        elif word in noplural_nouns:
-            lemma = word
-
-
-        # try dropping the s first and seeing if the result is a known word (catches irregulars like bordes/borde)
-        elif len(word) > 2 and word.endswith("s") and self.parent.has_word(word[:-1], "noun"):
-            lemma = word[:-1]
-
-        # ratones -> ratón
-        elif len(word) > 4 and word.endswith("ones") and self.parent.has_word(word[:-4]+"ón", "noun"):
-            lemma = word[:-4] + "ón"
-
         # canciones, coleciones
-        elif len(word) > 5 and word.endswith("iones"):
+        if len(word) > 5 and word.endswith("iones"):
             lemma = word[:-5] + "ión"
 
         # profesores, doctores, actores
@@ -117,96 +47,116 @@ class SpanishNouns:
 
         return lemma
 
-    def make_plural(self, singular, gender="m"):
-        if singular == "":
-            return None
 
-        if " " in singular:
-            res = re.match("^(.+)( (?:de|a)l? .+)$", singular)  # match xxx (de|del|a|al) yyyy
+
+
+    def make_singular(self, plural):
+        if not plural:
+            return []
+        if len(plural) < 2:
+            return [plural]
+        match = []
+
+        if " " in plural:
+            res = re.match("^(.+)( (?:de|a)l? .+)$", plural)  # match xxx (de|del|a|al) yyyy
             if res:
-                pl = self.make_plural(res.group(1), gender)
+                pl = self.make_singular(res.group(1))
+                second = res.group(2)
                 if not pl:
                     return None
-                first = pl[0]
-                second = res.group(2)
-                return [first+second]
+                for first in pl:
+                    match.append(first+second)
+                return match
             else:
-                words = singular.split(" ")
+                words = plural.split(" ")
                 if len(words) == 2:
-                    pl = self.make_plural(words[0], gender)
+                    pl = self.make_singular(words[0], gender)
                     if not pl:
-                        return None
+                        return []
                     noun = pl[0]
-                    adj = self.parent.adj.get_forms(words[1], gender)
+                    adj = get_adjective_forms(words[1], gender)
                     if not adj:
                         #raise ValueError("No adjective forms for", words[1], gender)
-                        return None
+                        return []
 
                     if gender == "m" and "mp" in adj:
                         return [noun + " " + adj["mp"]]
                     elif gender == "f" and "fp" in adj:
                         return [noun + " " + adj["fp"]]
+                else:
+                    return [plural]
 
-        # ends in unstressed vowel or á, é, ó (casa: casas)
-        if singular[-1] in "aeiouáéó":
-            return [singular+"s"]
+        # ends in unstressed vowel or á, é, ó + s (casas: casa)
+        if len(plural)>=2 and plural[-2] in "aeiouáéó" and plural[-1] == "s":
+            match.append(plural[:-1])
 
-        # ends in í or ú (bambú: [bambús, bambúes])
-        if singular[-1] in "íú":
-            return [ singular+"s", singular+"es" ]
+        # ends in í or ú (bambús, bambúes => bambú)
+        if len(plural)>= 3 and plural[-3] in "íú" and plural.endswith("es"):
+            match.append(plural[:-2])
+        if len(plural)>= 2 and plural[-2] in "íú" and plural[-1] == "s":
+            match.append(plural[:-1])
 
+        # -[vowel]ces -> -z
         # ends in a vowel + z (nariz: narices)
-        if len(singular)>1 and singular[-2] in "aeiouáéó" and singular.endswith("z"):
-            return [singular[:-1]+"ces"]
+        if len(plural)>=4 and plural[-4] in "aeiouáéó" and plural.endswith("ces"):
+            match.append(plural[:-3]+"z")
 
         # ends tz (hertz: hertz)
-        if singular.endswith("tz"):
-            return [singular]
+        if plural.endswith("tz"):
+            match.append(plural)
 
-        modsingle = re.sub("qu([ie])", r"k\1", singular)
+        modsingle = re.sub("qu([ie])", r"k\1", plural)
         vowels = []
         for c in modsingle:
             if c in "aeiouáéíóú":
                 vowels.append(c)
 
         # ends in s or x with more than 1 syllable, last syllable unstressed (saltamontes: saltamontes)
-        if len(vowels) > 1 and singular[-1] in "sx":
-            return [singular]
+        if len(vowels) > 1 and plural[-1] in "sx":
+            match.append(plural)
 
         # I can't find any places where this actually applies
         # ends in l, r, n, d, z, or j with 3 or more syllables, accented on third to last syllable
-        if len(vowels) > 2 and singular[-1] in "lrndzj" and vowels[len(vowels)-2] in "áéíóú":
-            return [singular]
+        if len(vowels) > 2 and plural[-1] in "lrndzj" and vowels[len(vowels)-2] in "áéíóú":
+            match.append(plural)
 
         # ends in a stressed vowel + consonant, remove the stress and add -es (ademán: ademanes)
-        if len(singular)>1 and singular[-2] in "áéíóú" and singular[-1] not in "aeiouáéíóú":
-            return [ singular[:-2] + self.unstress(singular[-2:]) + "es" ]
+        if len(plural)>=4 and plural[-4] in "aeiou" and plural[-3] not in "aeiouáéíóú" and plural.endswith("es"):
+            match.append(plural[:-4] + self.stress(plural[-4] + plural[-3]))
 
-        # ends in an unaccented vowel + y, l, r, n, d, j, s, x (color: coleres)
-        if len(singular)>1 and singular[-2] in "aeiou" and singular[-1] in "ylrndjsx":
-            # two or more vowels and ends with -n, add stress mark to plural  (desorden: desórdenes)
-            if len(vowels) > 1 and singular[-1] == "n":
-                res = re.match("^(.*)([aeiou])([^aeiou]*[aeiou][nl])$", modsingle)
-                if res:
-                    start = res.group(1)  # dólmen
-                    vowel = res.group(2)
-                    end = res.group(3)
-                    modplural = start + self.stress(vowel) + end + "es"
-                    plural = re.sub("k", "qu", modplural)
-                    return [ plural ]
-            return [ singular + "es" ]
+        # ends -[aeiou]nes and has a stress mark on the third from last vowel
+        # strip the stress mark and the -es
+        res = re.match("^(.*)([áéíóú])([^aeiou]*[aeiou][n])es$", modsingle)
+        if res:
+            modplural = res.group(1) + self.unstress(res.group(2)) + res.group(3)
+            clean = re.sub("k", "qu", modplural)
+            match.append(clean)
 
-        # ends in a vowel+ch (extremely few cases) (coach: coaches)
-        if len(singular)>2 and singular.endswith("ch") and singular[-3] in "aeiou":
-            return [ singular + "es" ]
+        if len(plural)>=4 and plural[-4] in "aeiou" and plural[-3] in "ylrndjsx" and plural.endswith("es"):
+            match.append(plural[:-2])
 
+
+        # ends in a vowel+ches (extremely few cases) (coach: coaches)
+        if len(plural)>=5 and plural[-5] in "aeiou" and plural.endswith("ches"):
+            match.append(plural[:-2])
+
+        # ends with two consonants +s
         # this matches mostly loanwords and is usually wrong (confort: conforts)
-        if len(singular)>1 and singular[-2] in "bcdfghjklmnpqrstvwxyz" and singular[-1] in "bcdfghjklmnpqrstvwxyz":
-            return [ singular + "s" ]
+        if len(plural)>=3 and plural[-3] in "bcdfghjklmnpqrstvwxyz" and plural[-2] in "bcdfghjklmnpqrstvwxyz" and plural[-1] == "s":
+            match.append(plural[:-1])
 
         # this seems to match only loanwords
         # ends in a vowel + consonant other than l, r, n, d, z, j, s, or x (robot: robots)
-        if len(singular)>1 and singular[-2] in "aeiou" and singular[-1] in "bcfghkmpqtvwy":
-            return [ singular + "s" ]
+        if len(plural)>=3 and plural[-3] in "aeiou" and plural[-2] in "bcfghkmpqtvwy" and plural[-1] == "s":
+            match.append(plural[:-1])
 
-        return None
+
+        elif len(plural)>=3 and plural[-3:] in [ "éis", "áis", "óis", "úis" ]:
+            match.append(plural[:-3]+self.unstress(plural[-3])+"y")
+
+        if len(match):
+            return match
+        else:
+            return [ plural ]
+
+

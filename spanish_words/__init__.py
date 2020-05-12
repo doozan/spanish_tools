@@ -13,7 +13,7 @@ class SpanishWords:
         self.adj = SpanishAdjectives(self)
         self.noun = SpanishNouns(self)
         self.__wordlist = SpanishWordlist(dictionary, self)
-        self.verb = SpanishVerbs(self)
+        self.verb = SpanishVerbs(self.__wordlist.irregular_verbs)
 
     @property
     def wordlist(self):
@@ -60,19 +60,60 @@ class SpanishWords:
         pos = pos.lower()
 
         if pos == "adj":
+            lemma = self.wordlist.get_lemma(word, "adj")
+            if lemma:
+                return [lemma]
+
             return [ self.adj.get_lemma(word) ]
 
         if pos == "noun":
-            lemma = self.wordlist.get_lemma(word)
+            lemma = self.wordlist.get_lemma(word, "noun")
             if lemma:
-                return [ lemma ]
+                return [lemma]
 
-            return [ self.noun.get_lemma(word) ]
+            if len(word) > 2 and word.endswith("s"):
+                if self.has_word(word, "num"):
+                    return [word]
+
+                # try dropping the s first and seeing if the result is a known word (catches irregulars like bordes/borde)
+                lemma = self.wordlist.get_lemma(word[:-1], "noun")
+                if lemma:
+                    return [lemma]
+
+                singles = self.noun.make_singular(word)
+                good_singles = []
+                for single in singles:
+                    lemma = self.wordlist.get_lemma(single, "noun")
+                    if lemma:
+                        good_singles.append(lemma)
+                    elif self.has_word(single):
+                        good_singles.append(single)
+
+                if len(good_singles):
+                    good_singles = list(dict.fromkeys(good_singles).keys())
+                    if len(good_singles) > 1 and word in good_singles:
+                        good_singles.remove(word)
+                    return good_singles
+
+            return [word]
 
         elif pos == "verb":
 
             res = []
-            res = self.verb.reverse_conjugate(word)
+
+            possible_verbs = self.verb.reverse_conjugate(word)
+            if debug: print(possible_verbs)
+
+            # validate possible verbs against real verbs in the wordlist
+            if possible_verbs:
+                for v in possible_verbs:
+                    if self.has_word(v['verb'], "verb"):
+                        res.append(v)
+                    # Check for reflexive only verbs
+                    elif self.has_word(v['verb']+"se", "verb"):
+                        v['verb'] += "se"
+                        res.append(v)
+
 #            if debug: print(res)
 #            if select_best:
             res = self.verb.select_best(res, debug)

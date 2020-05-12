@@ -36,10 +36,9 @@ pronouns = [
 ]
 
 class SpanishVerbs:
-    def __init__(self, parent):
-        self.parent = parent #weakref.ref(parent)
+    def __init__(self, irregular_verbs):
         self.reverse_irregular_verbs = {}
-        self.irregular_verbs = parent.wordlist.irregular_verbs
+        self.irregular_verbs = irregular_verbs
 
         self.build_reverse_conjugations()
         self.reverse_endings = {
@@ -71,10 +70,6 @@ class SpanishVerbs:
     def build_reverse_conjugations(self):
 
         for verb, vdata in self.irregular_verbs.items():
-            if not self.parent.has_word(verb, "verb"):
-                #print(f"Conjugation pattern specified for non existent verb: {verb}")
-                continue
-
             ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
             for item in vdata:
                 conjugations = self.do_conjugate( item['stems'], ending, item['pattern'], only_pattern=True )
@@ -200,15 +195,15 @@ class SpanishVerbs:
     def reverse_conjugate(self, word, check_pronouns=True):
         word = word.lower().strip()
 
-        valid_verbs =[]
+        verbs =[]
 
         # Check if it's already an infinitive listed in the dictionary
-        if any(word.endswith(ending) for ending in all_verb_endings) and self.parent.has_word(word, "verb"):
+        if any(word.endswith(ending) for ending in all_verb_endings):
             return [ { 'verb': word, 'form': 1 } ]
 
         # Check if it's an irregular verb
         if word in self.reverse_irregular_verbs:
-            valid_verbs += self.reverse_irregular_verbs[word]
+            verbs += self.reverse_irregular_verbs[word]
 
         # Find the longest matching conjugated ending for each matching infinitive ending
         matched_endings = []
@@ -218,32 +213,22 @@ class SpanishVerbs:
                     form = endings[ending]
                     matched_endings.append({'old': ending, 'new': endtype, 'forms': form})
         if matched_endings:
-            possible_verbs = []
             for match in matched_endings:
                 for form in match['forms']:
-                    possible_verbs.append({'verb': word[:-len(match['old'])]+match['new'], 'form': form })
+                    verbs.append({'verb': word[:-len(match['old'])]+match['new'], 'form': form })
 
             # Throw out any verb forms that don't match the conjugations of that verb
             # This catches mismatches where the word is what an irregular verb form would be if the verb was regular
-            possible_verbs = [ v for v in possible_verbs if not self.is_irregular(v['verb'], v['form']) ]
-
-            # Check the verbs against the dictionary and throw out any we've invented
-            for v in possible_verbs:
-                if self.parent.has_word(v['verb'], "verb"):
-                    valid_verbs.append(v)
-                # Check for reflexive only verbs
-                elif self.parent.has_word(v['verb']+"se", "verb"):
-                    v['verb'] += "se"
-                    valid_verbs.append(v)
+            verbs += [ v for v in verbs if not self.is_irregular(v['verb'], v['form']) ]
 
         # No results, try stripping any direct/indirect objects (dime => di)
         # pronouns can only be atteched to infinitive (1), gerund (2) and affirmative commands (63-68)
         if check_pronouns:
             endings = [ending for ending in pronouns if word.endswith(ending)]
             for ending in endings:
-                valid_verbs += [ v for v in self.reverse_conjugate( self.unstress(word[:len(ending)*-1]), check_pronouns =  False ) if v['form'] in [ 1, 2, 63, 64, 65, 66, 67, 68 ] ]
+                verbs += [ v for v in self.reverse_conjugate( self.unstress(word[:len(ending)*-1]), check_pronouns =  False ) if v['form'] in [ 1, 2, 63, 64, 65, 66, 67, 68 ] ]
 
-        return valid_verbs
+        return verbs
 
     def unstress(self, word):
         return word.translate(self._trantab)

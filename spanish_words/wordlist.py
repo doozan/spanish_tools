@@ -17,7 +17,7 @@ noun_tags = set([
     "ms",   # masculine singular - not used (more cruft)
 
     # These don't appear in the dictionary, but are generated during word analysis
-    "m-f",  # uses el/la to indigate different meanings of word (la cura, el cura)
+    "m-f",  # uses el/la to indicate different meanings of word (la cura, el cura)
     "f-el", # feminine, but uses "el" when singular
     "m/f"   # part of a masculine/feminine noun pair (amigo/amiga)
 ])
@@ -110,49 +110,78 @@ class SpanishWordlist:
         return tags
 
 
-    # Words that are ignored for being spelling errors or obsolute usage
-    # should be added to the lemma table, but only if the obsolete usage
-    # is in the first definition of the word (ie, the word isn't in the db yet)
-    def buffer_ignored_def(self, data):
-        if self._has_word(data['word']):
-            return
-        lemma = self.get_ignored_lemma(data['def'])
-        if lemma:
-            data['pos'] = 'forced-nmeta'
-            data['def'] = f"lemma:'{lemma}'"
-            self.buffer_meta(data)
-
     def buffer_meta(self, data):
         self.meta_buffer.append(data)
 
     def apply_meta(self):
         for data in self.meta_buffer:
-            if data['pos'] == "forced-nmeta":
+            if data['pos'].startswith("meta-lemma-"):
+                pos = data['pos'].split("-", 2)[2]
+                if self.pos_is_noun(pos):
+                    self.add_meta_lemma(data, "noun")
+                elif self.pos_is_verb(pos):
+                    self.add_meta_lemma(data, "verb")
+                else:
+                    self.add_meta_lemma(data, pos)
+            elif data['pos'] == "meta-noun": # and self._has_word(data['word'], "noun"):
                 self.add_nmeta(data)
-            elif data['pos'] == "nmeta" and self._has_word(data['word'], "noun"):
-                self.add_nmeta(data)
-#            elif data['pos'] == "ameta" and self._has_word(data['word'], "adj"):
-#                self.add_ameta(data)
-            elif data['pos'] == "vmeta" and self._has_word(data['word'], "verb"):
+            elif data['pos'] == "meta-verb": # and self._has_word(data['word'], "verb"):
                 self.add_vmeta(data)
+            elif data['pos'] == "meta-adj": # and self._has_word(data['word'], "verb"):
+                self.add_ameta(data)
 
+    def add_meta_lemma(self, item, pos):
+        word = item['word']
+        tags = self.parse_tags(item['def'])
+        if 'lemma' in tags:
+            for lemma in tags['lemma']:
+                self.add_lemma(word, lemma, pos)
 
-    def add_lemma(self, word, lemma):
-#        if word in self.lemmas and self.lemmas[word] != lemma:
-#            print(f"multiple lemmas specified for {word}: {self.lemmas[word]}/{lemma}")
-        self.lemmas[word] = lemma
-##            if plural not in self.plural_nouns:
-##                self.plural_nouns[plural] = word
-##            elif self.plural_nouns[plural] != word:
-##                print(f"dup singular for '{plural}': '{self.plural_nouns[plural]}'/'{word}'")
+    def add_lemma(self, word, lemma, pos):
+        if pos not in self.lemmas:
+            self.lemmas[pos] = {}
+        self.lemmas[pos][word] = lemma
 
-    def get_lemma(self, word):
+    def get_lemma(self, word, pos):
         lemma = None
-        if word in self.lemmas:
-            lemma = self.lemmas[word]
-            if lemma == "-":
-                lemma = word
+
+        search = word
+        found = False
+        depth = 0
+
+        while search in self.lemmas[pos]:
+            found = True
+            if self.lemmas[pos][search] == "-" or self.lemmas[pos][search] == search: # "-" indicates that word is its own lemma
+                break
+            search = self.lemmas[pos][search]
+            depth = depth+1
+            if depth > 10:
+#                raise ValueError(f"Lemma loop detected: '{search}' -> '{self.lemmas[pos][search]}'")
+                print(f"Lemma loop detected: '{search}' -> '{self.lemmas[pos][search]}'", file=sys.stderr)
+                break
+
+        if found:
+            lemma = search
+
+        elif self._has_word(word, pos):
+            lemma = word
+
         return lemma
+
+
+    def add_ameta(self, item):
+        word = item['word']
+        tags = self.parse_tags(item['def'])
+
+        # used for gender neutral terms
+        if 'm' in tags and 'f' in tags:
+            return
+
+        for k,v in tags.items():
+
+            if k in ["m", "pl", "mpl", "fpl"]:
+                for altword in v:
+                    self.add_lemma(altword, word, "adj")
 
 
     def add_nmeta(self, item):
@@ -170,7 +199,7 @@ class SpanishWordlist:
                     # some pl: tags have a - to indicate the noun is uncountable
                     if plural == "-":
                         continue
-                    self.add_lemma(plural, word)
+                    self.add_lemma(plural, word, "noun")
 
 
             elif k in ["f", "m"]:
@@ -180,8 +209,6 @@ class SpanishWordlist:
                     # some f: tags have a 1 to indicate they follow normal rules
                     if xnoun in ["1", "-"]:
                         continue
-#                    if tag in self.xnouns and self.xnouns[tag] != xnoun:
-#                        print(f"multiple values specified for {tag}: {self.xnouns[tag]}/{xnoun}")
                     self.xnouns[tag] = xnoun
 
                     # Femine nouns that specify a masculine counterpart
@@ -190,12 +217,12 @@ class SpanishWordlist:
                     # because it creates incorrect lemmas for words like pata and hambugrguesa which are feminine
                     # nouns first and feminine pairs of masculine nouns second
                     if k == "m":
-                        self.add_lemma(word, xnoun)
+                        self.add_lemma(word, xnoun, "noun")
 
             # explicitly tagged lemmas are generated when words are ignored as being obsolete versions of new words
             elif k == "lemma":
                 for lemma in v:
-                    self.add_lemma(word, lemma)
+                    self.add_lemma(word, lemma, "noun")
 
             else:
                 print(f"unknown nmeta value: {k} in {word}")
@@ -247,12 +274,8 @@ class SpanishWordlist:
             return
 
         res = self.parse_line(line)
-        if res['pos'] in ["ameta", "nmeta", "vmeta"]:
+        if res['pos'].startswith("meta-"):
             self.buffer_meta(res)
-        elif self.should_ignore_def(res['def']):
-            self.buffer_ignored_def(res)
-        elif self.should_ignore_note(res['note']):
-            return
         else:
             self.add_def(res)
 
@@ -381,20 +404,16 @@ class SpanishWordlist:
         return alldefs
 
 
-    #TODO: Use self.xverbs instead
     def is_feminized_noun(self, word, masculine=""):
-        if word not in self.allwords:
-            return False
+        if 'm:'+word in self.xnouns:
+            return True
 
-        alldefs = self.allwords[word]
-        if 'f' not in alldefs:
-            return False
 
         # Only search the first {f} note definitions (eliminates secondary uses like hamburguesa as a lady from Hamburg)
-        if "feminine noun of "+masculine in list(alldefs['f'].values())[0][0] or \
-           "(female" in list(alldefs['f'].values())[0][0] or \
-           "female equivalent of " in list(alldefs['f'].values())[0][0]:
-            return True
+#        if "feminine noun of "+masculine in list(alldefs['f'].values())[0][0] or \
+#           "(female" in list(alldefs['f'].values())[0][0] or \
+#           "female equivalent of " in list(alldefs['f'].values())[0][0]:
+#            return True
 
         return False
 
@@ -404,10 +423,12 @@ class SpanishWordlist:
 
     def get_feminine_noun(self, word):
 
-        # If it's been explitly defined, use that
         tag = "f:"+word
         if tag in self.xnouns:
             return self.xnouns[tag]
+
+
+    def guess_feminine_noun(self, word):
 
         femnoun = None
 
@@ -430,20 +451,11 @@ class SpanishWordlist:
 
 
     def get_masculine_noun(self, word):
-
-        # If it's been explitly defined, use that
         tag = "m:"+word
         if tag in self.xnouns:
             return self.xnouns[tag]
 
-        if word not in self.allwords or 'f' not in self.allwords[word]:
-            return
-
-        maindef = list(self.allwords[word]['f'].values())[0][0]
-        res = re.match('fem(?:inine noun|ale equivalent) of ([^;,:]*)', maindef)
-        if res:
-            return res.group(1)
-
+    def guess_masculine_noun(self, word):
         # if it doesn't end with a there are no good rules
         if not word.endswith("a"):
             return
@@ -478,7 +490,6 @@ class SpanishWordlist:
 
     @staticmethod
     def parse_line(data):
-        #re.match("^([^{]+)(?:{([a-z]+)})?", line) #}
 
         pattern = r"""(?x)
              (?P<word>[^{:]+)             # The word (anything not an opening brace)
@@ -491,7 +502,7 @@ class SpanishWordlist:
                (?P<note>[^\]]*)           #    and then the note, enclosed in square brackets
              \])?
 
-             ([ ]X[ ]                    # (optional) a space and then a pipe | and a space
+             (?:[ ][|][ ]                    # (optional) a space and then a pipe | and a space
                (?P<syn>.*?)                #    and then a list of synonyms
              )?
 
@@ -507,7 +518,7 @@ class SpanishWordlist:
         # This only applies to one entry in the 4/20/2020 wiktionary dump
         if not res:
     #        print("DOES NOT MATCH REGEX: '%s'"% data.strip())
-            return {'word':'', 'pos':'', 'note': 'NOMATCH', 'syn': '', 'def': ''}
+            return {'word':'', 'pos':'', 'note': '', 'syn': '', 'def': ''}
 
         word = res.group('word').strip()
         pos = res.group('pos') if res.group('pos') else ''
@@ -545,33 +556,6 @@ class SpanishWordlist:
             return "noun"
 
         return pos.lower()
-
-
-    @staticmethod
-    def should_ignore_def(definition):
-        if definition.startswith("eye dialect"):
-            return True
-        if definition.startswith("alternative form"):
-            return True
-        if definition.startswith("obsolete") and (
-             definition.startswith("obsolete spelling") or
-             definition.startswith("obsolete form of")):
-            return True
-        return False
-
-    @staticmethod
-    def get_ignored_lemma(definition):
-        res = re.match("(?:obsolete spelling of |obsolete form of |alternative form of |eye dialect of )([^,;]+)", definition)
-        if res:
-            return res.group(1)
-
-    @staticmethod
-    def should_ignore_note(note):
-        if {"archaic", "dated", "historical", "obsolete", "rare", "eye dialect"} & { n.strip() for n in note.lower().split(',') }:
-            return True
-
-        return False
-
 
 
     # splits a list by comma, but with awareness of ()

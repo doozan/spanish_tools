@@ -8,24 +8,54 @@ def test__init__(spanish):
     words = spanish
 
 def test_get_lemma():
-    assert words.get_lemma("notaword", "verb") == "notaword"
+    get_lemma = words.get_lemma
 
-    assert words.get_lemma("hablo", "verb") == "hablar"
-    assert words.get_lemma("fuiste", "verb") == "ir|ser"
+    assert get_lemma("notaword", "verb") == "notaword"
 
-    assert words.get_lemma("notaword", "noun") == "notaword"
+    assert get_lemma("hablo", "verb") == "hablar"
+    assert get_lemma("fuiste", "verb") == "ir|ser"
 
-    assert words.get_lemma("casas", "noun") == "casa"
-    assert words.get_lemma("amigas", "noun") == "amigo"
-    assert words.get_lemma("narices", "noun") == "nariz"
+    assert get_lemma("notaword", "noun") == "notaword"
 
-    assert words.get_lemma("notaword", "adj") == "notaword"
+    assert get_lemma("casas", "noun") == "casa"
+    assert get_lemma("amigo", "noun") == "amigo"
+    assert get_lemma("amigos", "noun") == "amigo"
+    assert get_lemma("amiga", "noun") == "amigo"
+    assert get_lemma("amigas", "noun") == "amigo"
+    assert get_lemma("narices", "noun") == "nariz"
 
-    assert words.get_lemma("bellos", "adj") == "bello"
-    assert words.get_lemma("bellas", "adj") == "bello"
-    assert words.get_lemma("bella", "adj") == "bello"
+    assert get_lemma("notaword", "adj") == "notaword"
 
-    assert words.get_lemma("escocés", "adj") == "escocés"
+    assert get_lemma("bellos", "adj") == "bello"
+    assert get_lemma("bellas", "adj") == "bello"
+    assert get_lemma("bella", "adj") == "bello"
+
+    assert get_lemma("escocés", "adj") == "escocés"
+
+    assert get_lemma("piernas", "noun") == "pierna"
+
+    assert get_lemma("dos", "noun") == "dos"
+    assert get_lemma("autobús", "noun") == "autobús"
+    assert get_lemma("cubrebocas", "noun") == "cubrebocas"
+    assert get_lemma("gas", "noun") == "gas"
+
+    assert get_lemma("mentirosas", "noun") == "mentiroso"
+
+    assert get_lemma("espráis", "noun") == "espray"
+
+    assert get_lemma("bordes", "noun") == "borde"
+    assert get_lemma("tardes", "noun") == "tarde"
+
+    assert get_lemma("meses", "noun") == "mes"
+
+    assert get_lemma("escocés", "noun") == "escocés"
+    assert get_lemma("ratones", "noun") == "ratón"
+
+    assert get_lemma("órdenes", "noun") == "orden"
+
+    assert get_lemma("mejicana", "noun") == "mexicano"
+    assert get_lemma("mejicanas", "noun") == "mexicano"
+
 
 def test_has_word():
     has_word = words.has_word

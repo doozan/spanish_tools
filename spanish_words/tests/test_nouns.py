@@ -8,7 +8,7 @@ def test_init(spanish):
     noun = SpanishNouns(spanish)
 
 def test_get_lemma():
-    get_lemma = noun.get_lemma
+    get_lemma = noun.old_get_lemma
 
     assert get_lemma("casas") == "casa"
 
@@ -19,41 +19,66 @@ def test_get_lemma():
 
     assert get_lemma("piernas") == "pierna"
 
-    assert get_lemma("dos") == "dos"
-    assert get_lemma("autobús") == "autobús"
-    assert get_lemma("cubrebocas") == "cubrebocas"
-    assert get_lemma("gas") == "gas"
+#    assert get_lemma("dos") == "dos"
+#    assert get_lemma("autobús") == "autobús"
+#    assert get_lemma("cubrebocas") == "cubrebocas"
+#    assert get_lemma("gas") == "gas"
 
-    assert get_lemma("mentirosas") == "mentiroso"
+#    assert get_lemma("mentirosas") == "mentiroso"
 
-    assert get_lemma("espráis") == "espray"
+#    assert get_lemma("espráis") == "espray"
 
-    assert get_lemma("bordes") == "borde"
-    assert get_lemma("tardes") == "tarde"
+#    assert get_lemma("bordes") == "borde"
+#    assert get_lemma("tardes") == "tarde"
 
-    assert get_lemma("meses") == "mes"
+#    assert get_lemma("meses") == "mes"
 
-    assert get_lemma("escocés") == "escocés"
-    assert get_lemma("ratones") == "ratón"
+#    assert get_lemma("escocés") == "escocés"
+#    assert get_lemma("ratones") == "ratón"
 
-    assert get_lemma("órdenes") == "orden"
+#    assert get_lemma("órdenes") == "orden"
 
-def test_get_lemma():
-    make_plural = noun.make_plural
+def test_make_singular():
+    make_singular = noun.make_singular
+    assert make_singular("acuerdos de paz") == ['acuerdo de paz', 'acuerdos de paz']
+    assert make_singular("asesinos a sueldo") == ['asesino a sueldo', 'asesinos a sueldo']
 
-    assert make_plural("acuerdo de paz", "m") == ["acuerdos de paz"]
-    assert make_plural("asesino a sueldo", "m") == ["asesinos a sueldo"]
+#    assert make_singular("aires frescos") == ["aire fresco"]
 
-    assert make_plural("aire fresco", "m") == ["aires frescos"]
+    assert make_singular("casas") == ["casa", "casas"]
+    assert make_singular("menúes") == ["menúe", "menú", "menúes"]
+    assert make_singular("disfraces") == ["disfrace", "disfraz", "disfraces", "disfrác"]
+    assert make_singular("hertz") == ["hertz"]
+    assert make_singular("saltamontes") == ["saltamonte", "saltamontes"]
+    assert make_singular("ademanes") == ['ademane', 'ademanes', 'ademán', 'ademan']
+    assert make_singular("desórdenes") == ['desórdene', 'desórdenes', 'desórdén', 'desorden', 'desórden']
+    assert make_singular("colores") == ['colore', 'colores', 'colór', 'color']
+    assert make_singular("coaches") ==  ['coache', 'coaches', 'coach']
+    assert make_singular("conforts") == ['conforts', 'confort']
+    assert make_singular("robots") == ['robots', 'robot']
 
-    assert make_plural("casa", "f") == ["casas"]
-    assert make_plural("menú", "m") == ["menús", "menúes"]
-    assert make_plural("disfraz", "m") == ["disfraces"]
-    assert make_plural("hertz", "m") == ["hertz"]
-    assert make_plural("saltamontes", "m") == ["saltamontes"]
-    assert make_plural("ademán", "m") == ["ademanes"]
-    assert make_plural("desorden", "m") == ["desórdenes"]
-    assert make_plural("color", "m") == ["colores"]
-    assert make_plural("coach", "m") == ["coaches"]
-    assert make_plural("confort", "m") == ["conforts"]
-    assert make_plural("robot", "m") == ["robots"]
+    assert make_singular("canciones") ==  ['cancione', 'canciones', 'canción', 'cancion']
+
+    assert make_singular("notaword") == ['notaword']
+
+
+    assert "nariz" in make_singular("narices")
+    assert "pierna" in make_singular("piernas")
+
+    assert "autobús" in make_singular("autobús")
+    assert "cubrebocas" in make_singular("cubrebocas")
+#    assert "gas" in make_singular("gas")
+
+    assert "espray" in make_singular("espráis")
+
+    assert "borde" in make_singular("bordes")
+    assert "tarde" in make_singular("tardes")
+
+    assert "mes" in make_singular("meses")
+
+    assert "escocés" in make_singular("escocés")
+    assert "ratón" in make_singular("ratones")
+
+    assert "orden" in make_singular("órdenes")
+
+
