@@ -49,11 +49,11 @@ class sentences:
 
     # tags are in the form:
     # { pos: [word1, word2] }
-    # past participles use "x" as the pos and need to be expanded to "adj" "noun" "verb"
     def add_tags_to_db(self, tags, index):
         for tagpos,words in tags.items():
-            allpos = [ "part", "adj", "noun", "verb" ] if tagpos == "part" else [ tagpos ]
-#            allpos = [ tagpos ]
+
+            # Past participles count as both adjectives and verbs
+            allpos = [ "part", "adj", "verb" ] if tagpos == "part" else [ tagpos ]
 
             for pos in allpos:
                 for word in words:
@@ -157,6 +157,7 @@ class sentences:
 
     def get_sentences(self, lookup, pos, count):
         res = self.get_sentence_ids(lookup, pos)
+
         sentences = self.get_sentences_from_ids(res['ids'], count)
         return { "sentences": sentences, "matched": res['source'] }
 

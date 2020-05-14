@@ -2,130 +2,92 @@
 # -*- python-mode -*-
 
 import argparse
+import sys
 import os
 import re
 import json
-import treetaggerwrapper
 import spanish_words
+import bz2
 
-parser = argparse.ArgumentParser(description='Tag spanish sentences')
-parser.add_argument('infile', help="File to read")
+
+
+parser = argparse.ArgumentParser(description='Manage tagged sentences')
+parser.add_argument('--tags', nargs=1, help="Merged tagged data with original data")
+parser.add_argument('sentences', default="spa.txt", help="Master sentences file with spanish/english sentences (default spa.txt)")
 args = parser.parse_args()
 
-if not os.path.isfile(args.infile):
-    raise FileNotFoundError(f"Cannot open: {args.infile}")
+if not os.path.isfile(args.sentences):
+    raise FileNotFoundError(f"Cannot open: {args.sentences}")
 
-tagger = treetaggerwrapper.TreeTagger(TAGLANG='es')#,TAGDIR="~/Downloads/treetagger/")
+if args.tags and not os.path.isfile(args.tags[0]):
+    raise FileNotFoundError(f"Cannot open: {args.tags}")
+
 words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
-
-tag2pos = {
-'ACRNM': "", # acronym (ISO, CEI)
-'ADJ': "adj", # Adjectives (mayores, mayor)
-'ADV': "adv", # Adverbs (muy, demasiado, cómo)
-'ALFP': "", # Plural letter of the alphabet (As/Aes, bes)
-'ALFS': "", # Singular letter of the alphabet (A, b)
-'ART': "art", # Articles (un, las, la, unas)
-'BACKSLASH': "", # backslash (\)
-'CARD': "num", # Cardinals
-'CC': "conj", # Coordinating conjunction (y, o)
-'CCAD': "conj", # Adversative coordinating conjunction (pero)
-'CCNEG': "conj", # Negative coordinating conjunction (ni)
-'CM': "", # comma (,)
-'CODE': "", # Alphanumeric code
-'COLON': "", # colon (:)
-'CQUE': "conj", # que (as conjunction)
-'CSUBF': "conj", # Subordinating conjunction that introduces finite clauses (apenas)
-'CSUBI': "conj", # Subordinating conjunction that introduces infinite clauses (al)
-'CSUBX': "conj", # Subordinating conjunction underspecified for subord-type (aunque)
-'DASH': "", # dash (-)
-'DM': "pron", # Demonstrative pronouns (ésas, ése, esta)
-'DOTS': "", # POS tag for "..."
-'FO': "", # Formula
-'FS': "", # Full stop punctuation marks
-'INT': "", # Interrogative pronouns (quiénes, cuántas, cuánto)
-'ITJN': "interj", # Interjection (oh, ja)
-'LP': "", # left parenthesis ("(", "[")
-'NC': "noun", # Common nouns (mesas, mesa, libro, ordenador)
-'NEG': "", # Negation
-'NMEA': "noun", # measure noun (metros, litros)
-'NMON': "noun", # month name
-'NP': "propnoun", # Proper nouns
-'ORD': "adj", # Ordinals (primer, primeras, primera)
-'PAL': "", # Portmanteau word formed by a and el
-'PDEL': "", # Portmanteau word formed by de and el
-'PE': "", # Foreign word
-'PERCT': "", # percent sign (%)
-'PNC': "", # Unclassified word
-'PPC': "pron", # Clitic personal pronoun (le, les)
-'PPO': "pron", # Possessive pronouns (mi, su, sus)
-'PPX': "pron", # Clitics and personal pronouns (nos, me, nosotras, te, sí)
-'PREP': "prep", # Negative preposition (sin)
-'PREP': "prep", # Preposition
-'PREP/DEL': "prep", #  Complex preposition "después del"
-'QT': "", # quotation symbol (" ' `)
-'QU': "adj", # Quantifiers (sendas, cada)
-'REL': "pron", # Relative pronouns (cuyas, cuyo)
-'RP': "", # right parenthesis (")", "]")
-'SE': "", # Se (as particle)
-'SEMICOLON': "", # semicolon (;)
-'SLASH': "", # slash (/)
-'SYM': "", # Symbols
-'UMMX': "", # measure unit (MHz, km, mA)
-'VCLIger': "verb", #  clitic gerund verb
-'VCLIinf': "verb", #  clitic infinitive verb
-'VCLIfin': "verb", #  clitic finite verb
-'VEadj': "part", # Verb estar. Past participle
-'VEfin': "verb", # Verb estar. Finite
-'VEger': "verb", # Verb estar. Gerund
-'VEinf': "verb", # Verb estar. Infinitive
-'VHadj': "part", # Verb haber. Past participle
-'VHfin': "verb", # Verb haber. Finite
-'VHger': "verb", # Verb haber. Gerund
-'VHinf': "verb", # Verb haber. Infinitive
-'VLadj': "part", # Lexical verb. Past participle
-'VLfin': "verb", # Lexical verb. Finite
-'VLger': "verb", # Lexical verb. Gerund
-'VLinf': "verb", # Lexical verb. Infinitive
-'VMadj': "part", # Modal verb. Past participle
-'VMfin': "verb", # Modal verb. Finite
-'VMger': "verb", # Modal verb. Gerund
-'VMinf': "verb", # Modal verb. Infinitive
-'VSadj': "part", # Verb ser. Past participle
-'VSfin': "verb", # Verb ser. Finite
-'VSger': "verb", # Verb ser. Gerund
-'VSinf': "verb", # Verb ser. Infinitive
-}
-
 
 mismatch = {}
 
 def tag_to_pos(tag):
 
-    if "\t" not in tag:
+    word = tag['form']
+    lemma = tag['lemma']
+    ctag = tag['ctag']
+
+    pos = None
+    if ctag.startswith("A"): # and lemma not in ["el", "la", "uno"]:
+        pos = "adj"
+    elif ctag.startswith("C"): # and lemma not in ["si", "que"]:
+        if lemma not in ["y"]:
+            pos = "conj"
+    elif ctag.startswith("D"):
+        pos = "art"
+    elif ctag.startswith("I"):
+        pos = "interj"
+    elif ctag.startswith("N"): # and lemma not in ["tom", "mary", "john"]:
+        pos = "propnoun" if ctag == "NP" else "noun"
+    elif ctag.startswith("P"):
+        pos = "pron"
+    elif ctag.startswith("R"):
+        if lemma not in ["no"]:
+            pos = "adv"
+    elif ctag.startswith("S"):
+       # if lemma not in ["a", "con", "de", "en", "por", "para"]:
+            pos = "prep"
+    elif ctag.startswith("V"):
+        pos = "part" if ctag.endswith("P") else "verb"
+    elif ctag.startswith("Z") and not word.isdigit():
+        pos = "num"
+        lemma = word
+    if not pos:
         return None
-        return "__BADTAG__" #+tag+"-__"
 
-    word,usage,oldlemma = tag.split("\t")
+    if pos != "propnoun":
+#        if pos != "num" and "_" in lemma:
+#            print(f"c-c-combo: {pos} {lemma}: {word}", file=sys.stderr)
+#            return None
+        word = word.lower()
 
-    pos = tag2pos[usage]
-    if pos:
-        pos = pos.lower()
+    # Use our lemmas so they're the same when we lookup against other things we've lemmatized
+    # Unless it's a phrase, then use their lemma
+    if pos in ("noun", "adj", "part"):
         lemma = words.get_lemma(word, pos)
-        if oldlemma != lemma:
-            mismatch[oldlemma] = lemma
-        if pos != "propnoun":
-            word = word.lower()
-            lemma = lemma.lower()
 
-        return [ pos, lemma, "@"+word ] #+"|#"+usage
+    # fix for freeling not generating lemmas for verbs with a pronoun suffix
+    elif pos == "verb":
+        if not lemma.endswith("r"):
+            lemma = words.get_lemma(word, pos)
 
-    return None
+    elif "_" in lemma:
+        lemma = word
+
+#        newlemma = words.get_lemma(word, pos)
+#        if lemma != newlemma:
+#            mismatch[f"{pos}:{lemma}"] = newlemma
+#            lemma = newlemma
+
+    return [ pos, lemma, "@"+word ]
 
 
-def get_tags(spanish):
-    tags = tagger.tag_text(spanish)
-#    print(tags)
-    pos_tags = map(tag_to_pos, tags)
+def group_tags(pos_tags):
 
     res = {}
     for item in pos_tags:
@@ -155,33 +117,89 @@ def get_interjections(string):
 
 
 
-with open(args.infile) as infile:
+def load_sentences():
+    sentences = {}
+
     seen = {}
+    with open(args.sentences) as infile:
+        for line in infile:
+            line = line.strip()
+            sdata = line.split("\t")
+            english,spanish,credits = sdata
+
+            wordcount = spanish.count(" ")+1
+
+            # ignore sentences with less than 6 or more than 15 spanish words
+            if wordcount < 5 or wordcount > 15:
+                continue
+
+            # ignore duplicates
+            if english in seen or spanish in seen:
+                continue
+            else:
+                seen[english] = 1
+                seen[spanish] = 1
+
+            sid=re.search("& #([0-9]+)", credits).group(1)
+            sentences[sid] = sdata
+
+    return sentences
+
+
+def print_untagged_sentences():
+    sentences = load_sentences()
+
+    first=True
+    for sid, sdata in sentences.items():
+        if not first:
+            print("")
+        print(sdata[1])
+        first=False
+
+
+def print_tagged_data():
+
+    sentences = load_sentences()
+    idx2sent = list(sentences.keys())
+
+    tagdata = {}
+
+#    with open(args.tags[0], 'r', encoding="utf-8") as infile:
+#        tagdata = json.load(infile)
+
+    with bz2.BZ2File(args.tags[0], 'r') as infile:
+        tagdata = json.load(infile)
+
+#    with zipfile.ZipFile(args.tags[0], 'r') as z:
+#        filename = z.namelist()[0]
+#        with z.open(filename) as f:
+#            tagdata = json.load(f)
+
+
+    first=True
     print("[")
-    first = True
-    for line in infile:
-        line = line.strip()
-        english, spanish, credits = line.split("\t")
-        tags = get_tags(spanish)
-        if "__BADTAG__" in tags:
-            continue
+    seen = {}
+    index = 0
+    for p in tagdata: #['paragraphs']:
+        sdata = sentences[idx2sent[index]]
+        english, spanish, credits = sdata
+        index = index+1
 
-        wordcount = spanish.count(" ")+1
+        pos_tags = []
+        for s in p['sentences']:
+            for t in s['tokens']:
+                pos_tag = tag_to_pos(t)
+                if not pos_tag:
+                    continue
+                pos_tags.append(pos_tag)
+                plemma = pos_tag[1]
+                if "_" in plemma:
+                    pword = pos_tag[2][1:]
+                    for word,lemma in zip( pword.split("_"), plemma.split("_") ):
+                        pos_tags.append(['split', lemma, '@'+word])
 
-        # ignore simple sentences
-        if len(tags) < 2:
-            continue
 
-        # ignore sentences with less than 6 or more than 15 spanish words
-        if wordcount < 5 or wordcount > 15:
-            continue
-
-        # ignore duplicates
-        if english in seen or spanish in seen:
-            continue
-        else:
-            seen[english] = 1
-            seen[spanish] = 1
+        tags = group_tags(pos_tags)
 
         # ignore sentences with the same adj/adv/noun/verb/pastparticiple combination
         unique_tags = []
@@ -193,6 +211,7 @@ with open(args.infile) as infile:
         if uniqueid in seen:
             continue
         seen[uniqueid] = 1
+
 
         interj = get_interjections(spanish)
         if interj:
@@ -214,9 +233,10 @@ f"""[{credits},
 {spanish},
 {tags}]""", end="")
 
-        #spanish_tagged = " ".join(tags)
-        #print("%s\t%s\t%s\t%s"%(english, spanish, spanish_tagged, credits))
-
     print("\n]")
 
-#    print(mismatch)
+
+if not (args.tags):
+    print_untagged_sentences()
+else:
+    print_tagged_data()
