@@ -1,8 +1,7 @@
 import re
 
 class SpanishNouns:
-    def __init__(self, parent):
-        self.parent = parent
+    def __init__(self):
         self._unstresstab = str.maketrans("áéíóú", "aeiou")
         self._stresstab = str.maketrans("aeiou", "áéíóú")
 
@@ -12,10 +11,11 @@ class SpanishNouns:
     def stress(self, word):
         return word.translate(self._stresstab)
 
-    def old_get_lemma(self, word):
+    def x_get_lemma(self, word):
         word = word.lower()
 
         lemma = word
+
 
         # canciones, coleciones
         if len(word) > 5 and word.endswith("iones"):
@@ -28,9 +28,6 @@ class SpanishNouns:
         # lapices, narices
         elif len(word) > 3 and word.endswith("ces"):
             lemma = word[:-3] + "z"
-
-        elif len(word) > 3 and word[-3:] in [ "éis", "áis", "óis", "úis" ]:
-            lemma = word[:-3] + "y"
 
         elif len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "ses", "xes", "yes", "íes" ]:
             lemma = word[:-2]
@@ -87,13 +84,13 @@ class SpanishNouns:
                     return [plural]
 
         # ends in unstressed vowel or á, é, ó + s (casas: casa)
-        if len(plural)>=2 and plural[-2] in "aeiouáéó" and plural[-1] == "s":
+        if plural[-2] in "aeiouáéó" and plural[-1] == "s":
             match.append(plural[:-1])
 
         # ends in í or ú (bambús, bambúes => bambú)
         if len(plural)>= 3 and plural[-3] in "íú" and plural.endswith("es"):
             match.append(plural[:-2])
-        if len(plural)>= 2 and plural[-2] in "íú" and plural[-1] == "s":
+        if len(plural)>=2 and plural[-2] in "íú" and plural[-1] == "s":
             match.append(plural[:-1])
 
         # -[vowel]ces -> -z
@@ -110,6 +107,14 @@ class SpanishNouns:
         for c in modsingle:
             if c in "aeiouáéíóú":
                 vowels.append(c)
+
+#        if len(word)>4 and word[-4:] in ["esis", "isis", "osis", "dica"]:
+#            return [word]
+#
+#        if word.endswith("grafía"
+#
+#        "grafía", "logía")):
+
 
         # ends in s or x with more than 1 syllable, last syllable unstressed (saltamontes: saltamontes)
         if len(vowels) > 1 and plural[-1] in "sx":
@@ -150,9 +155,9 @@ class SpanishNouns:
         if len(plural)>=3 and plural[-3] in "aeiou" and plural[-2] in "bcfghkmpqtvwy" and plural[-1] == "s":
             match.append(plural[:-1])
 
-
-        elif len(plural)>=3 and plural[-3:] in [ "éis", "áis", "óis", "úis" ]:
-            match.append(plural[:-3]+self.unstress(plural[-3])+"y")
+        # pretty much only applies to espráis, jerséis and noráis
+        elif len(plural)>=3 and plural[-3:] in [ "éis", "áis" ]:
+            match.append(plural[:-3] + self.unstress(plural[-3]) + "y")
 
         if len(match):
             return match

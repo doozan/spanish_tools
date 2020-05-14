@@ -7,54 +7,94 @@ def test__init__(spanish):
     global words
     words = spanish
 
-def test_get_lemma():
+
+def test_get_lemma_noun():
     get_lemma = words.get_lemma
 
-    assert get_lemma("notaword", "verb") == "notaword"
+    pairs = {
+        "notaword": "notaword",
 
-    assert get_lemma("hablo", "verb") == "hablar"
-    assert get_lemma("fuiste", "verb") == "ir|ser"
+        "casas": "casa",
+        "amigo": "amigo",
+        "amigos": "amigo",
+        "amiga": "amigo",
+        "amigas": "amigo",
+        "narices": "nariz",
 
-    assert get_lemma("notaword", "noun") == "notaword"
+        "piernas": "pierna",
 
-    assert get_lemma("casas", "noun") == "casa"
-    assert get_lemma("amigo", "noun") == "amigo"
-    assert get_lemma("amigos", "noun") == "amigo"
-    assert get_lemma("amiga", "noun") == "amigo"
-    assert get_lemma("amigas", "noun") == "amigo"
-    assert get_lemma("narices", "noun") == "nariz"
+        "dos": "dos",
+        "autobús": "autobús",
+        "cubrebocas": "cubrebocas",
+        "gas": "gas",
 
-    assert get_lemma("notaword", "adj") == "notaword"
+        "mentirosas": "mentiroso",
 
-    assert get_lemma("bellos", "adj") == "bello"
-    assert get_lemma("bellas", "adj") == "bello"
-    assert get_lemma("bella", "adj") == "bello"
+        "espráis": "espray",
 
-    assert get_lemma("escocés", "adj") == "escocés"
+        "bordes": "borde",
+        "tardes": "tarde",
 
-    assert get_lemma("piernas", "noun") == "pierna"
+        "meses": "mes",
 
-    assert get_lemma("dos", "noun") == "dos"
-    assert get_lemma("autobús", "noun") == "autobús"
-    assert get_lemma("cubrebocas", "noun") == "cubrebocas"
-    assert get_lemma("gas", "noun") == "gas"
+        "escocés": "escocés",
+        "ratones": "ratón",
 
-    assert get_lemma("mentirosas", "noun") == "mentiroso"
+        "órdenes": "orden",
 
-    assert get_lemma("espráis", "noun") == "espray"
+        "mejicana": "mexicano",
+        "mejicanas": "mexicano",
+    }
 
-    assert get_lemma("bordes", "noun") == "borde"
-    assert get_lemma("tardes", "noun") == "tarde"
+    for k,v in pairs.items():
+        assert get_lemma(k, "noun") == v
 
-    assert get_lemma("meses", "noun") == "mes"
 
-    assert get_lemma("escocés", "noun") == "escocés"
-    assert get_lemma("ratones", "noun") == "ratón"
 
-    assert get_lemma("órdenes", "noun") == "orden"
+def test_get_lemma_adj():
+    get_lemma = words.get_lemma
 
-    assert get_lemma("mejicana", "noun") == "mexicano"
-    assert get_lemma("mejicanas", "noun") == "mexicano"
+    pairs = {
+        "notaword": "notaword",
+        "bellos": "bello",
+        "bellas": "bello",
+        "bella": "bello",
+        "escocés": "escocés",
+    }
+
+    for k,v in pairs.items():
+        assert get_lemma(k, "adj") == v
+
+
+def test_get_lemma_verb():
+    get_lemma = words.get_lemma
+
+    pairs = {
+        "notaword": "notaword",
+        "podría": "poder",
+        "hablo": "hablar",
+        "fuiste": "ir|ser",
+        "comido": "comer",
+        "ve": "ir",
+        "sé": "saber",
+        "haciendo": "hacer",
+        "vete": "ir",
+        "vengan": "venir",
+        "volaste": "volar",
+        "temes": "temer",
+        "viste": "ver",
+        "podemos": "poder",
+        "suelen": "soler",
+        "viven": "vivir",
+        "diste": "dar",
+#        "venda": "vender",
+#        "sales": "salir",
+         "sumas": "sumar"
+    }
+
+    for k,v in pairs.items():
+        assert get_lemma(k, "verb") == v
+
 
 
 def test_has_word():

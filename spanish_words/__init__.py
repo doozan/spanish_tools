@@ -10,14 +10,10 @@ import os
 class SpanishWords:
     def __init__(self, dictionary, synonyms):
         self.synonyms = SpanishSynonyms(synonyms)
-        self.adj = SpanishAdjectives(self)
-        self.noun = SpanishNouns(self)
-        self.__wordlist = SpanishWordlist(dictionary, self)
-        self.verb = SpanishVerbs(self.__wordlist.irregular_verbs)
-
-    @property
-    def wordlist(self):
-        return self.__wordlist
+        self.wordlist = SpanishWordlist(dictionary, self)
+        self.adj = SpanishAdjectives()
+        self.noun = SpanishNouns()
+        self.verb = SpanishVerbs(self.wordlist.irregular_verbs)
 
     def get_defs(self, word):
         return self.wordlist.get_defs(word)
@@ -55,6 +51,21 @@ class SpanishWords:
 
         return results
 
+    def get_valid_lemmas(self, word, items, pos):
+        valid = []
+        for item in items:
+            lemma = self.wordlist.get_lemma(item, pos)
+            if lemma:
+                valid.append(lemma)
+            elif self.has_word(item, pos):
+                valid.append(item)
+
+        if len(valid):
+            valid = list(dict.fromkeys(valid).keys())
+            if len(valid) > 1 and word in valid:
+                valid.remove(word)
+        return valid
+
     def get_lemmas(self, word, pos, debug=False):
         word = word.lower().strip()
         pos = pos.lower()
@@ -64,7 +75,12 @@ class SpanishWords:
             if lemma:
                 return [lemma]
 
-            return [ self.adj.get_lemma(word) ]
+            maybe_lemmas = self.adj.get_lemma(word)
+            lemmas = self.get_valid_lemmas(word, maybe_lemmas, pos)
+            if len(lemmas):
+                return lemmas
+
+            return [word]
 
         if pos == "noun":
             lemma = self.wordlist.get_lemma(word, "noun")
@@ -80,20 +96,10 @@ class SpanishWords:
                 if lemma:
                     return [lemma]
 
-                singles = self.noun.make_singular(word)
-                good_singles = []
-                for single in singles:
-                    lemma = self.wordlist.get_lemma(single, "noun")
-                    if lemma:
-                        good_singles.append(lemma)
-                    elif self.has_word(single):
-                        good_singles.append(single)
-
-                if len(good_singles):
-                    good_singles = list(dict.fromkeys(good_singles).keys())
-                    if len(good_singles) > 1 and word in good_singles:
-                        good_singles.remove(word)
-                    return good_singles
+                maybe_lemmas = self.noun.make_singular(word)
+                lemmas = self.get_valid_lemmas(word, maybe_lemmas, pos)
+                if len(lemmas):
+                    return lemmas
 
             return [word]
 

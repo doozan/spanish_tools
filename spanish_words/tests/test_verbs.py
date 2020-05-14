@@ -80,43 +80,14 @@ def xtest_reverse_conjugate():
     assert reverse_conjugate("daloslos") == []
 
 
-def xtest_select_best():
-    reverse_conjugate = verb.reverse_conjugate
+def test_select_best():
     select_best = verb.select_best
-
-    v = reverse_conjugate("podría")
-    res = select_best(v)
-    assert len(res) == 1 and res[0]['verb'] == 'poder'
 
     v = []
     assert select_best(v) == []
 
-    v = [{'verb': 'volar', 'form': 21}]
-    assert select_best(v) == [{'verb': 'volar', 'form': 21}]
-
-    pairs = {
-        "comido": "comer",
-        "ve": "ir",
-        "sé": "saber",
-        "haciendo": "hacer",
-        "vete": "ir",
-        "vengan": "venir",
-        "volaste": "volar",
-        "temes": "temer",
-        "viste": "ver",
-        "podemos": "poder",
-        "suelen": "soler",
-        "viven": "vivir",
-        "diste": "dar",
-#        "venda": "vender",
-#        "sales": "salir",
-    }
-
-    for k,v in pairs.items():
-        item = reverse_conjugate(k)
-        res = select_best(item)
-        assert len(res) == 1
-        assert [k, res[0]['verb']] == [k, v]
+    v = [{'verb': 'verb1', 'form': 10}, {'verb': 'verb2', 'form': 32}, {'verb': 'verb3', 'form': 65}]
+    assert select_best(v) == [{'verb': 'verb2', 'form': 32}]
 
 
 def test_is_irregular():

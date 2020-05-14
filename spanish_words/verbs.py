@@ -222,7 +222,8 @@ class SpanishVerbs:
             verbs += [ v for v in verbs if not self.is_irregular(v['verb'], v['form']) ]
 
         # No results, try stripping any direct/indirect objects (dime => di)
-        # pronouns can only be atteched to infinitive (1), gerund (2) and affirmative commands (63-68)
+        # pronouns can only be attached to infinitive (1), gerund (2) and affirmative commands (63-68)
+        # TODO: strip accent as needed
         if check_pronouns:
             endings = [ending for ending in pronouns if word.endswith(ending)]
             for ending in endings:
