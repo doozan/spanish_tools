@@ -24,11 +24,11 @@ class sentences:
                     line = line.strip()
                     if line.startswith("#") or not ":" in line:
                         continue
-                    word,oldpos,newpos = line.split(":")
+                    oldword,oldpos,newword,newpos = line.split(":")
 
-                    if word not in self.tagfixes:
-                        self.tagfixes[word] = {}
-                    self.tagfixes[word][oldpos] = newpos
+                    if oldword not in self.tagfixes:
+                        self.tagfixes[oldword] = {}
+                    self.tagfixes[oldword][oldpos] = [newword, newpos]
 
         index=0
         with open(datafile) as infile:
@@ -55,19 +55,24 @@ class sentences:
             # Past participles count as both adjectives and verbs
             allpos = [ "part", "adj", "verb" ] if tagpos == "part" else [ tagpos ]
 
-            for pos in allpos:
-                for word in words:
+            for ipos in allpos:
+                for iword in words:
+                    pos = ipos
 
-                    if word not in self.tagdb:
-                        self.tagdb[word] = {}
+                    wordlist = [iword]
+                    if iword in self.tagfixes and pos in self.tagfixes[iword]:
+                        wlist,pos = self.tagfixes[iword][ipos]
+                        wordlist = wlist.split("|")
 
-                    if word in self.tagfixes and pos in self.tagfixes[word]:
-                        pos = self.tagfixes[word][pos]
+                    for word in wordlist:
 
-                    if pos not in self.tagdb[word]:
-                        self.tagdb[word][pos] = []
+                        if word not in self.tagdb:
+                            self.tagdb[word] = {}
 
-                    self.tagdb[word][pos].append(index)
+                        if pos not in self.tagdb[word]:
+                            self.tagdb[word][pos] = []
+
+                        self.tagdb[word][pos].append(index)
 
 
     def get_ids_from_phrase(self, phrase):
