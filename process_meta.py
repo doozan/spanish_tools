@@ -19,7 +19,7 @@ def stress(word):
     return word.translate(_stresstab)
 
 
-ignore_pattern = r"""(dated form|informal spelling|nonstandard spelling|alternative spelling|obsolete spelling|alternative form|alternate form|rare spelling|archaic spelling|obsolete form|eye dialect|alternate spelling|rare form|eye dialect|superseded spelling|euphemistic spelling|alternative form|common misspelling|euphemistic form|nonstandard form|obsolete form|informal form|dated spelling|pronunciation spelling|superseded form|alternative typography|misspelling form) of ([^,;:()]+)"""
+ignore_pattern = r"""(feminine plural|masculine plural|plural|dated form|informal spelling|nonstandard spelling|alternative spelling|obsolete spelling|alternative form|alternate form|rare spelling|archaic spelling|obsolete form|eye dialect|alternate spelling|rare form|eye dialect|superseded spelling|euphemistic spelling|alternative form|common misspelling|euphemistic form|nonstandard form|obsolete form|informal form|dated spelling|pronunciation spelling|superseded form|alternative typography|misspelling form) of ([^,;:()]+)"""
 
 _debug=True
 def dprint(*args, **kwargs):
@@ -189,6 +189,7 @@ def get_adjective_forms(singular, gender):
         stem = singular[:-1]
         return {"ms": stem, "mp": stem+"es", "fs": stem+"a", "fp":stem+"as"}
 
+    # Bug: no apparent support for non-feminines that end in -a
     if singular[-1] == "o" or (singular[-1] == "a" and gender == "f"):
         stem = singular[:-1]
         return {"ms": stem+"o", "mp": stem+"os", "fs": stem+"a", "fp":stem+"as"}
