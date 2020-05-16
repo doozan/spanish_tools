@@ -135,6 +135,9 @@ def build_wordlist():
         best_count = -1
         best_pos = ""
         for pos,count in all_pos.items():
+            # ignore anything that's already flagged for dismissal
+            if len(wordlist[pos+":"+word]['flags']):
+                continue
             if count > best_count:
                 best_count = count
                 best_pos = pos
@@ -146,10 +149,12 @@ def build_wordlist():
             else:
                 popular_pos.append(pos)
 
-        if "adj" in popular_pos and "adv" in popular_pos:
-            wordlist["adv:"+word]['flags'].append(flag("DUPLICATE-ADJ-ADV"))
-        if "adj" in popular_pos and "noun" in popular_pos:
-            wordlist["noun:"+word]['flags'].append(flag("DUPLICATE-ADJ-NOUN"))
+        # only flag dups if the adjective usage isn't flagged
+        if "adj" in popular_pos and len(wordlist["adj:"+word]['flags'])==0:
+            if "adv" in popular_pos:
+                 wordlist["adv:"+word]['flags'].append(flag("DUPLICATE-ADJ-ADV"))
+            if "noun" in popular_pos:
+                wordlist["noun:"+word]['flags'].append(flag("DUPLICATE-ADJ-NOUN"))
 
 
 
