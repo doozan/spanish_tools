@@ -29,6 +29,7 @@ class SpanishWordlist:
         self.xnouns = {}
         self.lemmas = {}
         self.allwords = {}
+        self.allsyns = {}
         self.meta_buffer = []
         self.parent=parent
         if dictionary:
@@ -77,6 +78,20 @@ class SpanishWordlist:
 
         if not len(self.allwords[word]):
             del self.allwords[word]
+
+
+    def add_syn(self, item):
+        word = item['word']
+        pos = item['pos']
+        syn = item['syn']
+
+        if word not in self.allsyns:
+            self.allsyns[word] = { pos: [ syn ] }
+        else:
+            if pos not in self.allsyns[word]:
+                self.allsyns[word][pos] = [ syn ]
+            else:
+                self.allsyns[word][pos].append(syn)
 
 
     def add_def(self, item):
@@ -278,6 +293,7 @@ class SpanishWordlist:
             self.buffer_meta(res)
         else:
             self.add_def(res)
+            self.add_syn(res)
 
 
     def load_dictionary(self, datafile):
@@ -402,6 +418,25 @@ class SpanishWordlist:
                 notes[note] = self.defs_to_string(pos, self.split_defs(pos, defs))
 
         return alldefs
+
+    def get_synonyms(self, word, pos):
+        if word not in self.allwords:
+            return
+
+        allsyns = self.allsyns[word]
+        allsyns = self.filter_syns(allsyns, pos)
+
+        synonyms = []
+        for pos,syns in allsyns.items():
+            for synstring in syns:
+                for syn in synstring.split("; "):
+                    if syn != word and syn in self.allwords and pos in self.allwords[word]:
+                        if syn.startswith("Thesaurus:"):
+                            synonyms.append(syn[len("Thesaurus:"):])
+                        else:
+                            synonyms.append(syn)
+
+        return list(dict.fromkeys(synonyms).keys())
 
 
     def is_feminized_noun(self, word, masculine=""):
@@ -715,9 +750,42 @@ class SpanishWordlist:
 
 
     @staticmethod
+    def filter_syns(allsyns, filter_pos=None):
+        res = {}
+        if filter_pos:
+            filter_pos = filter_pos.lower()
+
+        for pos,syns in allsyns.items():
+            # Remove all defs that don't match the filter_pos
+            if filter_pos and filter_pos != "":
+                if filter_pos == "verb":
+                    if not SpanishWordlist.pos_is_verb(pos):
+                        continue
+                elif filter_pos == "noun":
+                    if not SpanishWordlist.pos_is_noun(pos):
+                        continue
+                elif filter_pos != pos:
+                    continue
+
+            # Filter out all defs that contain the filter_phrase
+            for syn in syns:
+                if syn == "":
+                    continue
+                if pos not in res:
+                    res[pos] = []
+                if syn not in res[pos]:
+                    res[pos] = [ syn ]
+                else:
+                    res[pos].append(syn)
+
+        return res
+
+
+    @staticmethod
     def filter_defs(alldefs, filter_pos=None, filter_phrase=None):
         res = {}
-        if filter_pos: filter_pos = filter_pos.lower()
+        if filter_pos:
+            filter_pos = filter_pos.lower()
 
         for pos,notes in alldefs.items():
 

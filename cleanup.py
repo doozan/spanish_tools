@@ -37,7 +37,7 @@ if not (args.dup or args.repeat or args.nodef or args.wrongpos or args.nosent or
     exit(1)
 
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt", iverbs="spanish_data/irregular_verbs.json")
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
 spanish_sentences = spanish_sentences.sentences("spanish_data/spanish.json")
 
 def format_def(item):

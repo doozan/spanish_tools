@@ -22,7 +22,7 @@ if not os.path.isfile(args.sentences):
 if args.tags and not os.path.isfile(args.tags[0]):
     raise FileNotFoundError(f"Cannot open: {args.tags}")
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
 
 mismatch = {}
 

@@ -223,7 +223,7 @@ def main():
     args = parser.parse_args()
 
     global spanish
-    spanish = spanish_words.SpanishWords(dictionary=args.infile, synonyms="spanish_data/synonyms.txt")
+    spanish = spanish_words.SpanishWords(dictionary=args.infile)
 
     seen = {}
     prev_fem = ""

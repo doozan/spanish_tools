@@ -16,7 +16,7 @@ parser.add_argument('file', help="Frequency list")
 parser.add_argument('outfile', help="CSV file to create")
 args = parser.parse_args()
 
-spanish = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
+spanish = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
 sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 
 freq = {}

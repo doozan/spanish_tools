@@ -2,14 +2,12 @@ from .wordlist import SpanishWordlist
 from .verbs import SpanishVerbs
 from .nouns import SpanishNouns
 from .adjectives import SpanishAdjectives
-from .synonyms import SpanishSynonyms
 import re
 import sys
 import os
 
 class SpanishWords:
-    def __init__(self, dictionary, synonyms):
-        self.synonyms = SpanishSynonyms(synonyms)
+    def __init__(self, dictionary):
         self.wordlist = SpanishWordlist(dictionary, self)
         self.adj = SpanishAdjectives()
         self.noun = SpanishNouns()
@@ -70,6 +68,16 @@ class SpanishWords:
             if len(valid) > 1 and word in valid:
                 valid.remove(word)
         return valid
+
+    def get_synonyms(self, word, pos):
+        word = word.lower().strip()
+        pos = pos.lower()
+
+        syns = self.wordlist.get_synonyms(word, pos)
+        if not syns:
+            return []
+        return syns
+
 
     def get_lemmas(self, word, pos, debug=False):
         word = word.lower().strip()

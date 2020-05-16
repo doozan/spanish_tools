@@ -13,7 +13,7 @@ import spanish_sentences
 import spanish_speech
 import argparse
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
 spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 
 allwords = {}
@@ -196,8 +196,8 @@ def validate_note(item):
     return True
 
 def get_synonyms(word, pos):
-    items = words.synonyms.get_synonyms(word)
-    return [ k for k in items if pos+":"+k in allwords ]
+    items = words.get_synonyms(word,pos)
+    return [ k for k in items if pos+":"+k in allwords ][:5]
 
 #_FEMALE1 = "Lupe"
 _FEMALE1 = "Penelope"

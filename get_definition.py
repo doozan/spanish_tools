@@ -29,10 +29,10 @@ def pretty_print(word, item):
     print("==========================")
 
 
-spanish = SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
+spanish = SpanishWords(dictionary="spanish_data/es-en.txt")
 
 if (args.syn):
-    print("See also: %s" % ", ".join(spanish.synonyms.get_synonyms(args.word)))
+    print("See also: %s" % ", ".join(spanish.get_synonyms(args.word, args.pos)))
 else:
     res = spanish.lookup(args.word, args.pos)
 
