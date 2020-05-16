@@ -34,20 +34,25 @@ class SpanishWords:
     def lookup(self, word, pos):
         results = self.wordlist.lookup(word, pos)
 
-        if pos == "adj" and self.has_word(word, "noun"):
-            results.update(self.wordlist.lookup(word,"noun"))
+        if pos == "adj":
+            if self.has_word(word, "noun"):
+                results.update(self.wordlist.lookup(word,"noun"))
+            #if self.verb.is_past_participle(word):
+            #    lemma = self.get_lemma(word, "verb")
+            #    results['adj'].update({'verb': f'past particple of {lemma}'})
 
-        if pos == "noun" and self.has_word(word, "adj"):
-            results.update(self.wordlist.lookup(word,"adj"))
+        elif pos == "noun":
+            if self.has_word(word, "adj"):
+                results.update(self.wordlist.lookup(word,"adj"))
+            #if self.verb.is_past_participle(word):
+            #    lemma = self.get_lemma(word, "verb")
+            #    results['adj'].update({'verb': f'past particple of {lemma}'})
 
-        if pos != "interj" and self.has_word(word, "interj"):
-            results.update(self.wordlist.lookup(word,"interj"))
-
-        if pos == "adj" and self.verb.is_past_participle(word):
-            lemma = self.get_lemma(word, "verb")
-            results['adj'].update({'verb': f'past particple of {lemma}'})
-
-            results.update(self.wordlist.lookup(lemma,"verb"))
+        elif pos != "interj":
+            if self.has_word(word, "adj"):
+                results.update(self.wordlist.lookup(word,"adj"))
+            if self.has_word(word, "noun"):
+                results.update(self.wordlist.lookup(word,"noun"))
 
         return results
 
