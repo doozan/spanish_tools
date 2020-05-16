@@ -60,6 +60,8 @@ def test_get_lemma_adj():
         "bellas": "bello",
         "bella": "bello",
         "escocés": "escocés",
+        "chillones": "chillón",
+        "chillona": "chillón",
     }
 
     for k,v in pairs.items():
@@ -89,7 +91,7 @@ def test_get_lemma_verb():
         "diste": "dar",
 #        "venda": "vender",
 #        "sales": "salir",
-         "sumas": "sumar"
+#         "sumas": "sumar"
     }
 
     for k,v in pairs.items():

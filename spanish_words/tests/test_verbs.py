@@ -105,6 +105,10 @@ def test_unstress():
     unstress = verb.unstress
     assert unstress("tést") == "test"
 
+def test_stress_last_vowel():
+    stress_last_vowel = verb.stress_last_vowel
+    assert stress_last_vowel("tésttest") == "testtést"
+
 def test_do_conjugate():
     do_conjugate = verb.do_conjugate
     assert do_conjugate( ['cr', ''], '-ar', 'i-í unstressed') == {1: ['criar'], 2: ['criando'], 3: ['criado'], 4: ['criada'], 5: ['criados'], 6: ['criadas'], 7: ['crío'], 8: ['crías'], 9: ['crias', 'criás'], 10: ['cría'], 11: ['criamos'], 12: ['criais', 'criáis'], 13: ['crían'], 14: ['criaba'], 15: ['criabas'], 16: ['criaba'], 17: ['criábamos'], 18: ['criabais'], 19: ['criaban'], 20: ['crie', 'crié'], 21: ['criaste'], 22: ['crio', 'crió'], 23: ['criamos'], 24: ['criasteis'], 25: ['criaron'], 26: ['criaré'], 27: ['criarás'], 28: ['criará'], 29: ['criaremos'], 30: ['criaréis'], 31: ['criarán'], 32: ['criaría'], 33: ['criarías'], 34: ['criaría'], 35: ['criaríamos'], 36: ['criaríais'], 37: ['criarían'], 38: ['críe'], 39: ['críes'], 40: ['criéis', 'crieis'], 41: ['críe'], 42: ['criemos'], 43: ['crieis'], 44: ['críen'], 45: ['criara'], 46: ['criaras'], 47: ['criara'], 48: ['criáramos'], 49: ['criarais'], 50: ['criaran'], 51: ['criase'], 52: ['criases'], 53: ['criase'], 54: ['criásemos'], 55: ['criaseis'], 56: ['criasen'], 57: ['criare'], 58: ['criares'], 59: ['criare'], 60: ['criáremos'], 61: ['criareis'], 62: ['criaren'], 63: ['cría'], 64: ['criá', 'cria'], 65: ['críe'], 66: ['criemos'], 67: ['criad'], 68: ['críen'], 69: ['críes'], 70: ['críe'], 71: ['criemos'], 72: ['crieis'], 73: ['críen']}

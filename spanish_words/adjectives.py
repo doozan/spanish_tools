@@ -59,6 +59,10 @@ class SpanishAdjectives:
             match.append(word)
 
         elif word.endswith("a"):
+            # chillona -> chillón
+            if word.endswith("ona"):
+                match.append(word[:-1])
+                match.append(word[:-3] + self.stress(word[-3] + word[-2]))
             match.append(word[:-1]+"o")
             match.append(word)
 

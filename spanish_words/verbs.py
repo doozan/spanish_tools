@@ -49,7 +49,21 @@ class SpanishVerbs:
         }
 
         self.build_reverse_inflections()
-        self._trantab = str.maketrans("áéíóú", "aeiou")
+        self._unstresstab = str.maketrans("áéíóú", "aeiou")
+        self._stresstab = str.maketrans("aeiou", "áéíóú")
+
+    def unstress(self, word):
+        return word.translate(self._unstresstab)
+
+    def stress(self, word):
+        return word.translate(self._stresstab)
+
+    def stress_last_vowel(self,word):
+        uword = self.unstress(word)
+        res = re.match("^(.*)([aeiou])([^aeiou]*)", uword)
+        if res:
+            return res.group(1) + self.stress(res.group(2)) + res.group(3)
+        return word
 
     def build_reverse_inflections(self):
         self._reverse_inflections = {}
@@ -228,11 +242,10 @@ class SpanishVerbs:
             endings = [ending for ending in pronouns if word.endswith(ending)]
             for ending in endings:
                 verbs += [ v for v in self.reverse_conjugate( self.unstress(word[:len(ending)*-1]), check_pronouns =  False ) if v['form'] in [ 1, 2, 63, 64, 65, 66, 67, 68 ] ]
+                # mantente => mantén
+                verbs += [ v for v in self.reverse_conjugate( self.stress_last_vowel(word[:len(ending)*-1]), check_pronouns =  False ) if v['form'] in [ 1, 2, 63, 64, 65, 66, 67, 68 ] ]
 
         return verbs
-
-    def unstress(self, word):
-        return word.translate(self._trantab)
 
     # Returns True if a verb is irregular in the specified form
     def is_irregular(self, verb, form):
