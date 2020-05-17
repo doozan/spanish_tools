@@ -40,8 +40,9 @@ class SpanishWords:
             #    results['adj'].update({'verb': f'past particple of {lemma}'})
 
         elif pos == "noun":
-            if self.has_word(word, "adj"):
-                results.update(self.wordlist.lookup(word,"adj"))
+            word_adj = self.get_lemma(word, "adj")
+            if self.has_word(word_adj, "adj"):
+                results.update(self.wordlist.lookup(word_adj,"adj"))
             #if self.verb.is_past_participle(word):
             #    lemma = self.get_lemma(word, "verb")
             #    results['adj'].update({'verb': f'past particple of {lemma}'})
