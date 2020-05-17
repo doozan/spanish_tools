@@ -278,7 +278,7 @@ def main():
                     meta_data = {"lemma": [lemma]}
 
             # strip definitions that are noted as obsolete
-            if {"archaic", "dated", "historical", "obsolete", "rare", "eye dialect"} & { n.strip() for n in note.lower().split(',') }:
+            if {"archaic", "dated", "eye dialect", "heraldry", "historical", "obsolete", "rare"} & { n.strip() for n in note.lower().split(',') }:
                 definition = ""
 
             if not pos.startswith("meta-"):
