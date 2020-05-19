@@ -4,7 +4,7 @@ import sys
 import os
 
 el_f_nouns = [ 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia', 'area',
-        'arma', 'arpa', 'asma', 'aula', 'habla', 'habla', 'hacha', 'hambre', 'águila']
+        'arma', 'arpa', 'asma', 'aula', 'habla', 'hada', 'hacha', 'hambre', 'águila']
 
 noun_tags = set([
     "n",    # noun (very few cases, mainly just cruft in wiktionary)
@@ -80,19 +80,32 @@ class SpanishWordlist:
             del self.allwords[word]
 
 
-    def add_syn(self, item):
-        word = item['word']
-        pos = item['pos']
-        syn = item['syn']
+    def add_syn(self, word, pos, syn):
+        if syn == "":
+            return
 
-        if word not in self.allsyns:
-            self.allsyns[word] = { pos: [ syn ] }
-        else:
-            if pos not in self.allsyns[word]:
+        #if syn != word and syn in self.allwords and pos in self.allwords[word]:
+        # don't check if sym is in allwords because allwords is not fully populated yet
+        if syn != word:
+            if word not in self.allsyns:
+                self.allsyns[word] = { pos: [syn] }
+            elif pos not in self.allsyns[word]:
                 self.allsyns[word][pos] = [ syn ]
             else:
                 self.allsyns[word][pos].append(syn)
 
+    def add_syns(self, item, add_both_ways=False):
+        word = item['word']
+        pos = item['pos']
+        synstring = item['syn']
+
+        for syn in synstring.split("; "):
+            if syn.startswith("Thesaurus:"):
+                syn = syn[len("Thesaurus:"):]
+            self.add_syn(word, pos, syn)
+
+            if add_both_ways:
+                self.add_syn(syn, pos, word)
 
     def add_def(self, item):
         word = item['word']
@@ -292,8 +305,14 @@ class SpanishWordlist:
         if res['pos'].startswith("meta-"):
             self.buffer_meta(res)
         else:
+            is_first_def = True
+            if res['word'] in self.allwords:
+                is_first_def = False
             self.add_def(res)
-            self.add_syn(res)
+
+            # TODO: This should take into account the general pos of the word
+            # if this is the first def?
+            self.add_syns(res, is_first_def)
 
 
     def load_dictionary(self, datafile):
@@ -420,7 +439,7 @@ class SpanishWordlist:
         return alldefs
 
     def get_synonyms(self, word, pos):
-        if word not in self.allwords:
+        if word not in self.allwords or word not in self.allsyns:
             return
 
         allsyns = self.allsyns[word]
@@ -428,13 +447,9 @@ class SpanishWordlist:
 
         synonyms = []
         for pos,syns in allsyns.items():
-            for synstring in syns:
-                for syn in synstring.split("; "):
-                    if syn != word and syn in self.allwords and pos in self.allwords[word]:
-                        if syn.startswith("Thesaurus:"):
-                            synonyms.append(syn[len("Thesaurus:"):])
-                        else:
-                            synonyms.append(syn)
+            for syn in syns:
+                if syn in self.allwords and pos in self.allwords[syn]:
+                    synonyms.append(syn)
 
         return list(dict.fromkeys(synonyms).keys())
 
