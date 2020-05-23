@@ -235,8 +235,12 @@ def get_phrase(word, pos, noun_type, femnoun):
             phrase = f"los {word}"
         elif noun_type == "m/f":
             voice = _MALE1
-            phrase = f"la {femnoun}. el {word}"
-            display = f"la {femnoun}/el {word}"
+            if femnoun in words.wordlist.el_f_nouns:
+                phrase = f"el {femnoun}. el {word}"
+                display = f"el {femnoun}/el {word}"
+            else:
+                phrase = f"la {femnoun}. el {word}"
+                display = f"la {femnoun}/el {word}"
         else:
             raise ValueError(f"Word {word} has unknown noun type {noun_type}")
     else:
@@ -290,8 +294,7 @@ def build_item(row):
     elif wordtag in guids:
         item['guid'] = guids[wordtag]
     else:
-#        print("generating guid for ", wordtag)
-        item['guid'] = genanki.guid_for(wordtag)
+        item['guid'] = genanki.guid_for(wordtag, "Jeff's Spanish Deck")
 
 #        tags = [ row['pos'],str(math.ceil(int(row['rank']) / 500)*500) ]
     tags = [ noun_type if pos == "noun" else pos ]
