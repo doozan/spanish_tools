@@ -6,6 +6,12 @@ import spanish_words
 import argparse
 import re
 
+parser = argparse.ArgumentParser(description='Check and clean wiktionary dump')
+parser.add_argument('infile', help="Input file")
+parser.add_argument('--dry-run', help="Don't print output line", action="store_true")
+parser.add_argument('--debug', help="Print cleanup information about messy items", action="store_true")
+_args = parser.parse_args()
+
 spanish = None
 all_plurals = {}
 
@@ -20,11 +26,14 @@ def stress(word):
 
 
 ignore_pattern = r"""(feminine plural|masculine plural|plural|dated form|informal spelling|nonstandard spelling|alternative spelling|obsolete spelling|alternative form|alternate form|rare spelling|archaic spelling|obsolete form|eye dialect|alternate spelling|rare form|eye dialect|superseded spelling|euphemistic spelling|alternative form|common misspelling|euphemistic form|nonstandard form|obsolete form|informal form|dated spelling|pronunciation spelling|superseded form|alternative typography|misspelling form) of ([^,;:()]+)"""
+ignore_notes = {"archaic", "dated", "eye dialect", "heraldry", "heraldiccharge", "historical", "obsolete", "rare"}
 
-_debug=True
 def dprint(*args, **kwargs):
-    if _debug:
-        print(*args, file=sys.stderr, **kwargs)
+    if _args.debug:
+        if _args.dry_run:
+            print(*args, **kwargs)
+        else:
+            print(*args, file=sys.stderr, **kwargs)
 
 def get_useful_data(word, meta, data):
     if meta != "meta-noun":
@@ -55,13 +64,13 @@ def get_useful_data(word, meta, data):
             v = data['pl']
             guess_plural = make_plural(word, gender)
             if guess_plural and (" ".join(sorted(guess_plural)) == " ".join(sorted(v))):
-                dprint(f"ERROR: Useless plural declaration in {word}: {v}")
+                dprint(f"AUTOFIX: Useless plural declaration in {word}: {v}")
             else:
                 useful_data["pl"] = data["pl"]
 #                print(" ".join(sorted(guess_plural))," == "," ".join(sorted(v)))
             for v in data['pl']:
-                if v in all_plurals and v != "-":
-                    dprint(f"NOTICE: Two words share same plural ({v}) {all_plurals[v]}/{word}")
+                if v in all_plurals and v != "-" and word!=all_plurals[v]:
+                    dprint(f"FIXME: Two words share same plural ({v}) {all_plurals[v]}/{word}")
                 else:
                     all_plurals[v] = word
 
@@ -74,7 +83,17 @@ def print_useful_meta(word, meta, data):
     if data:
         print_meta(word, meta, data)
 
+
+def print_line(linedata):
+    if _args.dry_run:
+        return
+
+    print(" ".join(linedata))
+
 def print_meta(word, meta, data):
+    if _args.dry_run:
+        return
+
     line = [ word, "{"+meta+"}", "::" ]
 
     for k,values in data.items():
@@ -218,17 +237,14 @@ def get_adjective_forms(singular, gender):
 
 def main():
 
-    parser = argparse.ArgumentParser(description='Check and clean wiktionary dump')
-    parser.add_argument('infile', help="Input file")
-    args = parser.parse_args()
-
     global spanish
-    spanish = spanish_words.SpanishWords(dictionary=args.infile)
+    spanish = spanish_words.SpanishWords(dictionary=_args.infile)
 
     seen = {}
     prev_fem = ""
     prev_word = ""
-    with open(args.infile) as infile:
+    prev_pos = ""
+    with open(_args.infile) as infile:
         for line in infile:
             item = spanish.wordlist.parse_line(line)
 
@@ -241,45 +257,64 @@ def main():
             meta_type = None
             meta_data = []
 
-            if pos == "f" and word != prev_fem: # only check the first definition of a word
+            # Print notice for any use of the "feminine of" template, which should be replaced with something better
+            res = re.search("feminine of ([^,;:()]+)", definition)
+            if res:
+                dprint(f"FIXME: {word} uses worthless 'feminine of' template")
+
+            if pos == "f":
+                first_def = word != prev_fem
+
                 masculine = spanish.wordlist.get_masculine_noun(word)
                 res = re.search("(feminine noun|female equivalent) of ([^,;:()]+)", definition)
                 if res:
-                    def_masculine = res.group(2).strip()
-                    if masculine and def_masculine != masculine:
-                        dprint(f"WARN: {word} is confused about its partner, definition says {def_masculine} but header says {masculine}")
-                    else:
-                        masculine = def_masculine
 
                     sub_pattern = res.group(0)+r"[,;:()]*\s*"
                     definition = re.sub(sub_pattern, "", definition)
- #                   print(f"Cleaned: '{old_def}' => '{definition}'")
-                    if not spanish.wordlist.is_feminized_noun(word):
-                        dprint(f"ERROR: {word} uses feminine noun of in first definition, but does not declare masculine noun in es-noun")
-                        meta_type = "meta-noun"
-                        meta_data = {"m": [masculine]}
+#                    print(f"Cleaned: '{old_def}' => '{definition}'")
+
+                    def_masculine = res.group(2).strip()
+                    if masculine and def_masculine != masculine:
+                        dprint(f"FIXME: {word} is confused about its partner, definition says {def_masculine} but header says {masculine}")
+                    else:
+                        masculine = def_masculine
+
+                    if first_def:
+                        if not spanish.wordlist.is_feminized_noun(word):
+                            dprint(f"ERROR: NOHEAD {word} uses feminine noun/equivalent of in first definition, but does not declare masculine noun in es-noun")
+                            meta_type = "meta-noun"
+                            meta_data = {"m": [masculine]}
+
+                    else:
+                        dprint(f"INFO: {word} uses feminine noun, but not in its first definition {prev_fem}")
 
                 if masculine:
                     other_fem = spanish.wordlist.get_feminine_noun(masculine)
                     if not other_fem:
                         dprint(f"NOTICE: {word} has unrequited partner: {masculine}")
                     elif other_fem != word:
-                        dprint(f"WARN: {word} has unfaithful partner: {masculine}/{other_fem}")
+                        dprint(f"FIXME: {word} has unfaithful partner: {masculine}/{other_fem}")
 
                 prev_fem = word
 
             # Replace "obsolete form of" et al with a lemma to the good word
+            # but only if it's the first definition
             match = re.match(ignore_pattern, definition)
             if match:
+                definition = ""
                 if prev_word != word or prev_pos != pos:
                     lemma = match.group(2).strip()
-                    definition = ""
                     meta_type = f"meta-lemma-{pos}"
                     meta_data = {"lemma": [lemma]}
 
+            notes = { n.strip() for n in note.lower().split(',') }
+
             # strip definitions that are noted as obsolete
-            if {"archaic", "dated", "eye dialect", "heraldry", "historical", "obsolete", "rare"} & { n.strip() for n in note.lower().split(',') }:
+            if ignore_notes & notes:
                 definition = ""
+
+            prev_pos = pos
+            prev_word = word
 
             if not pos.startswith("meta-"):
                 definition = definition.strip()
@@ -290,13 +325,10 @@ def main():
                     if syn:
                         linedata.append(f"| {syn}")
                     linedata.append(f":: {definition}")
-                    print(" ".join(linedata))
+                    print_line(linedata)
                 if meta_type:
                     print_meta(word, meta_type, meta_data)
                 continue
-            else:
-                prev_pos = pos
-                prev_word = word
 
             data = spanish.wordlist.parse_tags(definition)
             print_useful_meta(word, pos, data)
@@ -307,7 +339,6 @@ def main():
                 seen[word][pos] = definition
             else:
                 dprint(f"NOTICE: Multiple definitions for {word} {pos} {seen[word][pos]}/{definition}")
-
 
 
 if __name__ == "__main__":
