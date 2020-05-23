@@ -3,9 +3,6 @@ import re
 import sys
 import os
 
-el_f_nouns = [ 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia', 'area',
-        'arma', 'arpa', 'asma', 'aula', 'habla', 'hada', 'hacha', 'hambre', 'águila']
-
 noun_tags = set([
     "n",    # noun (very few cases, mainly just cruft in wiktionary)
     "f",    # feminine (casa)
@@ -38,6 +35,9 @@ class SpanishWordlist:
 #                print(f'"{verb}": {vdata},')
         self._trantab = str.maketrans("áéíóú", "aeiou")
 
+        self.el_f_nouns = [ 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia', 'area',
+            'arma', 'arpa', 'asma', 'aula', 'habla', 'hada', 'hacha', 'hambre', 'águila']
+
     def remove_def(self, item):
         word = item['word']
         pos = item['pos']
@@ -45,6 +45,7 @@ class SpanishWordlist:
         definition = item['def']
 
         if not word or word not in self.allwords:
+            print(f"{item} does not match any entries in wordlist, cannot be removed")
             return
 
         if not pos:
@@ -52,6 +53,7 @@ class SpanishWordlist:
             return
 
         if pos not in self.allwords[word]:
+            print(f"{item} does not match any entries in wordlist, cannot be removed")
             return
 
         if not note and not definition:
@@ -60,6 +62,7 @@ class SpanishWordlist:
         else:
 
             if note not in self.allwords[word][pos]:
+                print(f"{item} does not match any entries in wordlist, cannot be removed")
                 return
 
             if not definition:
@@ -296,8 +299,8 @@ class SpanishWordlist:
         if line.startswith("#"):
             return
 
-        if line.startswith("-"):
-            res = self.parse_line(line[1:])
+        if line.startswith("- "):
+            res = self.parse_line(line[2:])
             self.remove_def(res)
             return
 
@@ -305,14 +308,16 @@ class SpanishWordlist:
         if res['pos'].startswith("meta-"):
             self.buffer_meta(res)
         else:
-            is_first_def = True
-            if res['word'] in self.allwords:
-                is_first_def = False
-            self.add_def(res)
+            prev_pos = "xx"
+            is_first_pos_def = True
+            cur_pos = self.common_pos(res['pos'])
 
-            # TODO: This should take into account the general pos of the word
-            # if this is the first def?
-            self.add_syns(res, is_first_def)
+            if res['word'] in self.allwords and cur_pos == prev_pos:
+                is_first_pos_def = False
+                prev_pos = cur_pos
+
+            self.add_def(res)
+            self.add_syns(res, is_first_pos_def)
 
 
     def load_dictionary(self, datafile):
@@ -393,7 +398,7 @@ class SpanishWordlist:
                         alldefs['m-f'][newnote] = use
                     del alldefs[oldpos]
 
-        elif "f" in alldefs and word in el_f_nouns:
+        elif "f" in alldefs and word in self.el_f_nouns:
             alldefs["f-el"] = alldefs.pop("f")
 
         elif "m" in alldefs:
