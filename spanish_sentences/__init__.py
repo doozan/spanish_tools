@@ -12,6 +12,7 @@ class sentences:
         self.sentencedb = []
         self.tagdb = {}
         self.tagfixes = {}
+        self.filter_ids = {}
 
         if not os.path.isfile(datafile):
             raise FileNotFoundError(f"Cannot open file: '{datafile}'")
@@ -30,14 +31,28 @@ class sentences:
                         self.tagfixes[oldword] = {}
                     self.tagfixes[oldword][oldpos] = [newword, newpos]
 
+        # Tagfixes must be loaded before the main file
+        datafixes = datafile + ".filter"
+        if os.path.isfile(datafixes):
+            with open(datafixes) as infile:
+                for line in infile:
+                    line = line.strip()
+                    if line.startswith("#"):
+                        continue
+                    self.filter_ids[int(line.split(" ")[0])] = 1
+
+
         index=0
         with open(datafile) as infile:
             data = json.load(infile)
             for line in data:
-                extras, english, spanish, tags = line
+                score, eng_id, eng_user, spa_id, spa_user, english, spanish, tags = line
                 stripped = self.strip_sentence(spanish).strip()
 
-                self.sentencedb.append( (spanish, english) )
+                if eng_id in self.filter_ids or spa_id in self.filter_ids:
+                    continue
+
+                self.sentencedb.append( (spanish, english, score, spa_id, eng_id) )
                 self.grepdb.append(stripped)
 
                 self.add_tags_to_db(tags,index)
@@ -122,10 +137,24 @@ class sentences:
         if results <= count:
             ids = range(0,results)
         else:
-            step = results/(count+1.0)
+            # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
+            best = [ i for i in available if self.sentencedb[i][2] >= 56 ]
+            if len(best) < count:
+                best = [ i for i in available if self.sentencedb[i][2] >= 55 ]
+            if len(best) < count:
+                best = [ i for i in available if self.sentencedb[i][2] >= 54 ]
 
-            # select sentences over an even distribution of the range
-            ids = [ math.ceil((i+1)*step) for i in range(count) ]
+            if len(best) == count:
+                ids = range(0,len(best))
+            else:
+                if len(best) > count:
+                    available = best
+                    results = len(available)
+
+                step = results/(count+1.0)
+
+                # select sentences over an even distribution of the range
+                ids = [ math.ceil((i+1)*step) for i in range(count) ]
 
     # Randomly select sentences
     #        while count>0:
@@ -136,8 +165,8 @@ class sentences:
     #            count-=1
     #        ids = sorted(ids)
 
-        for idx in ids:
-            sentences.append(self.sentencedb[available[idx]])
+
+        sentences = [ self.sentencedb[available[idx]] for idx in ids ]
 
         return(sentences)
 

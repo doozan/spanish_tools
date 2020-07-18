@@ -123,9 +123,10 @@ def load_sentences():
     seen = {}
     with open(args.sentences) as infile:
         for line in infile:
+
             line = line.strip()
             sdata = line.split("\t")
-            english,spanish,credits = sdata
+            english,spanish,credits,score = sdata
 
             wordcount = spanish.count(" ")+1
 
@@ -134,7 +135,8 @@ def load_sentences():
                 continue
 
             # ignore duplicates
-            if english in seen or spanish in seen:
+            #if english in seen or spanish in seen:
+            if spanish in seen:
                 continue
             else:
                 seen[english] = 1
@@ -182,7 +184,7 @@ def print_tagged_data():
     index = 0
     for p in tagdata: #['paragraphs']:
         sdata = sentences[idx2sent[index]]
-        english, spanish, credits = sdata
+        english,spanish,credits,score = sdata
         index = index+1
 
         pos_tags = []
@@ -217,6 +219,9 @@ def print_tagged_data():
         if interj:
             tags['interj'] = list(map(str.lower, interj))
 
+        res = re.match(r"CC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)", credits)
+        eng_id, eng_user, spa_id, spa_user = res.groups()
+
         english = json.dumps(english, ensure_ascii=False)
         spanish = json.dumps(spanish, ensure_ascii=False)
         tags = json.dumps(tags, ensure_ascii=False)
@@ -228,7 +233,7 @@ def print_tagged_data():
             first = False
 
         print(\
-f"""[{credits},
+f"""[{score}, {eng_id}, "{eng_user}", {spa_id}, "{spa_user}",
 {english},
 {spanish},
 {tags}]""", end="")

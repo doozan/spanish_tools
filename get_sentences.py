@@ -14,7 +14,7 @@ args = parser.parse_args()
 spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 
 def format_sentences(sentences):
-    return "\n".join('spa: %s\neng: %s' % pair[:2] for pair in sentences )
+    return "\n".join(f'spa: {s[3]} - {s[2]} - {s[0]}\neng: {s[4]} - {s[2]} - {s[1]}' for s in sentences )
 
 def get_sentences(lookup, pos, count):
     results = spanish_sentences.get_sentences(lookup, pos, count)
