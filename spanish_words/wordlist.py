@@ -38,6 +38,8 @@ class SpanishWordlist:
         self.el_f_nouns = [ 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia', 'area',
             'arma', 'arpa', 'asma', 'aula', 'habla', 'hada', 'hacha', 'hambre', 'águila']
 
+        self.prev_pos = "xx"
+
     def remove_def(self, item):
         word = item['word']
         pos = item['pos']
@@ -308,16 +310,15 @@ class SpanishWordlist:
         if res['pos'].startswith("meta-"):
             self.buffer_meta(res)
         else:
-            prev_pos = "xx"
             is_first_pos_def = True
             cur_pos = self.common_pos(res['pos'])
 
-            if res['word'] in self.allwords and cur_pos == prev_pos:
+            if res['word'] in self.allwords and cur_pos == self.prev_pos:
                 is_first_pos_def = False
-                prev_pos = cur_pos
 
             self.add_def(res)
             self.add_syns(res, is_first_pos_def)
+            self.prev_pos = cur_pos
 
 
     def load_dictionary(self, datafile):
@@ -650,7 +651,7 @@ class SpanishWordlist:
     @staticmethod
     def clean_def(pos, d):
         if SpanishWordlist.pos_is_verb(pos):
-            if d.startswith("to "):
+            if d.startswith("to ") or d.startswith("To "):
                 return d[3:]
         return d
 

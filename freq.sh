@@ -50,7 +50,8 @@ compare () {
 
 
 do_freq () {
-python3 freq.py 2018_es_50k.txt 2018.csv || exit
+python3 freq.py 2018_es_50k.txt 2018.csv --ignore ignore.txt || exit
+#python3 freq.py 2018_es_50k.txt 2018.csv || exit
 #echo "spanish,pos">/tmp/words.csv && grep CLEAR 2018.csv | cut -d',' -f'2,3'  >> /tmp/words.csv
 #python3 compare.py 5k.csv /tmp/words.csv | cut -d ',' -f1,2,3 > /tmp/list.csv
 #grep "^1," /tmp/list.csv  | cut -d ',' -f2 | sort | uniq > /tmp/c1.txt
