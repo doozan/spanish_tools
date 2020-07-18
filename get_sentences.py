@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(description='Get sentences that contain variati
 parser.add_argument('word', help="Word to search for")
 parser.add_argument('pos', nargs="?", default="", help="part of speech")
 parser.add_argument('count', nargs="?", default=3, type=int, help="Max sentences to retrieve")
+parser.add_argument('--force', type=int, action="append", help="Force use of sentence id")
 args = parser.parse_args()
 
 spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
@@ -16,8 +17,8 @@ spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 def format_sentences(sentences):
     return "\n".join(f'spa: {s[3]} - {s[2]} - {s[0]}\neng: {s[4]} - {s[2]} - {s[1]}' for s in sentences )
 
-def get_sentences(lookup, pos, count):
-    results = spanish_sentences.get_sentences(lookup, pos, count)
+def get_sentences(lookup, pos, count, forced):
+    results = spanish_sentences.get_sentences(lookup, pos, count, forced)
 
     if len(results['sentences']):
         print("Matched ", results['matched'])
@@ -25,4 +26,4 @@ def get_sentences(lookup, pos, count):
 
     return ""
 
-get_sentences(args.word, args.pos, args.count)
+get_sentences(args.word, args.pos, args.count, args.force)

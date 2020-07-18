@@ -13,24 +13,14 @@ import spanish_sentences
 import spanish_speech
 import argparse
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
-spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
-
-allwords = {}
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-def fail(*args, **kwargs):
-    eprint(*args, **kwargs)
-    exit(1)
-
 parser = argparse.ArgumentParser(description='Compile anki deck')
 parser.add_argument('deckname', help="Name of deck to build")
 parser.add_argument('-m', '--mediadir', help="Directory containing deck media resources (default: DECKNAME.media)")
 parser.add_argument('-w', '--wordlist', action='append', help="List of words to include/exclude from the deck (default: DECKNAME.json")
 parser.add_argument('-j', '--json',  help="JSON file with deck info (default: DECKNAME.json)")
 parser.add_argument('-g', '--guids',  help="Read guids from file")
+parser.add_argument('-s', '--sentence-ids',  help="Read sentence ids from file")
+parser.add_argument('-d', '--dump-sentence-ids',  help="Dump sentence ids to file")
 args = parser.parse_args()
 
 if not args.mediadir:
@@ -52,31 +42,57 @@ for wordlist in args.wordlist:
 if not os.path.isfile(args.json):
     fail(f"Deck JSON does not exist: {args.json}")
 
+if args.guids and not os.path.isfile(args.guids):
+    fail(f"File does not exist: {args.guids}")
 
-noun_articles = {
-    "m": "el",
-    "mp": "los",
-    "f": "la",
-    "fp": "las",
-    "mf": "el/la",
-    "f-el": "el",
-    "m-f": "el",
-    "m/f": "el"
-}
+if args.sentence_ids and not os.path.isfile(args.sentence_ids):
+    fail(f"File does not exist: {args.sentence_ids}")
+
+
+words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
+spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
+
+allwords = {}
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+def fail(*args, **kwargs):
+    eprint(*args, **kwargs)
+    exit(1)
 
 def format_sentences(sentences):
-    return "<br>\n".join( f'<span class="spa">{pair[0]}</span><br><span class="eng">{pair[1]}</span>' for pair in sentences )
+    return "<br>\n".join( f'<span class="spa">{item[0]}</span><br><span class="eng">{item[1]}</span>' for item in sentences )
 
+all_sentences = {}
 def get_sentences(word, pos, count):
 
     results = spanish_sentences.get_sentences(word, pos, count)
+    wordtag = make_tag(word, pos)
+    all_sentences[wordtag] = results
+
+    sids = sentence_ids[wordtag] if wordtag in sentence_ids else None
+
+    results = spanish_sentences.get_sentences(word, pos, count, sids)
 
     if len(results['sentences']):
         return format_sentences(results['sentences'])
 
     return ""
 
+# (spanish, english, score, spa_id, eng_id)
+def dump_sentences(filename):
+    with open(filename, "w") as outfile:
+        csvwriter = csv.writer(outfile)
+        csvwriter.writerow([ "spanish", "pos", "sid1", "sid2", "sid3" ])
 
+        for tag,value in all_sentences.items():
+            pos,word = tag.split(":")
+            row = [word,pos]
+            for sentence in value['sentences']:
+                row.append(f"{sentence[3]}:{sentence[4]}")
+
+            csvwriter.writerow(row)
 
 class MyNote(genanki.Note):
     def write_card_to_db(self, cursor, now_ts, deck_id, note_id, order, due):
@@ -342,6 +358,15 @@ if args.guids:
             wordtag = make_tag(row['spanish'], row['pos'])
             guids[wordtag] = row['guid']
 
+sentence_ids = {}
+if args.sentence_ids:
+    with open(args.sentence_ids) as infile:
+        csvreader = csv.DictReader(infile)
+        for row in csvreader:
+            wordtag = make_tag(row['spanish'], row['pos'])
+            sids = [ sid for sid in [ 'sid1', 'sid2', 'sid3' ] if sid in row and row[sid] != "" ]
+            sentence_ids[wordtag] = sids
+
 # read through all the files to populate the synonyms and excludes lists
 for wordlist in args.wordlist:
     with open(wordlist, newline='') as csvfile:
@@ -354,7 +379,7 @@ for wordlist in args.wordlist:
             if not row:
                 continue
 
-            # Rank that is another word will replace pos:word specified
+            # Rank that is another word instead of a numeric value will replace pos:word specified
             # or the first occurance of the word if the pos: is not specified
             if 'rank' in row and not row['rank'][0].isdigit() and not row['rank'][0] == "-":
                 old_word = row['rank']
@@ -450,6 +475,9 @@ card_model = genanki.Model(model_guid,
 )
 
 _fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Display", "Audio" ]
+
+if args.dump_sentence_ids:
+    dump_sentences(args.dump_sentence_ids)
 
 with open('notes_rebuild.csv', 'w', newline='') as outfile:
     csvwriter = csv.writer(outfile)

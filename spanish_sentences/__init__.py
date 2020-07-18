@@ -125,17 +125,32 @@ class sentences:
 
         return list(results)
 
-
-    def get_sentences_from_ids(self, available, count):
+    def get_sentences_from_ids(self, ids):
         sentences = []
+        sentences = [ self.sentencedb[idx] for idx in ids ]
+        return sentences
+
+    def get_best_sentence_ids(self, lookup, pos, count, forced_ids):
+
         ids = []
+        source = ""
 
-        # strip duplicates and sort
-        available = sorted(list(set(available)))
+        res = self.get_all_sentence_ids(lookup, pos)
+        # remove forced ids, strip duplicates and sort
+        available = sorted(set(res['ids']) - set(forced_ids))
 
-        results = len(available)
-        if results <= count:
-            ids = range(0,results)
+        if forced_ids:
+            if len(forced_ids) > count:
+                source = "forced"
+                forced_ids = forced_ids[:count]
+            else:
+                source = f"forced/{res['source']}"
+            count = count-len(forced_ids)
+        else:
+            source = res['source']
+
+        if len(available) <= count:
+            ids = available
         else:
             # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
             best = [ i for i in available if self.sentencedb[i][2] >= 56 ]
@@ -144,33 +159,17 @@ class sentences:
             if len(best) < count:
                 best = [ i for i in available if self.sentencedb[i][2] >= 54 ]
 
-            if len(best) == count:
-                ids = range(0,len(best))
-            else:
-                if len(best) > count:
-                    available = best
-                    results = len(available)
+            if len(best) >= count:
+                available = best
 
-                step = results/(count+1.0)
+            step = len(available)/(count+1.0)
 
-                # select sentences over an even distribution of the range
-                ids = [ math.ceil((i+1)*step) for i in range(count) ]
+            # select sentences over an even distribution of the range
+            ids = [ available[math.ceil((i)*step)] for i in range(count) ]
 
-    # Randomly select sentences
-    #        while count>0:
-    #            rnd = random.randint(0,results)-1
-    #            if rnd in ids:
-    #                continue
-    #            ids.append(rnd)
-    #            count-=1
-    #        ids = sorted(ids)
+        return { "ids": forced_ids + ids, "source": source }
 
-
-        sentences = [ self.sentencedb[available[idx]] for idx in ids ]
-
-        return(sentences)
-
-    def get_sentence_ids(self, lookup, pos):
+    def get_all_sentence_ids(self, lookup, pos):
         ids = []
         lookup = lookup.strip().lower()
         pos = pos.lower()
@@ -189,10 +188,19 @@ class sentences:
 
         return { "ids": ids, "source": source }
 
-    def get_sentences(self, lookup, pos, count):
-        res = self.get_sentence_ids(lookup, pos)
+    def itemtags_to_ids(self, items):
+        return [ idx for idx in range(0,len(self.sentencedb)) if f"{self.sentencedb[idx][3]}:{self.sentencedb[idx][4]}" in items ]
 
-        sentences = self.get_sentences_from_ids(res['ids'], count)
+    def get_sentences(self, lookup, pos, count, forced_items=[]):
+
+        # Convert sentence id to index of sentencedb
+        forced_ids = []
+        if forced_items and len(forced_items):
+            forced_ids = self.itemtags_to_ids(forced_items)
+
+        res = self.get_best_sentence_ids(lookup, pos, count, forced_ids)
+
+        sentences = self.get_sentences_from_ids(res['ids'])
         return { "sentences": sentences, "matched": res['source'] }
 
 
