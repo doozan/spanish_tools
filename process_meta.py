@@ -26,7 +26,7 @@ def stress(word):
 
 
 ignore_pattern = r"""(feminine plural|masculine plural|plural|dated form|informal spelling|nonstandard spelling|alternative spelling|obsolete spelling|alternative form|alternate form|rare spelling|archaic spelling|obsolete form|eye dialect|alternate spelling|rare form|eye dialect|superseded spelling|euphemistic spelling|alternative form|common misspelling|euphemistic form|nonstandard form|obsolete form|informal form|dated spelling|pronunciation spelling|superseded form|alternative typography|misspelling form) of ([^,;:()]+)"""
-ignore_notes = {"archaic", "dated", "eye dialect", "heraldry", "heraldiccharge", "historical", "obsolete", "rare"}
+ignore_notes = {"archaic", "dated", "eye dialect", "heraldry", "heraldiccharge", "historical", "obsolete", "rare", "numismatics"}
 
 def dprint(*args, **kwargs):
     if _args.debug:
