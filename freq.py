@@ -12,13 +12,19 @@ import spanish_sentences
 import get_best_pos
 
 parser = argparse.ArgumentParser(description='Lemmatize frequency list')
+parser.add_argument('--ignore', nargs=1, help="List of words to ignore")
 parser.add_argument('file', help="Frequency list")
 parser.add_argument('outfile', help="CSV file to create")
 args = parser.parse_args()
 
+if args.ignore and not os.path.isfile(args.ignore[0]):
+    raise FileNotFoundError(f"Cannot open: {args.ignore}")
+
+
 spanish = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
 sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 
+ignore = {}
 freq = {}
 def add_count(word, pos, count, origword):
     tag = pos+":"+word
@@ -176,10 +182,23 @@ def get_best_lemma(strlemma, pos):
     return best
 
 
+# If there's an ignore list specified, load it
+if args.ignore:
+    with open(args.ignore[0]) as infile:
+        for line in infile:
+            if line.startswith("#"):
+                continue
+            line = line.strip()
+            if line and line != "":
+                ignore[line] = 1
+
+
 # Read all the lines and do an initial lookup of lemmas
 with open(args.file) as infile:
     for line in infile:
         word, count = line.strip().split(' ')
+        if word in ignore:
+            continue
 
         posrank = get_best_pos.get_ranked_pos(word, spanish, sentences)
         pos = posrank[0]['pos'] if posrank else "none"
