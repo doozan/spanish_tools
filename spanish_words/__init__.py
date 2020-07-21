@@ -13,9 +13,6 @@ class SpanishWords:
         self.noun = SpanishNouns()
         self.verb = SpanishVerbs(self.wordlist.irregular_verbs)
 
-    def get_defs(self, word):
-        return self.wordlist.get_defs(word)
-
     def has_word(self, word, pos=None):
         if pos == "part":
             if self.wordlist._has_word(word, "adj"):

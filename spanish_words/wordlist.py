@@ -99,6 +99,7 @@ class SpanishWordlist:
             else:
                 self.allsyns[word][pos].append(syn)
 
+
     def add_syns(self, item, add_both_ways=False):
         word = item['word']
         pos = item['pos']
@@ -454,7 +455,9 @@ class SpanishWordlist:
         synonyms = []
         for pos,syns in allsyns.items():
             for syn in syns:
-                if syn in self.allwords and pos in self.allwords[syn]:
+                # Don't filter by pos because it's the specific pos and not the clean pos
+                # ie demora (f) is a syn of retraso (m) even though f!=m
+                if syn in self.allwords: # and pos in self.allwords[syn]:
                     synonyms.append(syn)
 
         return list(dict.fromkeys(synonyms).keys())
@@ -795,8 +798,6 @@ class SpanishWordlist:
                 if pos not in res:
                     res[pos] = []
                 if syn not in res[pos]:
-                    res[pos] = [ syn ]
-                else:
                     res[pos].append(syn)
 
         return res
