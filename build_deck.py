@@ -211,9 +211,9 @@ def validate_note(item):
 
     return True
 
-def get_synonyms(word, pos):
+def get_synonyms(word, pos, limit=5):
     items = words.get_synonyms(word,pos)
-    return [ k for k in items if pos+":"+k in allwords ][:5]
+    return [ k for k in items if pos+":"+k in allwords ][:limit]
 
 #_FEMALE1 = "Lupe"
 _FEMALE1 = "Penelope"
@@ -364,7 +364,7 @@ if args.sentence_ids:
         csvreader = csv.DictReader(infile)
         for row in csvreader:
             wordtag = make_tag(row['spanish'], row['pos'])
-            sids = [ sid for sid in [ 'sid1', 'sid2', 'sid3' ] if sid in row and row[sid] != "" ]
+            sids = [ row[sid] for sid in [ 'sid1', 'sid2', 'sid3' ] if sid in row and row[sid] != "" ]
             sentence_ids[wordtag] = sids
 
 # read through all the files to populate the synonyms and excludes lists
