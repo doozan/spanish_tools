@@ -175,10 +175,15 @@ def format_image(filename):
 def format_def(item):
 
     results = []
+    first = True
     for pos in item:
         pos_tag = ""
         if len(item.keys()) > 1:
-            pos_tag = f'<span class="pos pos-{pos}">{{{pos}}} </span>'
+            if first:
+                pos_tag = f'<span class="pos pos-{pos}"> '
+                first=False
+            else:
+                pos_tag = f'<span class="pos pos-{pos}">{{{pos}}} '
 
         for tag in item[pos]:
             if len(results):
@@ -192,6 +197,9 @@ def format_def(item):
                 results.append(f'<span class="usage-type usage-tag">[{tag}]: </span>')
 
             results.append(f'<span class="usage">{usage}</span>')
+
+            if len(item.keys()) > 1:
+                results.append("</span>")
 
     return "".join(results)
 
