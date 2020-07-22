@@ -4,6 +4,12 @@ import re
 import os
 import json
 
+IDX_SPANISH=0
+IDX_ENGLISH=1
+IDX_SCORE=2
+IDX_SPAID=3
+IDX_ENGID=4
+
 class sentences:
 
     def __init__(self, datafile):
@@ -149,19 +155,40 @@ class sentences:
         else:
             source = res['source']
 
+        # Find the hightest scoring sentences without repeating the english or spanish ids
+        # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
+        scored = {}
+        for i in available:
+            s = self.sentencedb[i]
+            score = s[IDX_SCORE]
+            if not score in scored:
+                scored[score] = { 'ids': set(), 'eng_ids': set(), 'spa_ids': set() }
+            scored[score]['ids'].add(i)
+            scored[score]['eng_ids'].add(s[IDX_ENGID])
+            scored[score]['spa_ids'].add(s[IDX_SPAID])
+
+        seen = set()
+        available = []
+        for score in sorted( scored.keys(), reverse=True ):
+            for i in scored[score]['ids']:
+                s = self.sentencedb[i]
+                if s[IDX_ENGID] not in seen and s[IDX_SPAID] not in seen:
+                    seen.add(s[IDX_ENGID])
+                    seen.add(s[IDX_SPAID])
+                    available.append(i)
+
+                if len(available) >= count:
+                    break
+
+            if len(available) >= count:
+                break
+
+        available = sorted(available)
+
         if len(available) <= count:
             ids = available
+
         else:
-            # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
-            best = [ i for i in available if self.sentencedb[i][2] >= 56 ]
-            if len(best) < count:
-                best = [ i for i in available if self.sentencedb[i][2] >= 55 ]
-            if len(best) < count:
-                best = [ i for i in available if self.sentencedb[i][2] >= 54 ]
-
-            if len(best) >= count:
-                available = best
-
             step = len(available)/(count+1.0)
 
             # select sentences over an even distribution of the range
