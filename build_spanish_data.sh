@@ -49,7 +49,7 @@ bzcat eng_sentences_detailed.tsv.bz2 | awk 'BEGIN {FS="\t"} NR==FNR{A[$1];next}!
 
 cat<<'EOF'>join.awk
 BEGIN {FS="\t"}
-FNR == 1 {FID++} 
+FNR == 1 {FID++}
 FID==1{eng[$1] = $2; credit[$1] = $3; skill[$1] = $4}
 FID==2{spa[$1] = $2; credit[$1] = $3; skill[$1] = $4}
 FID==3 && $1 in eng && $2 in spa{ print eng[$1] "\t" spa[$2] "\tCC-BY 2.0 (France) Attribution: tatoeba.org #" $1 " (" credit[$1] ") & #" $2 " (" credit[$2] ")\t" skill[$1]+skill[$2] }
@@ -61,7 +61,7 @@ cat spa.txt joined.tsv | sort -k1,1 -k2,2 -t$'\t' --unique | awk 'BEGIN {FS="\t"
 
 ./build_sentences.py eng-spa.tsv > spa-only.txt
 ./build_tags.sh spa-only.txt
-./build_sentences.py --tags tags.bz2 eng-spa.tsv > spanish_data/sentences.json
+./build_sentences.py --tags spa-only.txt.json eng-spa.tsv > spanish_data/sentences.json
 
 # Generate the irregular verb list and table
 python3 build_irregular_verbs.py > spanish_words/paradigms.py

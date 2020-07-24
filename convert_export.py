@@ -57,7 +57,7 @@ with open(args.infile) as infile:
 
     init_sentences()
 
-    print("spanish,pos,sid1,sid2,sid3")
+    #print("spanish,pos,sid1,sid2,sid3")
     for row in csvreader:
         word = row[IDX_WORD]
         pos = get_clean_pos(row[IDX_POS])

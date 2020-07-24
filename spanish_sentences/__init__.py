@@ -10,6 +10,9 @@ IDX_SCORE=2
 IDX_SPAID=3
 IDX_ENGID=4
 
+def make_tag(word, pos):
+    return pos.lower() + ":" + word.lower()
+
 class sentences:
 
     def __init__(self, datafile):
@@ -19,12 +22,17 @@ class sentences:
         self.tagdb = {}
         self.tagfixes = {}
         self.filter_ids = {}
+        self.forced_ids = {}
+
+
+        dataprefix = os.path.splitext(datafile)[0]
+
 
         if not os.path.isfile(datafile):
             raise FileNotFoundError(f"Cannot open file: '{datafile}'")
 
         # Tagfixes must be loaded before the main file
-        datafixes = datafile + ".tagfixes"
+        datafixes = dataprefix + ".tagfixes"
         if os.path.isfile(datafixes):
             with open(datafixes) as infile:
                 for line in infile:
@@ -37,8 +45,8 @@ class sentences:
                         self.tagfixes[oldword] = {}
                     self.tagfixes[oldword][oldpos] = [newword, newpos]
 
-        # Tagfixes must be loaded before the main file
-        datafixes = datafile + ".filter"
+        # Ignore list must be loaded before the main file
+        datafixes = dataprefix + ".ignore"
         if os.path.isfile(datafixes):
             with open(datafixes) as infile:
                 for line in infile:
@@ -46,7 +54,6 @@ class sentences:
                     if line.startswith("#"):
                         continue
                     self.filter_ids[int(line.split(" ")[0])] = 1
-
 
         index=0
         with open(datafile) as infile:
@@ -63,6 +70,19 @@ class sentences:
 
                 self.add_tags_to_db(tags,index)
                 index+=1
+
+        # Forced items must be processed last
+        dataforced = dataprefix + ".forced"
+        if os.path.isfile(dataforced):
+            with open(dataforced) as infile:
+                for line in infile:
+                    line = line.strip()
+                    if line.startswith("#"):
+                        continue
+                    word,pos,*forced_itemtags = line.split(",")
+                    wordtag = make_tag(word, pos)
+                    self.forced_ids[wordtag] = self.itemtags_to_ids(forced_itemtags)
+
 
     def strip_sentence(self, string):
         stripped = re.sub('[^ a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+', '', string).lower()
@@ -136,24 +156,54 @@ class sentences:
         sentences = [ self.sentencedb[idx] for idx in ids ]
         return sentences
 
-    def get_best_sentence_ids(self, lookup, pos, count, forced_ids):
+
+    def get_best_sentence_ids(self, items, count):
+
+        sentences = []
+        source = None
+
+        seen = set()
+        for word, pos in items:
+            # if there are multiple word/pos pairs specified, ideally use results from each equally
+            # However, if one item doesn't have enough results we will use more results from this item
+            # Thus, we need to retrieve "count" items, as we could be using them all if the other has none
+
+            item_ids = []
+
+            wordtag = make_tag(word, pos)
+            forced_ids = self.forced_ids.get(wordtag,[])
+            if len(forced_ids):
+                source = "forced"
+                item_ids = forced_ids[:count]
+                seen |= set( [ self.sentencedb[x][IDX_SPAID] for x in item_ids ] )
+                seen |= set( [ self.sentencedb[x][IDX_ENGID] for x in item_ids ] )
+
+            else:
+                res = self.get_all_sentence_ids(word, pos)
+                available_ids = set(res['ids']) - set(item_ids)
+                item_ids += self.select_best_ids(available_ids, count, seen)
+                if not source:
+                    source = res['source']
+
+            sentences.append(item_ids)
+
+        ids = []
+        for idx in range(count):
+            if len(ids)>=count:
+                break
+            for item in sentences:
+                if len(ids)>=count:
+                    break
+
+                if len(item)>idx:
+                    ids.append(item[idx])
+
+        return { "ids": ids, "source": source }
+
+    def select_best_ids(self, available, count, seen):
 
         ids = []
         source = ""
-
-        res = self.get_all_sentence_ids(lookup, pos)
-        # remove forced ids, strip duplicates and sort
-        available = sorted(set(res['ids']) - set(forced_ids))
-
-        if forced_ids:
-            if len(forced_ids) > count:
-                source = "forced"
-                forced_ids = forced_ids[:count]
-            else:
-                source = f"forced/{res['source']}"
-            count = count-len(forced_ids)
-        else:
-            source = res['source']
 
         # Find the hightest scoring sentences without repeating the english or spanish ids
         # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
@@ -167,7 +217,6 @@ class sentences:
             scored[score]['eng_ids'].add(s[IDX_ENGID])
             scored[score]['spa_ids'].add(s[IDX_SPAID])
 
-        seen = set()
         available = []
         for score in sorted( scored.keys(), reverse=True ):
             for i in scored[score]['ids']:
@@ -192,9 +241,9 @@ class sentences:
             step = len(available)/(count+1.0)
 
             # select sentences over an even distribution of the range
-            ids = [ available[math.ceil((i)*step)] for i in range(count) ]
+            ids = [ available[math.ceil(i*step)] for i in range(count) ]
 
-        return { "ids": forced_ids + ids, "source": source }
+        return ids
 
     def get_all_sentence_ids(self, lookup, pos):
         ids = []
@@ -218,14 +267,9 @@ class sentences:
     def itemtags_to_ids(self, items):
         return [ idx for idx in range(0,len(self.sentencedb)) if f"{self.sentencedb[idx][3]}:{self.sentencedb[idx][4]}" in items ]
 
-    def get_sentences(self, lookup, pos, count, forced_items=[]):
+    def get_sentences(self, items, count, forced_items=[]):
 
-        # Convert sentence id to index of sentencedb
-        forced_ids = []
-        if forced_items and len(forced_items):
-            forced_ids = self.itemtags_to_ids(forced_items)
-
-        res = self.get_best_sentence_ids(lookup, pos, count, forced_ids)
+        res = self.get_best_sentence_ids(items, count)
 
         sentences = self.get_sentences_from_ids(res['ids'])
         return { "sentences": sentences, "matched": res['source'] }

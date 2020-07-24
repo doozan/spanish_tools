@@ -42,7 +42,7 @@ def tag_to_pos(tag):
         pos = "art"
     elif ctag.startswith("I"):
         pos = "interj"
-    elif ctag.startswith("N"): # and lemma not in ["tom", "mary", "john"]:
+    elif ctag.startswith("N"): # and lemma not in ["tom", "mary", "john", "maría"]:
         pos = "propnoun" if ctag == "NP" else "noun"
     elif ctag.startswith("P"):
         pos = "pron"
@@ -166,11 +166,11 @@ def print_tagged_data():
 
     tagdata = {}
 
-#    with open(args.tags[0], 'r', encoding="utf-8") as infile:
-#        tagdata = json.load(infile)
-
-    with bz2.BZ2File(args.tags[0], 'r') as infile:
+    with open(args.tags[0], 'r', encoding="utf-8") as infile:
         tagdata = json.load(infile)
+
+#    with bz2.BZ2File(args.tags[0], 'r') as infile:
+#        tagdata = json.load(infile)
 
 #    with zipfile.ZipFile(args.tags[0], 'r') as z:
 #        filename = z.namelist()[0]

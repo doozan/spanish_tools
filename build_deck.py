@@ -19,7 +19,6 @@ parser.add_argument('-m', '--mediadir', help="Directory containing deck media re
 parser.add_argument('-w', '--wordlist', action='append', help="List of words to include/exclude from the deck (default: DECKNAME.json")
 parser.add_argument('-j', '--json',  help="JSON file with deck info (default: DECKNAME.json)")
 parser.add_argument('-g', '--guids',  help="Read guids from file")
-parser.add_argument('-s', '--sentence-ids',  help="Read sentence ids from file")
 parser.add_argument('-d', '--dump-sentence-ids',  help="Dump sentence ids to file")
 args = parser.parse_args()
 
@@ -45,9 +44,6 @@ if not os.path.isfile(args.json):
 if args.guids and not os.path.isfile(args.guids):
     fail(f"File does not exist: {args.guids}")
 
-if args.sentence_ids and not os.path.isfile(args.sentence_ids):
-    fail(f"File does not exist: {args.sentence_ids}")
-
 
 words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
 spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
@@ -65,15 +61,10 @@ def format_sentences(sentences):
     return "<br>\n".join( f'<span class="spa">{item[0]}</span><br><span class="eng">{item[1]}</span>' for item in sentences )
 
 all_sentences = {}
-def get_sentences(word, pos, count):
+def get_sentences(items, count):
 
-    results = spanish_sentences.get_sentences(word, pos, count)
-    wordtag = make_tag(word, pos)
+    results = spanish_sentences.get_sentences(items, count)
     all_sentences[wordtag] = results
-
-    sids = sentence_ids[wordtag] if wordtag in sentence_ids else None
-
-    results = spanish_sentences.get_sentences(word, pos, count, sids)
 
     if len(results['sentences']):
         return format_sentences(results['sentences'])
@@ -138,28 +129,6 @@ class MyNote(genanki.Note):
             self.write_card_to_db(cursor, now_ts, deck_id, note_id, count, self._order)
             count+=1
 
-#    def __init__(self, model=None, fields=None, sort_field=None, tags=None, guid=None):
-#        super(MyNote, self).__init__(model, fields, sort_field, tags, guid)
-#        try:
-#            self.guid = guid
-#        except AttributeError:
-#            # guid was defined as a property
-#            pass
-#
-#    @property
-#    def guid(self):
-#        if self._guid is None:
-#            return genanki.guid_for(self.fields[1], self.fields[2])
-#        return self._guid
-#
-#    @guid.setter
-#    def guid(self, val):
-#        self._guid = val
-
-#    @property
-#    def guid(self):
-#        if super(MyNote, self)._guid is None:
-#            return genanki.guid_for(self.fields[0], self.fields[6])
 
 
 def format_sound(filename):
@@ -177,13 +146,10 @@ def format_def(item):
     results = []
     first = True
     for pos in item:
-        pos_tag = ""
-        if len(item.keys()) > 1:
-            if first:
-                pos_tag = f'<span class="pos pos-{pos}"> '
-                first=False
-            else:
-                pos_tag = f'<span class="pos pos-{pos}">{{{pos}}} '
+        pos_tag = f'<span class="pos pos-{pos}"> '
+        if len(item.keys()) > 1 and not first:
+            pos_tag = f'<span class="pos pos-{pos}">{{{pos}}} '
+        first=False
 
         for tag in item[pos]:
             if len(results):
@@ -194,12 +160,11 @@ def format_def(item):
             usage = item[pos][tag]
 
             if tag != "":
-                results.append(f'<span class="usage-type usage-tag">[{tag}]: </span>')
+                results.append(f'<span class="tag">[{tag}]: </span>')
 
             results.append(f'<span class="usage">{usage}</span>')
 
-            if len(item.keys()) > 1:
-                results.append("</span>")
+            results.append('</span>')
 
     return "".join(results)
 
@@ -297,44 +262,31 @@ def build_item(row):
     tts_data = get_phrase(spanish,pos,noun_type,femnoun)
     sound = spanish_speech.get_speech(tts_data['voice'], tts_data['phrase'], args.mediadir)
 
+    all_usage_pos = { words.common_pos(k):1 for k in usage.keys() }.keys()
+    lookups = [ [ spanish, pos ] for pos in all_usage_pos ]
+    sentences = get_sentences(lookups, 3)
+
     if pos == "part":
         pos = "past participle"
 
     item = {
-#            'Picture': format_image(image),
-#        'Rank': row['count'],
         'Spanish': spanish,
         'Part of Speech': noun_type if pos == "noun" else pos,
         'Synonyms': ", ".join(syns),
         'English': english,
-        'Sentences': get_sentences(spanish, pos, 3),
+        'Sentences': sentences,
         'Display': tts_data['display'],
         'Audio':   format_sound(sound),
+        'guid': genanki.guid_for(wordtag, "Jeff's Spanish Deck")
     }
 
-    wordtag = make_tag(spanish, pos)
-    if 'guid' in row and row['guid']:
-        item['guid'] = row['guid']
-    elif wordtag in guids:
-        item['guid'] = guids[wordtag]
-    else:
-        item['guid'] = genanki.guid_for(wordtag, "Jeff's Spanish Deck")
 
-#        tags = [ row['pos'],str(math.ceil(int(row['rank']) / 500)*500) ]
     tags = [ noun_type if pos == "noun" else pos ]
     tags.append("NEW")
     if "tags" in row and row['tags'] != "":
         for tag in row['tags'].split(" "):
             tags.append(tag)
     item['tags'] = tags
-
-#        item['Picture'] = ""
-#        FILE=os.path.join(args.mediadir, image)
-#        if os.path.isfile(FILE):
-#            media.append(FILE)
-#        else:
-#            item['Picture'] = ""
-#            print("Skipping missing pic",image,row['rank'],row['spanish'], file=sys.stderr)
 
     FILE=os.path.join(args.mediadir, sound)
     if os.path.isfile(FILE):
@@ -366,15 +318,6 @@ if args.guids:
             wordtag = make_tag(row['spanish'], row['pos'])
             guids[wordtag] = row['guid']
 
-sentence_ids = {}
-if args.sentence_ids:
-    with open(args.sentence_ids) as infile:
-        csvreader = csv.DictReader(infile)
-        for row in csvreader:
-            wordtag = make_tag(row['spanish'], row['pos'])
-            sids = [ row[sid] for sid in [ 'sid1', 'sid2', 'sid3' ] if sid in row and row[sid] != "" ]
-            sentence_ids[wordtag] = sids
-
 # read through all the files to populate the synonyms and excludes lists
 for wordlist in args.wordlist:
     with open(wordlist, newline='') as csvfile:
@@ -404,7 +347,6 @@ for wordlist in args.wordlist:
                     item['spanish'] = new_word
                     item['pos'] = new_pos
                     allwords[newtag] = item
-                    #print(f"replaced {old_tag} with {new_word} ({new_pos})")
                 else:
                     replaced=False
                     for wordtag in list(allwords.keys()):
@@ -414,12 +356,10 @@ for wordlist in args.wordlist:
                             item['spanish'] = new_word
                             item['pos'] = new_pos
                             allwords[new_tag] = item
-                            #print(f"replaced {old_word} with {new_word} ({new_pos})")
                             replaced=True
                             break
                     if not replaced:
                         raise ValueError(f"{old_word} not found, unable to replace with {new_word} ({new_pos}) from {wordlist}")
-#                        allwords[newtag] = { 'spanish': new_word, 'pos': new_pos }
 
 
             # Negative rank indicates that all previous instances of this word should be removed
@@ -458,18 +398,18 @@ for wordtag, row in allwords.items():
     else:
         all_items.append(item)
 
-# Number the items
+# Number the items and add tags to each group of 500 items
 count = 1
 for item in all_items:
     item['Rank'] = str(count)
     count += 1
+    item['tags'].append( str(math.ceil(count / 500)*500) )
 
 with open(args.json) as jsonfile:
     data = json.load(jsonfile)
 
 model_guid = list(data['model'].keys())[0]
 model_name = data['model'][model_guid]['name']
-#deck_guid = [ item for item in data['deck'] if item != '1' ][0]
 deck_guid = 1587078062419
 
 my_deck = genanki.Deck(int(deck_guid),'Spanish top 5000-revised', "5000 common Spanish words")
@@ -487,7 +427,7 @@ _fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentenc
 if args.dump_sentence_ids:
     dump_sentences(args.dump_sentence_ids)
 
-with open('notes_rebuild.csv', 'w', newline='') as outfile:
+with open(args.deckname + '.notes.csv', 'w', newline='') as outfile:
     csvwriter = csv.writer(outfile)
     csvwriter.writerow(_fields)
 

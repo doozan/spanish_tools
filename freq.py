@@ -83,7 +83,7 @@ def get_word_flags(word,pos):
     if not spanish.has_word(word, pos):
         flags.append(flag("NODEF"))
 
-    res = sentences.get_sentences(word,pos,1)
+    res = sentences.get_sentences([[word,pos]],1)
     if not len(res['sentences']):
         flags.append(flag("NOSENT"))
 

@@ -21,7 +21,7 @@ args = parser.parse_args()
 all_selections = {}
 
 sentences = spanish_sentences.sentences("spanish_data/sentences.json")
-spanish = SpanishWords(dictionary="spanish_data/es-en.txt")
+words = SpanishWords(dictionary="spanish_data/es-en.txt")
 
 
 
@@ -152,13 +152,12 @@ def get_selection(word, pos):
     all_ids = selected_ids + [ x for x in sentences.get_all_sentence_ids(word, pos)['ids'] if x not in selected_ids ]
     all_options = sentences.get_sentences_from_ids(all_ids)
 
-    definition = format_def(spanish.lookup(word, pos))
+    definition = format_def(words.lookup(word, pos))
     return SentenceChooser(word, pos, definition, all_options, selected).main()
 
 def save_selections():
     with open(args.outfile, "w") as outfile:
         csvwriter = csv.writer(outfile)
-        csvwriter.writerow(["spanish","pos","sid1","sid2","sid3"])
         for tag, ids in all_selections.items():
             if ids and len(ids):
                 csvwriter.writerow( tag.split(":") + ids )
@@ -168,11 +167,13 @@ def save_selections():
 
 if os.path.isfile(args.outfile):
     with open(args.outfile) as infile:
-        csvreader = csv.DictReader(infile)
-        for row in csvreader:
-            selections = [ row[x] for x in ['sid1', 'sid2', 'sid3'] if row[x] != "" ]
+        for line in infile:
+            line = line.strip()
+            if line.startswith("#"):
+                continue
+            word,pos,*selections = line.split(",")
             if len(selections):
-                tag = f"{row['spanish']}:{row['pos']}"
+                tag = f"{word}:{pos}"
                 all_selections[tag] = selections
 
 default_selections = {}
@@ -182,14 +183,14 @@ if not args.infile:
 
 else:
     with open(args.infile) as infile:
-        csvreader = csv.DictReader(infile)
-        for row in csvreader:
-            all_items.append( [row['spanish'],row['pos']] )
-
-            selections = [ row[x] for x in ['sid1', 'sid2', 'sid3'] if x in row and row[x] != "" ]
+        for line in infile:
+            line = line.strip()
+            if line.startswith("#"):
+                continue
+            word,pos,*selections = line.split(",")
+            all_items.append( [word,pos] )
             if len(selections):
-                tag = f"{row['spanish']}:{row['pos']}"
-                default_selections[tag] = selections
+                default_selections[f"{word}:{pos}"] = selections
 
 
 for item in all_items:
