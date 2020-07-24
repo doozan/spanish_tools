@@ -609,12 +609,13 @@ class SpanishWordlist:
         if not pos:
             return ""
 
+        pos = pos.lower()
         if SpanishWordlist.pos_is_verb(pos):
             return "verb"
         if SpanishWordlist.pos_is_noun(pos):
             return "noun"
 
-        return pos.lower()
+        return pos
 
 
     # splits a list by comma, but with awareness of ()
