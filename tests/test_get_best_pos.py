@@ -4,7 +4,7 @@ import get_best_pos
 
 
 def test_get_best_pos():
-    words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt", synonyms="spanish_data/synonyms.txt")
+    words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
     sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 
     test_words = {
@@ -17,7 +17,7 @@ def test_get_best_pos():
     "apenas": "adv",
     "veras": "noun",
     "adelanto": "noun",
-    "entendido": "noun",
+    "entendido": "adj",
     "lamento": "verb",
     "contento": "adj",
     "placer": "noun",
@@ -28,12 +28,12 @@ def test_get_best_pos():
     "sentido": "noun",
     "asesino": "noun",
     "drogas": "noun",
-#    "salvo": "adv",
+    "salvo": "adv",
     "alrededor": "adv",
     "vete": "verb",
     "rosa": "noun",
     "noticias": "noun",
-#    "doble": "adj",
+    "doble": "adj",
     "comida": "noun",
     "chistes": "noun",
     "alerta": "noun",
@@ -42,7 +42,7 @@ def test_get_best_pos():
     "mentiroso": "noun",
     "mira": "verb",
     "rotas": "adj",
-    "hecho": "noun",
+    "hecho": "adj",
     }
 
     for word,pos in test_words.items():

@@ -66,11 +66,10 @@ class SpanishWords:
                 tags = { n.strip() for n in note.lower().split(',') }
 
                 # strip smaller country-specific usage if it's only listed for one country
-                overlap = tags & {"chile", "argentina", "venezuela", "peru", "uruguay", "el salvador", "colombia", "cuba", "honduras", "ecuador", "bolivia", "costa rica", "nicaragua", "dominican republic", "guatemala", "paraguay", "puerto rico", "panama", "caribbean", "philippines", "us", "united states", "new mexico"}
+                overlap = tags & {"chile", "argentina", "venezuela", "peru", "uruguay", "el salvador", "colombia", "cuba", "honduras", "ecuador", "bolivia", "costa rica", "nicaragua", "dominican republic", "guatemala", "paraguay", "puerto rico", "panama", "caribbean", "philippines", "us", "united states", "new mexico", "louisiana"}
                 if len(overlap) == 1:
                     if "mexico" not in tags and "spain" not in tags:
                         continue
-#                        del alldefs[pos][note]
                 res[pos][note] = defs
 
         return res

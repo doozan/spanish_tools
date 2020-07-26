@@ -194,7 +194,7 @@ def test_lookup():
     assert res == {'m/f': {'': 'pupil, student'}}
 
     res = lookup("abuelo", "noun")
-    assert res == {'m/f': {'f': 'grandmother', 'm': "grandfather; loose tufts of hair in the nape when one's hair is messed up", 'm, colloquial, affectionate': 'an elderly person'}}
+    assert res == {'m/f': {'f': 'grandmother', 'f, colloquial': 'old woman', 'm': 'grandfather', 'm, colloquial, affectionate': 'an elderly person'}} 
 
     # f-el detection
     res = lookup("alma", "noun")

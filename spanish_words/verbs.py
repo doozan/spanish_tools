@@ -213,6 +213,8 @@ class SpanishVerbs:
 
         # Check if it's already an infinitive listed in the dictionary
         if any(word.endswith(ending) for ending in all_verb_endings):
+            if word.endswith("se"):
+                return [ { 'verb': word, 'form': 1 }, { 'verb': word[:-2], 'form': 1 } ]
             return [ { 'verb': word, 'form': 1 } ]
 
         # Check if it's an irregular verb

@@ -56,12 +56,22 @@ def test_get_lemma_adj():
 
     pairs = {
         "notaword": "notaword",
+        "notwords": "notwords",
+
+        "titulares": "titular",
+
+        "vitales": "vital",
+
+        "torpones": "torpón",
+        "comunes": "común",
+
+        "veloces": "veloz",
+
         "bellos": "bello",
         "bellas": "bello",
         "bella": "bello",
-        "escocés": "escocés",
-        "chillones": "chillón",
-        "chillona": "chillón",
+
+        "escocés": "escocés"
     }
 
     for k,v in pairs.items():
@@ -118,11 +128,6 @@ def test_has_word():
 def test_lookup():
     lookup = words.lookup
 
-    # adjectives that are past participles should add a note and then the verb usage
-    res = lookup("descubierto", "adj")
-    print(res)
-    assert res == {'adj': {'': 'discovered', 'verb': 'past particple of descubrir'}, 'v': {'': 'to discover; to reveal; to invent'}}
-
     # nouns and adjectives that share a word should add each other's usage
     res = lookup("santo", "adj")
     assert res == {'adj': {'': 'holy, godly'}, 'm/f': {'': 'saint; name day'}}
@@ -143,11 +148,11 @@ def test_lookup():
     assert res == {'m/f': {'': 'pupil, student'}}
 
     res = lookup("abuelo", "noun")
-    assert res == {'m/f': {'f': 'grandmother', 'm': "grandfather; loose tufts of hair in the nape when one's hair is messed up", 'm, colloquial, affectionate': 'an elderly person'}}
+    assert res == {'m/f': {'f': 'grandmother', 'f, colloquial': 'old woman', 'm': 'grandfather', 'm, colloquial, affectionate': 'an elderly person'}} 
 
     # f-el detection
     res = lookup("alma", "noun")
-    assert res == {'f-el': {'': 'soul'}}
+    assert res ==  {'adj': {'poetic': 'nourishing; venerable'}, 'f-el': {'': 'soul'}}
 
     # m-f detection
     res = lookup("batería", "noun")

@@ -10,27 +10,30 @@ def test_init():
 def test_get_lemma():
     get_lemma = obj.get_lemma
 
-    assert get_lemma("notaword") == ["notaword"]
+    test_words = {
+        "dentista": "dentista",
+        "dentistas": "dentista",
 
-    assert get_lemma("dentista") == ["dentista"]
-    assert get_lemma("dentistas") == ["dentista"]
+        "profesores": "profesor",
+        "profesoras": "profesor",
+        "profesora": "profesor",
 
-    assert get_lemma("profesores") == ["profesor"]
-    assert get_lemma("profesoras") == ["profesor"]
-    assert get_lemma("profesora") == ["profesor"]
+        "titulares": "titular",
 
-    assert get_lemma("titulares") == ["titular"]
+        "vitales": "vital",
 
-    assert get_lemma("vitales") == ["vital"]
+        "torpones": "torpón",
+        "comunes": "común",
 
-    assert get_lemma("torpones") == ["torpón"]
-    assert get_lemma("comunes") == ["común"]
+        "veloces": "veloz",
 
-    assert get_lemma("veloces") == ["veloz"]
+        "bellos": "bello",
+        "bellas": "bello",
+        "bella": "bello",
 
-    assert get_lemma("bellos") == ["bello","bellos"]
-    assert "bello" in get_lemma("bellas")
-    assert "bello" in get_lemma("bella")
+        "escocés": "escocés"
+    }
 
-    assert "escocés" in get_lemma("escocés")
+    for k,v in test_words.items():
+        assert v in get_lemma(k)
 

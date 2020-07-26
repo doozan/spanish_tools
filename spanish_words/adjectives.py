@@ -52,21 +52,21 @@ class SpanishAdjectives:
 
         # at this point we're just guessing and returning a list of possible matches to be checked against
         # the wordlist.  Return with/without -s and try changing -a to -o
-        elif word.endswith("s"):
+        if word.endswith("s"):
             match.append(word[:-1])
-            if word[-2] == "a":
-                match.append(word[:-2]+"o")
             match.append(word)
+            word = word[:-1]
 
-        elif word.endswith("a"):
+        if word.endswith("a"):
             # chillona -> chillón
-            if word.endswith("ona"):
+            if word.endswith("ona") or word.endswith("ana"):
                 match.append(word[:-1])
                 match.append(word[:-3] + self.stress(word[-3] + word[-2]))
             match.append(word[:-1]+"o")
+            match.append(word[:-1])
             match.append(word)
 
-        else:
+        if not len(match):
             match.append(word)
 
         return match
