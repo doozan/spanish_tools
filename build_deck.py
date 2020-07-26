@@ -18,8 +18,10 @@ parser.add_argument('deckname', help="Name of deck to build")
 parser.add_argument('-m', '--mediadir', help="Directory containing deck media resources (default: DECKNAME.media)")
 parser.add_argument('-w', '--wordlist', action='append', help="List of words to include/exclude from the deck (default: DECKNAME.json")
 parser.add_argument('-j', '--json',  help="JSON file with deck info (default: DECKNAME.json)")
-parser.add_argument('-g', '--guids',  help="Read guids from file")
 parser.add_argument('-d', '--dump-sentence-ids',  help="Dump sentence ids to file")
+parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
+parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
+
 args = parser.parse_args()
 
 if not args.mediadir:
@@ -32,17 +34,17 @@ if not args.json:
     args.json = args.deckname + ".json"
 
 if not os.path.isdir(args.mediadir):
-    fail(f"Deck directory does not exist: {args.mediadir}")
+    print(f"Deck directory does not exist: {args.mediadir}")
+    exit(1)
 
 for wordlist in args.wordlist:
     if not os.path.isfile(wordlist):
-        fail(f"Wordlist file does not exist: {wordlist}")
+        print(f"Wordlist file does not exist: {wordlist}")
+        exit(1)
 
 if not os.path.isfile(args.json):
-    fail(f"Deck JSON does not exist: {args.json}")
-
-if args.guids and not os.path.isfile(args.guids):
-    fail(f"File does not exist: {args.guids}")
+    print(f"Deck JSON does not exist: {args.json}")
+    exit(1)
 
 
 words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
@@ -58,7 +60,7 @@ def fail(*args, **kwargs):
     exit(1)
 
 def format_sentences(sentences):
-    return "<br>\n".join( f'<span class="spa">{item[0]}</span><br><span class="eng">{item[1]}</span>' for item in sentences )
+    return "<br>\n".join( f'<span class="spa">{item[0]}</span><br>\n<span class="eng">{item[1]}</span>' for item in sentences )
 
 all_sentences = {}
 def get_sentences(items, count):
@@ -144,12 +146,13 @@ def format_image(filename):
 def format_def(item):
 
     results = []
-    first = True
     for pos in item:
-        pos_tag = f'<span class="pos pos-{pos}"> '
-        if len(item.keys()) > 1 and not first:
-            pos_tag = f'<span class="pos pos-{pos}">{{{pos}}} '
-        first=False
+        common_pos = words.common_pos(pos)
+        safe_pos = pos.replace("/", "_")
+        if pos in [ "m-f", "m/f" ]:
+            pos_tag = f'<span class="pos {common_pos} {safe_pos}">'
+        else:
+            pos_tag = f'<span class="pos {common_pos} {safe_pos}">{{{pos}}}'
 
         for tag in item[pos]:
             if len(results):
@@ -160,7 +163,7 @@ def format_def(item):
             usage = item[pos][tag]
 
             if tag != "":
-                results.append(f'<span class="tag">[{tag}]: </span>')
+                results.append(f'<span class="tag">[{tag}]:</span>')
 
             results.append(f'<span class="usage">{usage}</span>')
 
@@ -310,14 +313,6 @@ media = []
 notes = []
 all_items = []
 
-guids = {}
-if args.guids:
-    with open(args.guids) as infile:
-        csvreader = csv.DictReader(infile)
-        for row in csvreader:
-            wordtag = make_tag(row['spanish'], row['pos'])
-            guids[wordtag] = row['guid']
-
 # read through all the files to populate the synonyms and excludes lists
 for wordlist in args.wordlist:
     with open(wordlist, newline='') as csvfile:
@@ -328,6 +323,9 @@ for wordlist in args.wordlist:
 
         for row in csvreader:
             if not row:
+                continue
+
+            if 'flags' in row and 'CLEAR' not in row['flags']:
                 continue
 
             # Rank that is another word instead of a numeric value will replace pos:word specified
@@ -389,7 +387,12 @@ for wordlist in args.wordlist:
                     allwords[wordtag] = row
 
 # Build the items
+count=0
 for wordtag, row in allwords.items():
+    count+=1
+    if args.limit and count>args.limit:
+        break
+
     item = build_item(row)
 
     rank = int(row['rank']) if row['rank'] else 0
@@ -399,10 +402,10 @@ for wordtag, row in allwords.items():
         all_items.append(item)
 
 # Number the items and add tags to each group of 500 items
-count = 1
+count = 0
 for item in all_items:
-    item['Rank'] = str(count)
     count += 1
+    item['Rank'] = str(count)
     item['tags'].append( str(math.ceil(count / 500)*500) )
 
 with open(args.json) as jsonfile:
@@ -424,23 +427,28 @@ card_model = genanki.Model(model_guid,
 
 _fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Display", "Audio" ]
 
-if args.dump_sentence_ids:
-    dump_sentences(args.dump_sentence_ids)
+rows = []
+for item in all_items:
+    row = []
+    for field in _fields:
+        row.append(item[field])
 
-with open(args.deckname + '.notes.csv', 'w', newline='') as outfile:
-    csvwriter = csv.writer(outfile)
-    csvwriter.writerow(_fields)
-
-    for item in all_items:
-        row = []
-        for field in _fields:
-            row.append(item[field])
-
-        note = MyNote( model = card_model, sort_field=row[4], fields = row, guid = item['guid'], tags = item['tags'] )
-        note._order = int(item['Rank'])
-        my_deck.add_note( note )
-        csvwriter.writerow(row)
+    note = MyNote( model = card_model, sort_field=row[4], fields = row, guid = item['guid'], tags = item['tags'] )
+    note._order = int(item['Rank'])
+    my_deck.add_note( note )
+    rows.append(row)
 
 my_package = genanki.Package(my_deck)
 my_package.media_files = media
 my_package.write_to_file(args.deckname + '.apkg')
+
+
+if args.dump_sentence_ids:
+    dump_sentences(args.dump_sentence_ids)
+
+if args.dump_notes:
+    with open(args.dump_notes, 'w', newline='') as outfile:
+        csvwriter = csv.writer(outfile)
+        csvwriter.writerow(_fields)
+        for row in rows:
+            csvwriter.writerow(row)

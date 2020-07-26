@@ -3,14 +3,8 @@
 
 import sys
 import spanish_words
-import argparse
 import re
 
-parser = argparse.ArgumentParser(description='Check and clean wiktionary dump')
-parser.add_argument('infile', help="Input file")
-parser.add_argument('--dry-run', help="Don't print output line", action="store_true")
-parser.add_argument('--debug', help="Print cleanup information about messy items", action="store_true")
-_args = parser.parse_args()
 
 spanish = None
 all_plurals = {}
@@ -342,4 +336,14 @@ def main():
 
 
 if __name__ == "__main__":
-   main()
+
+    import argparse
+    global _args
+
+    parser = argparse.ArgumentParser(description='Check and clean wiktionary dump')
+    parser.add_argument('infile', help="Input file")
+    parser.add_argument('--dry-run', help="Don't print output line", action="store_true")
+    parser.add_argument('--debug', help="Print cleanup information about messy items", action="store_true")
+    _args = parser.parse_args()
+
+    main()

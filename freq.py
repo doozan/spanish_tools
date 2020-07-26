@@ -14,7 +14,6 @@ import get_best_pos
 parser = argparse.ArgumentParser(description='Lemmatize frequency list')
 parser.add_argument('--ignore', nargs=1, help="List of words to ignore")
 parser.add_argument('file', help="Frequency list")
-parser.add_argument('outfile', help="CSV file to create")
 args = parser.parse_args()
 
 if args.ignore and not os.path.isfile(args.ignore[0]):
@@ -45,7 +44,7 @@ flags_defs = {
     'UNKNOWN': "Word does not appear in lemma database or dictionary",
     'NOUSAGE': "Multiple POS, but no sentences for any usage",
     'PRONOUN': "Ignoring pronouns",
-    'FILLER': "Common filler word",
+    'COMMON': "Common filler word",
     'LETTER': "Letter",
     'NODEF': "No definition",
     'NOSENT': "No sentences",
@@ -112,7 +111,7 @@ def build_wordlist():
         flags = get_word_flags(word, pos)
         # flag the most common "filler" words (pronouns, articles, etc)
         if count<200 and pos not in [ "adj", "adv", "noun", "verb" ]:
-            flags.append(flag("FILLER"))
+            flags.append(flag("COMMON"))
 
         # Check for repeat usage
         if word not in wordusage:
@@ -217,51 +216,14 @@ for word,item in lines.items():
         lemma = get_best_lemma(lemma,pos)
         add_count(lemma, pos, count, word)
 
-# Look through the lemmas to find verbs with overwhelming usage of
-# forms that could be interj, nouns, or adjectives
-#for tag,item in freq.items():
-#    if not tag.startswith("verb"):
-#        continue
-#
-#    count = item['count']
-#    uses = item['usage']
-#    wordcount,word = uses[0].split(":")
-#
-#    if len(uses) == 1:
-#        pos,verb = tag.split(":")
-#        if word != verb:
-#            if spanish.has_word(word):
-#                print(f"Single use of verb {verb} -> {word} has alternate uses :: ", uses[0])
-#    else:
-#        if int(wordcount) > (int(count)*.8):
-#            pos,verb = tag.split(":")
-#            if word != verb:
-#                if spanish.has_word(word):
-#                    print(f"Majority use of verb {verb} -> {word} {count} has alternate uses :: ", uses[0])# lines[word]['posrank'])
-#
-#exit(1)
-
-with open(args.file+".lemmas.csv",'w') as outfile:
-    csvwriter = csv.writer(outfile)
-    csvwriter.writerow(["count", "word", "lemma", "pos"])
-
-    for word,item in lines.items():
-        lemma = item['lemma']
-        pos = item['pos']
-        count = item['count']
-        csvwriter.writerow([count,word,lemma,pos])
-
 
 build_wordlist()
 
-with open(args.outfile,'w') as outfile:
-    csvwriter = csv.writer(outfile)
-    csvwriter.writerow(["rank", "spanish", "pos","flags","usage"])
+print("rank,spanish,pos,flags,usage")
+for k,item in sorted(wordlist.items(), key=lambda item: item[1]['count']):
+    if len(item['flags']) == 1 and "LITERAL" in item['flags']:
+        item['flags'].append("CLEAR")
 
-    for k,item in sorted(wordlist.items(), key=lambda item: item[1]['count']):
-        if len(item['flags']) == 1 and "LITERAL" in item['flags']:
-            item['flags'].append("CLEAR")
-
-        if not len(item['flags']):
-            item['flags'].append("CLEAR")
-        csvwriter.writerow([item['count'],item['word'],item['pos'],"; ".join(item['flags']),"|".join(item['usage'])])
+    if not len(item['flags']):
+        item['flags'].append("CLEAR")
+    print(",".join(map(str, [item['count'],item['word'],item['pos'],"; ".join(item['flags']),"|".join(item['usage'])] )))
