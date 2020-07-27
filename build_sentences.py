@@ -5,6 +5,7 @@ import argparse
 import sys
 import os
 import re
+import ijson
 import json
 import spanish_words
 import bz2
@@ -167,78 +168,74 @@ def print_tagged_data():
     tagdata = {}
 
     with open(args.tags[0], 'r', encoding="utf-8") as infile:
-        tagdata = json.load(infile)
 
-#    with bz2.BZ2File(args.tags[0], 'r') as infile:
-#        tagdata = json.load(infile)
+        first=True
+        print("[")
+        seen = {}
+        index = 0
 
-#    with zipfile.ZipFile(args.tags[0], 'r') as z:
-#        filename = z.namelist()[0]
-#        with z.open(filename) as f:
-#            tagdata = json.load(f)
+        items = ijson.kvitems(infile, 'item')
 
-
-    first=True
-    print("[")
-    seen = {}
-    index = 0
-    for p in tagdata: #['paragraphs']:
-        sdata = sentences[idx2sent[index]]
-        english,spanish,credits,score = sdata
-        index = index+1
-
-        pos_tags = []
-        for s in p['sentences']:
-            for t in s['tokens']:
-                pos_tag = tag_to_pos(t)
-                if not pos_tag:
-                    continue
-                pos_tags.append(pos_tag)
-                plemma = pos_tag[1]
-                if "_" in plemma:
-                    pword = pos_tag[2][1:]
-                    for word,lemma in zip( pword.split("_"), plemma.split("_") ):
-                        pos_tags.append(['split', lemma, '@'+word])
-
-
-        tags = group_tags(pos_tags)
-
-        # ignore sentences with the same adj/adv/noun/verb/pastparticiple combination
-        unique_tags = []
-        for n in [ "adj", "adv", "noun", "verb", "part" ]:
-            if n not in tags:
+        for k,v in items:
+            if k!='sentences':
                 continue
-            unique_tags += [t for t in tags[n] if not t.startswith("@")]
-        uniqueid = ":".join(sorted(set(unique_tags)))
-        if uniqueid in seen:
-            continue
-        seen[uniqueid] = 1
+
+            sdata = sentences[idx2sent[index]]
+            english,spanish,credits,score = sdata
+            index = index+1
+
+            pos_tags = []
+            for s in v:
+                for t in s['tokens']:
+                    pos_tag = tag_to_pos(t)
+                    if not pos_tag:
+                        continue
+                    pos_tags.append(pos_tag)
+                    plemma = pos_tag[1]
+                    if "_" in plemma:
+                        pword = pos_tag[2][1:]
+                        for word,lemma in zip( pword.split("_"), plemma.split("_") ):
+                            pos_tags.append(['split', lemma, '@'+word])
 
 
-        interj = get_interjections(spanish)
-        if interj:
-            tags['interj'] = list(map(str.lower, interj))
+            tags = group_tags(pos_tags)
 
-        res = re.match(r"CC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)", credits)
-        eng_id, eng_user, spa_id, spa_user = res.groups()
+            # ignore sentences with the same adj/adv/noun/verb/pastparticiple combination
+            unique_tags = []
+            for n in [ "adj", "adv", "noun", "verb", "part" ]:
+                if n not in tags:
+                    continue
+                unique_tags += [t for t in tags[n] if not t.startswith("@")]
+            uniqueid = ":".join(sorted(set(unique_tags)))
+            if uniqueid in seen:
+                continue
+            seen[uniqueid] = 1
 
-        english = json.dumps(english, ensure_ascii=False)
-        spanish = json.dumps(spanish, ensure_ascii=False)
-        tags = json.dumps(tags, ensure_ascii=False)
-        credits = json.dumps(credits, ensure_ascii=False)
 
-        if not first:
-            print(",\n")
-        else:
-            first = False
+            interj = get_interjections(spanish)
+            if interj:
+                tags['interj'] = list(map(str.lower, interj))
 
-        print(\
+            res = re.match(r"CC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)", credits)
+            eng_id, eng_user, spa_id, spa_user = res.groups()
+
+            english = json.dumps(english, ensure_ascii=False)
+            spanish = json.dumps(spanish, ensure_ascii=False)
+            tags = json.dumps(tags, ensure_ascii=False)
+            credits = json.dumps(credits, ensure_ascii=False)
+
+            if not first:
+                print(",\n")
+            else:
+                first = False
+
+            print(\
 f"""[{score}, {eng_id}, "{eng_user}", {spa_id}, "{spa_user}",
 {english},
 {spanish},
 {tags}]""", end="")
 
-    print("\n]")
+        print("\n]")
 
 
 if not (args.tags):
