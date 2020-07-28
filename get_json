@@ -1,2 +1,0 @@
-#!/bin/sh
-sqlite3 ~/.local/share/Anki2/User\ 1/collection.anki2 "select models from col" | jq '.["1587075402744"] | {"model": {"1587075402744": .}}' > spanish_5k.json
