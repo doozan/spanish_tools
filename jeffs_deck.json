@@ -1,0 +1,135 @@
+{
+  "model": {
+    "1587075402744": {
+      "css": ".card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: white;\n background-color: black;\n}\n.synonyms { font-size: .75em }\n.pos { font-size: .75em }\n.eng { font-style: italic; font-size: .75em }",
+      "did": 1587078062419,
+      "flds": [
+        {
+          "name": "Rank",
+          "ord": 0,
+          "sticky": false,
+          "rtl": false,
+          "font": "Arial",
+          "size": 20,
+          "media": []
+        },
+        {
+          "name": "Spanish",
+          "ord": 1,
+          "sticky": false,
+          "rtl": false,
+          "font": "Arial",
+          "size": 20,
+          "media": []
+        },
+        {
+          "name": "Part of Speech",
+          "ord": 2,
+          "sticky": false,
+          "rtl": false,
+          "font": "Arial",
+          "size": 20,
+          "media": []
+        },
+        {
+          "name": "Synonyms",
+          "ord": 3,
+          "sticky": false,
+          "rtl": false,
+          "font": "Arial",
+          "size": 20,
+          "media": []
+        },
+        {
+          "name": "English",
+          "ord": 4,
+          "sticky": false,
+          "rtl": false,
+          "font": "Arial",
+          "size": 20,
+          "media": []
+        },
+        {
+          "name": "Sentences",
+          "ord": 5,
+          "sticky": false,
+          "rtl": false,
+          "font": "Arial",
+          "size": 20,
+          "media": []
+        },
+        {
+          "name": "Display",
+          "ord": 6,
+          "sticky": false,
+          "rtl": false,
+          "font": "Arial",
+          "size": 20,
+          "media": []
+        },
+        {
+          "name": "Audio",
+          "ord": 7,
+          "sticky": false,
+          "rtl": false,
+          "font": "Arial",
+          "size": 20,
+          "media": []
+        }
+      ],
+      "id": 1587075402744,
+      "latexPost": "\\end{document}",
+      "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+      "mod": 1589498141,
+      "name": "Spanish5k-40320",
+      "req": [
+        [
+          0,
+          "any",
+          [
+            2,
+            7
+          ]
+        ],
+        [
+          1,
+          "any",
+          [
+            2,
+            3,
+            4
+          ]
+        ]
+      ],
+      "sortf": 0,
+      "tags": [],
+      "tmpls": [
+        {
+          "name": "Forward",
+          "ord": 0,
+          "qfmt": "<div class=\"pos\">{{Part of Speech}}</div>\n<div style=\"display:none;\">{{Audio}}</div>\n",
+          "afmt": "{{Display}}\n<div class=\"pos\">{{Part of Speech}} {{Rank}}</div>\n{{#Synonyms}}<div class=\"synonyms\">[also {{Synonyms}}]</div>\n{{/Synonyms}}\n\n<hr id=answer>\n\n{{English}}\n<br><br>\n{{Sentences}}",
+          "did": null,
+          "bqfmt": "",
+          "bafmt": "",
+          "bfont": "Arial",
+          "bsize": 12
+        },
+        {
+          "name": "Reverse",
+          "ord": 1,
+          "qfmt": "{{English}}\n<div class=\"pos\">{{Part of Speech}}</div>\n{{#Synonyms}}<div class=\"synonyms\">[not {{Synonyms}}]</div>\n{{/Synonyms}}\n",
+          "afmt": "{{English}}\n<div class=\"pos\">{{Part of Speech}} {{Rank}}</div>\n{{#Synonyms}}<div class=\"synonyms\">[not {{Synonyms}}]</div>\n{{/Synonyms}}\n<div style=\"display:none;\">{{Audio}}</div>\n\n<hr id=answer>\n\n{{Display}}\n<br><br>\n{{Sentences}}",
+          "did": null,
+          "bqfmt": "",
+          "bafmt": "",
+          "bfont": "Arial",
+          "bsize": 12
+        }
+      ],
+      "type": 0,
+      "usn": 131,
+      "vers": []
+    }
+  }
+}
