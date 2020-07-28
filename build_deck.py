@@ -18,7 +18,7 @@ parser.add_argument('deckname', help="Name of deck to build")
 parser.add_argument('-m', '--mediadir', help="Directory containing deck media resources (default: DECKNAME.media)")
 parser.add_argument('-w', '--wordlist', action='append', help="List of words to include/exclude from the deck (default: DECKNAME.json")
 parser.add_argument('-j', '--json',  help="JSON file with deck info (default: DECKNAME.json)")
-parser.add_argument('-d', '--dump-sentence-ids',  help="Dump sentence ids to file")
+parser.add_argument('-d', '--dump-sentence-ids',  help="Dump high scoring sentence ids to file")
 parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
 parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
 
@@ -73,19 +73,49 @@ def get_sentences(items, count):
 
     return ""
 
+
+dumpable_sentences = {}
+def save_dump_sentences(lookups):
+    if not args.dump_sentence_ids:
+        return
+
+    for word,pos in lookups:
+        tag = make_tag(word, pos)
+        if tag in dumpable_sentences:
+            continue
+
+        results = spanish_sentences.get_sentences( [ [word,pos] ], 3)
+        if not results:
+            continue
+
+        if results['matched'] not in ('preferred', 'exact'):
+            continue
+
+        if len(results['sentences']) != 3:
+            continue
+
+        all_good=True
+        for sentence in results['sentences']:
+            if sentence[2] not in [ 55, 56 ]:
+                all_good = False
+
+        if all_good:
+            ids = [ f"{sentence[3]}:{sentence[4]}" for sentence in results['sentences' ] ]
+            dumpable_sentences[tag] = ids
+
+
 # (spanish, english, score, spa_id, eng_id)
 def dump_sentences(filename):
     with open(filename, "w") as outfile:
-        csvwriter = csv.writer(outfile)
-        csvwriter.writerow([ "spanish", "pos", "sid1", "sid2", "sid3" ])
-
-        for tag,value in all_sentences.items():
+        print(f"dumping {filename}")
+        for tag,ids in sorted(dumpable_sentences.items()):
             pos,word = tag.split(":")
-            row = [word,pos]
-            for sentence in value['sentences']:
-                row.append(f"{sentence[3]}:{sentence[4]}")
+            row = [word,pos] + ids
 
-            csvwriter.writerow(row)
+            outfile.write(",".join(row))
+            outfile.write("\n")
+
+
 
 class MyNote(genanki.Note):
     def write_card_to_db(self, cursor, now_ts, deck_id, note_id, order, due):
@@ -268,6 +298,7 @@ def build_item(row):
     all_usage_pos = { words.common_pos(k):1 for k in usage.keys() }.keys()
     lookups = [ [ spanish, pos ] for pos in all_usage_pos ]
     sentences = get_sentences(lookups, 3)
+    save_dump_sentences(lookups)
 
     if pos == "part":
         pos = "past participle"
@@ -395,7 +426,7 @@ for wordtag, row in allwords.items():
 
     item = build_item(row)
 
-    rank = int(row['rank']) if row['rank'] else 0
+    rank = row.get('rank', 0)
     if rank and rank < len(all_items):
         all_items.insert(rank-1, item)
     else:

@@ -20,9 +20,11 @@ class sentences:
         self.grepdb = []
         self.sentencedb = []
         self.tagdb = {}
+        self.id_index = {}
         self.tagfixes = {}
         self.filter_ids = {}
         self.forced_ids = {}
+        self.forced_ids_source = {}
 
 
         dataprefix = os.path.splitext(datafile)[0]
@@ -68,13 +70,18 @@ class sentences:
                 self.sentencedb.append( (spanish, english, score, spa_id, eng_id) )
                 self.grepdb.append(stripped)
 
+                self.id_index[f"{spa_id}:{eng_id}"] = index
+
                 self.add_tags_to_db(tags,index)
                 index+=1
 
-        # Forced items must be processed last
-        dataforced = dataprefix + ".forced"
-        if os.path.isfile(dataforced):
+        # Forced/preferred items must be processed last
+        for source in [ "preferred", "forced" ]:
+            dataforced = dataprefix+"."+source
+            if not os.path.isfile(dataforced):
+                continue
             with open(dataforced) as infile:
+
                 for line in infile:
                     line = line.strip()
                     if line.startswith("#"):
@@ -82,6 +89,7 @@ class sentences:
                     word,pos,*forced_itemtags = line.split(",")
                     wordtag = make_tag(word, pos)
                     self.forced_ids[wordtag] = self.itemtags_to_ids(forced_itemtags)
+                    self.forced_ids_source[wordtag] = source
 
 
     def strip_sentence(self, string):
@@ -173,7 +181,7 @@ class sentences:
             wordtag = make_tag(word, pos)
             forced_ids = self.forced_ids.get(wordtag,[])
             if len(forced_ids):
-                source = "forced"
+                source = self.forced_ids_source[wordtag]
                 item_ids = forced_ids[:count]
                 seen |= set( [ self.sentencedb[x][IDX_SPAID] for x in item_ids ] )
                 seen |= set( [ self.sentencedb[x][IDX_ENGID] for x in item_ids ] )
@@ -265,7 +273,7 @@ class sentences:
         return { "ids": ids, "source": source }
 
     def itemtags_to_ids(self, items):
-        return [ idx for idx in range(0,len(self.sentencedb)) if f"{self.sentencedb[idx][3]}:{self.sentencedb[idx][4]}" in items ]
+        return [ self.id_index.get(tag) for tag in items ]
 
     def get_sentences(self, items, count, forced_items=[]):
 
