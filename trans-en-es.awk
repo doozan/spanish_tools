@@ -37,6 +37,12 @@
 #    include synonyms (syn, synonyms template):
 #    -v ENABLE_SYN="y" 
 #
+#    include metadata (irregular verb conjugation templates, noun/adj plurals/feminines)
+#    -v ENABLE_META="y"
+#
+#    dump metadata templates to a separate file (only useful for debugging metadata, requires ENABLE_METADATA)
+#    -v DEBUG_META="meta-templates.txt"
+#
 #########################
 
 BEGIN {
@@ -65,6 +71,9 @@ else remove_wikilinks = 0;
 #
 if(ENABLE_SYN == "y") enable_syn = 1;
 else enable_syn = 0;
+#
+if(ENABLE_META == "y") enable_meta = 1;
+else enable_meta = 0;
 #
 # default options if not set in language configuration below
 rm_headless_pos = 0;
@@ -124,6 +133,8 @@ nounhead = "\\{\\{head\\|es\\|(noun|proper noun)\\||\\{\\{es-noun\\||\\{\\{es-pr
 # verb headline
 verbhead = "\\{\\{es-verb[\\|\\}]|\\{\\{head\\|es\\|verb[\\|\\}]";
 #
+# metadata headline (nouns, verbs, and adjectives)
+metahead = "\\{\\{head\\|es\\|(noun|proper noun)\\||\\{\\{es-(noun|proper noun|conj-..|adj)\\|";
 # Options to add pronunciation
 enable_ipa = 0;
 # default regex matching IPA-pronunciation line 
@@ -904,6 +915,7 @@ if(4 in tpar) outp = outp " " tpar[4];
 if("means" in tpar) outp = outp " = " tpar["means"];
 outp = outp "]";
 return outp;
+
 
 # Spanish and others
 # get gender from "es-noun", "es-proper noun" and other languages
@@ -1921,6 +1933,200 @@ next;
 # form of headers, exclude current POS section
 $0 ~ exclude_POS {pos="-"; next;}
 
+enable_meta && $0 ~ metahead {
+    if (prevtitle != title) {
+        in_vmeta = 0
+        prevmeta = ""
+    }
+
+    # Strip anything in html comments, even if they've been sanitized
+    gsub(/<!--[^>]*-->/,"")
+    gsub(/&lt;!--[^>]*--&gt;/,"")
+
+    # replace nested braces and escape their bar separators
+    # {{es-noun|m|administradores de base de datos|head={{l|es|administrador}} de {{l|es|base de datos}}|f=administradora de base de datos}}
+    # becomes
+    # {{es-noun|m|administradores de base de datos|head=_SOB__SOB_l_WLB_es_WLB_administrador_SCB__SCB_ de _SOB__SOB_l_WLB_es_WLB_base de datos_SCB__SCB_|f=administradora de base de datos}}
+
+
+    sob="_SOB_"
+    scb="_SCB_"
+    wlbar="_WLB_"
+
+    line = ""
+    split($0, chars, "")
+    nested = 0
+    for (i=1; i <= length($0); i++) {
+        if (chars[i] == "{") {
+            nested = nested+1
+            if (nested > 2)
+                line = line sob
+            else
+                line = line "{"
+
+        }
+        else if (chars[i] == "}") {
+            if (nested > 2)
+                line = line scb
+            else
+                line = line "}"
+            nested = nested-1
+        }
+        else if (chars[i] == "|") {
+            if (nested > 2)
+                line = line wlbar
+            else
+                line = line "|"
+        }
+        else
+            line = line chars[i]
+    }
+
+    # split input string into templates (ta[1, ..., n]) and non-template strings (sa[0, ..., n])
+    nt = patsplit(line, ta, /\{\{[^}{]*\}\}/, sa);
+
+    for(i=1; i<=nt; i=i+1) {
+        ts = ta[i]
+
+        # probably unnecessary, but ignore any other templates on this line
+        if (ts !~ metahead) continue
+
+        # replace bars inside [[]]
+        ts = gensub(/(\[\[[^\]]*)(\|)([^\]]*\]\])/, "\\1" wlbar "\\3", "g", ts)
+
+        # split template arguments into array targs
+        sub(/\{\{/, "", ts)
+        sub(/\}\}/, "", ts)
+        na = split(ts, targs, "|");
+
+        k = 0; delete tpar;
+        for(j=1; j<=na; j=j+1) {
+            n2 = split(targs[j], a2, "=");
+            # prevent uninitialized  a2[1] for empty template argument targs[j]
+            if(n2==0)  a2[1] = "";
+            if(n2 <= 1) {tpar[k] = a2[1]; k=k+1;}
+            else        tpar[a2[1]] = a2[2];
+        }
+
+        #         0 1             2
+        # {{es-noun|m|pluralization|f=feminine}}
+
+        #         0 1                                                       2
+        # {{es-noun|m|head=[[hombre]] [[de]] [[negocios]]|hombres de negocios|f=mujer de negocios}}
+
+        #      0  1           2      3      4  5       6
+        # {{head|es|proper noun|plural|lemmas|or|lemmata|head=[[distrito|Distrito]] [[federal|Federal]]|g=m}}
+
+        # {{head|es|proper noun|head=[[puerto|Puerto]] [[rico|Rico]]}}
+
+        # {{head|es|adjective|feminine|esa|masculine plural|esos|feminine plural|esas|g=m}}
+
+                         0 1
+        # {{es-proper noun|m|head={{l|es|Aragón}} {{1|oriental}}}}
+
+
+        switch (tpar[0]) {
+
+        # calls to {{head}} with more than 2 paramaters may have interesting data, but parsing them is beyond the scope of this script
+        case "head":
+            if (DEBUG_META && k>3)
+                print title " {headline} :: " $0 > DEBUG_META
+            next
+
+        case /adj/:
+
+            data = ""
+            if ("m" in tpar) data = data "m:'" tpar["f"] "' "
+            if ("f" in tpar) data = data "f:'" tpar["f"] "' "
+            if ("f2" in tpar) data = data "f:'" tpar["f2"] "' "
+            if ("pl" in tpar) data = data "pl:'" tpar["pl"] "' "
+            if ("pl2" in tpar) data = data "pl:'" tpar["pl2"] "' "
+            if ("mpl" in tpar) data = data "mpl:'" tpar["mpl"] "' "
+            if ("mpl2" in tpar) data = data "mpl:'" tpar["mpl2"] "' "
+            if ("fpl" in tpar) data = data "fpl:'" tpar["fpl"] "' "
+            if ("fpl2" in tpar) data = data "fpl:'" tpar["fpl2"] "' "
+
+            if (data != "") {
+                meta = title " {meta-adj} :: " data
+
+                if (prevmeta != meta) {
+                    # We only want the first header
+                    if (prevadj != title) {
+                        print meta
+                        if (DEBUG_META) print title " :: " $0 " :: " meta  > DEBUG_META
+                    }
+                    else if (DEBUG_META) print title " {secondary} :: " $0 " :: " meta > DEBUG_META
+                }
+                prevmeta = meta
+            }
+            prevadj = title
+            break
+
+        case /noun/:
+
+            data = ""
+            if (2 in tpar && tpar[2] != "") data = data "pl:'" tpar[2] "' "
+            if ("pl2" in tpar && tpar["pl2"] != "") data = data "pl:'" tpar["pl2"] "' "
+            if ("m" in tpar) data = data "m:'" tpar["m"] "' "
+            if ("f" in tpar) data = data "f:'" tpar["f"] "' "
+
+            if (data != "") {
+                meta = title " {meta-noun} :: " data
+
+                if (prevmeta != meta) {
+                    # We only want the first header
+                    if (prevnoun != title) {
+                        print meta
+                        if (DEBUG_META) print title " :: " $0 " :: " meta  > DEBUG_META
+                    }
+                    else if (DEBUG_META) print title " {secondary} :: " $0 " :: " meta > DEBUG_META
+                }
+                prevmeta = meta
+            }
+            prevnoun = title
+            break
+
+        case /conj/:
+
+            stems = "stem:''"
+            # k = number of stems+1
+            if (k>1) {
+                stems = ""
+                for (j=1; j<k; j=j+1)
+                    stems = stems " stem:'" tpar[j] "'"
+            }
+
+            meta = title " {meta-verb} ::"
+            if ("p" in tpar)
+                meta = meta " pattern:'" tpar["p"] "'"
+            else
+                meta = meta " pattern:''"
+            meta = meta stems
+
+            # some verbs have two conjugations, if we've just detected that we're in an irregular verb,
+            # and we've also already seen a regular conjugation for this verb, print the regular conjugation line
+            if ("p" in tpar && !in_vmeta) {
+                in_vmeta = 1
+                if (prevtitle == title && prevmeta != "") {
+                    print prevmeta
+                    if (DEBUG_META) print title " :: " prevline " :: " prevmeta > DEBUG_META
+                }
+            }
+
+            if (in_vmeta && prevmeta != meta) {
+                print meta
+                if (DEBUG_META) print title " :: " $0 " :: " meta  > DEBUG_META
+            }
+            prevmeta = meta
+            break
+
+        }
+    }
+    prevtitle = title
+    prevline = $0
+}
+
+
 # determine gender of nouns
 $0 ~ nounhead  {
 if((pos=="n")||(pos=="prop")) {	
@@ -2035,4 +2241,3 @@ outp = LHS " :: " DL;
 printout(outp);
 	}
 }
-
