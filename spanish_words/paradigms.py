@@ -1,5 +1,6 @@
 # This file is generated automatically, do not hand edit
 #
+
 paradigms = {}
 paradigms['-ar'] = {}
 # Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar (revision: 39594417)
@@ -981,7 +982,7 @@ paradigms['-er']['raer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/roer (revision: 38984611)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/roer (revision: 59514070)
 paradigms['-er']['roer'] = {
 
 "replacement": {  1: "1ro"},
@@ -991,15 +992,15 @@ paradigms['-er']['roer'] = {
       3:'1roído',   4:'1roída',   5:'1roídos',   6:'1roídas',
 
        7:'1roo,1roigo,1royo',
-      20:'1roí',   21:'1roíste',   22:'1royó',   23:'1roímos',   24:'1roísteis',   25:'1royeron',
+      21:'1roíste',   22:'1royó',   23:'1roímos',   24:'1roísteis',   25:'1royeron',
 
-      38:'1roa,1roiga,1roya',   39:'1roas,1roigas,1royas',   41:'1roa,1roiga',   42:'1roamos,1roigamos',   43:'1roáis,1roigáis,1royáis',   44:'1roan,1roigan,1royan',
+      38:'1roa,1roiga,1roya',   39:'1roas,1roigas,1royas',   41:'1roa,1roiga,1roya',   42:'1roamos,1roigamos,1royamos',   43:'1roáis,1roigáis,1royáis',   44:'1roan,1roigan,1royan',
       45:'1royera',   46:'1royeras',   47:'1royera',   48:'1royéramos',   49:'1royerais',   50:'1royeran',
       51:'1royese',   52:'1royeses',   53:'1royese',   54:'1royésemos',   55:'1royeseis',   56:'1royesen',
       57:'1royere',   58:'1royeres',   59:'1royere',   60:'1royéremos',   61:'1royereis',   62:'1royeren',
 
-      65:'1roa,1roiga',  66:'1roamos,1roigamos',   68:'1roan,1roigan',
-      69:'1roas,1roigas,1royas',   70:'1roa,1roiga',   71:'1roamos,1roigamos',   72:'1roáis,1roigáis,1royáis',   73:'1roan,1roigan,1royan'
+      65:'1roa,1roiga,1roya',  66:'1roamos,1roigamos,1royamos',   68:'1roan,1roigan,1royan',
+      69:'1roas,1roigas,1royas',   70:'1roa,1roiga,1roya',   71:'1roamos,1roigamos,1royamos',   72:'1roáis,1roigáis,1royáis',   73:'1roan,1roigan,1royan'
     },
 
 "ref": {  2: "1royéndose",   64: '-',   65: "1roase,1roigase,1royase",   66: "1roámonos,1roigámonos,1royámonos",   68: "1roanse,1roiganse,1royanse"},
@@ -1248,7 +1249,7 @@ paradigms['-er']['-cer o-ue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-eer (revision: 58756177)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-eer (revision: 59244159)
 paradigms['-er']['-eer'] = {
 
 "replacement": {  1: "1e"},
@@ -1258,7 +1259,7 @@ paradigms['-er']['-eer'] = {
 "patterns": {  40: '-',
       2: '1eyendo',
       3: '1eído',   4: '1eída',   5: '1eídos',   6: '1eídas',
-      21: 'leíste',   22: '1eyó',   23: 'leímos',   24: 'leísteis',   25: '1eyeron',
+      21: '1eíste',   22: '1eyó',   23: '1eímos',   24: '1eísteis',   25: '1eyeron',
       45: '1eyera',   46: '1eyeras',   47: '1eyera',   48: '1eyéramos',   49: '1eyerais',   50: '1eyeran',
       51: '1eyese',   52: '1eyeses',   53: '1eyese',   54: '1eyésemos',   55: '1eyeseis',   56: '1eyesen',
       57: '1eyere',   58: '1eyeres',   59: '1eyere',   60: '1eyéremos',   61: '1eyereis',   62: '1eyeren'
@@ -2637,4 +2638,5 @@ paradigms['-ír']['refreír'] = {
     },
 
 }
+
 

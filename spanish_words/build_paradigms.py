@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- python-mode -*-
+
 import requests
 import json
 import re
@@ -13,13 +16,13 @@ def fail(*args, **kwargs):
     exit(1)
 
 parser = argparse.ArgumentParser(description='Scrape irregular verb usage from wiktionary')
-parser.add_argument('-p', '--patterns', help="Save pattern usage to specified file")
-parser.add_argument('-v', '--verbs',    help="Save irregular verb list to specified file")
+#parser.add_argument('-p', '--patterns', help="Save pattern usage to specified file")
+#parser.add_argument('-v', '--verbs',    help="Save irregular verb list to specified file")
 parser.add_argument('-c', '--cache',    help="Cache file name to use (Default: _cache.json)")
 args = parser.parse_args()
 
-if args.patterns is None and args.verbs is None:
-    parser.error("You must specify either --patterns or --verbs to dump files")
+#if args.patterns is None and args.verbs is None:
+#    parser.error("You must specify either --patterns or --verbs to dump files")
 
 if args.cache is None:
     args.cache = "_cache.json"
@@ -348,7 +351,7 @@ def make_category_link(ending, paradigm):
            + "Category:Spanish_verbs_ending_in_" + ending + "_(conjugation_" + paradigm.replace(" ", "_") + ")"
 
 
-def dump_patterns(filename):
+def dump_patterns():
 
     paradigm_list = load_paradigm_list()
     paradigms = {}
@@ -367,9 +370,11 @@ def dump_patterns(filename):
             dump.append("\n\n")
             paradigms[ending][pattern] = luadata
 
-    with open(filename, "w") as outfile:
-        outfile.write("# This file is generated automatically, do not hand edit\n#\n")
-        outfile.write(''.join(dump))
+#    with open(filename, "w") as outfile:
+#        outfile.write("# This file is generated automatically, do not hand edit\n#\n")
+#        outfile.write(''.join(dump))
+    print("# This file is generated automatically, do not hand edit\n#\n")
+    print(''.join(dump))
 
 
 def dump_verbs(filename):
@@ -416,12 +421,13 @@ def dump_verbs(filename):
         outfile.write(''.join(dump))
 
 
-def init():
+def main():
 
-    if args.patterns:
-        dump_patterns(args.patterns)
+    dump_patterns()
+#    if args.patterns:
+#        dump_patterns(args.patterns)
 
-    if args.verbs:
-        dump_verbs(args.verbs)
+#    if args.verbs:
+#        dump_verbs(args.verbs)
 
-init()
+main()
