@@ -122,7 +122,7 @@ def build_wordlist():
         wordusage[word][pos] = item['count']
 
         wordlist[k] = {
-            'count': count,
+            'count': item['count'],
             'word': word,
             'pos': pos,
             'flags': flags,
@@ -219,8 +219,8 @@ for word,item in lines.items():
 
 build_wordlist()
 
-print("rank,spanish,pos,flags,usage")
-for k,item in sorted(wordlist.items(), key=lambda item: item[1]['count']):
+print("count,spanish,pos,flags,usage")
+for k,item in sorted(wordlist.items(), key=lambda item: item[1]['count'], reverse=True):
     if len(item['flags']) == 1 and "LITERAL" in item['flags']:
         item['flags'].append("CLEAR")
 
