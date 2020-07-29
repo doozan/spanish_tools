@@ -1,4 +1,4 @@
-rank,spanish,pos
+position,spanish,pos
 acerca,acerca de,prep
 bordo,a bordo,adv
 diario,a diario,adv
@@ -45,7 +45,6 @@ iris,arco iris,noun
 2209,vaya,interj
 1554,perdón,interj
 2519,ánimo,interj
-2108,caramba,interj
 2086,venga,interj
 1141,ándale,interj
 1809,permiso,interj
@@ -66,13 +65,11 @@ iris,arco iris,noun
 1600,en caso de,conj
 1650,a causa de,prep
 1700,debido a,prep
-1750,por supuesto,adv
 1800,gracias a,prep
 1850,en lugar de,prep
 1900,frente a,prep
 1950,a menos que,conj
 2000,en vez de,prep
-2050,a través de,adv
 2100,a partir de,prep
 2150,tener lugar,verb
 2200,por lo menos,adv

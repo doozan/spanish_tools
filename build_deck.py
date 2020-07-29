@@ -47,10 +47,14 @@ if not os.path.isfile(args.json):
     exit(1)
 
 
+allwords = []
+allwords_set = set()
+allwords_positions = {}
+
 words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
 spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
 
-allwords = {}
+media = []
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -62,11 +66,9 @@ def fail(*args, **kwargs):
 def format_sentences(sentences):
     return "<br>\n".join( f'<span class="spa">{item[0]}</span><br>\n<span class="eng">{item[1]}</span>' for item in sentences )
 
-all_sentences = {}
 def get_sentences(items, count):
 
     results = spanish_sentences.get_sentences(items, count)
-    all_sentences[wordtag] = results
 
     if len(results['sentences']):
         return format_sentences(results['sentences'])
@@ -109,7 +111,7 @@ def dump_sentences(filename):
     with open(filename, "w") as outfile:
         print(f"dumping {filename}")
         for tag,ids in sorted(dumpable_sentences.items()):
-            pos,word = tag.split(":")
+            word, pos = split_tag(tag)
             row = [word,pos] + ids
 
             outfile.write(",".join(row))
@@ -219,7 +221,7 @@ def validate_note(item):
 
 def get_synonyms(word, pos, limit=5):
     items = words.get_synonyms(word,pos)
-    return [ k for k in items if pos+":"+k in allwords ][:limit]
+    return [ k for k in items if make_tag(k,pos) in allwords_set ][:limit]
 
 #_FEMALE1 = "Lupe"
 _FEMALE1 = "Penelope"
@@ -276,11 +278,12 @@ def get_phrase(word, pos, noun_type, femnoun):
 
 
 
-def build_item(row):
-    spanish = row['spanish'].strip()
+def build_item(word, pos):
+    spanish = word.strip()
+    pos = pos.lower()
+
     english = ""
     noun_type = ""
-    pos = row['pos'].lower()
     usage = words.lookup(spanish, pos)
     syns = get_synonyms(spanish, pos)
     if usage and len(usage):
@@ -311,7 +314,7 @@ def build_item(row):
         'Sentences': sentences,
         'Display': tts_data['display'],
         'Audio':   format_sound(sound),
-        'guid': genanki.guid_for(wordtag, "Jeff's Spanish Deck")
+        'guid': genanki.guid_for(make_tag(spanish, pos), "Jeff's Spanish Deck")
     }
 
 
@@ -336,108 +339,68 @@ def build_item(row):
 
 
 def make_tag(word, pos):
+    if not pos:
+        return word.lower()
+
     return pos.lower() + ":" + word.lower()
 
+def split_tag(wordtag):
+    pos,junk,word = wordtag.partition(":")
+    return [word,pos.lower()]
+
+def wordlist_indexof(target):
+    if ":" in target:
+        return allwords.index(target)
+
+    for index in range(len(allwords)):
+        word, pos = split_tag(allwords[index])
+
+        if word == target:
+            return index
+
+def wordlist_replace(old_tag, new_tag):
+
+    index = wordlist_indexof(old_tag)
+    if not index:
+        raise ValueError(f"{old_tag} not found in wordlist, unable to replace with {new_tag}")
+
+    old_tag = allwords[index]
+    allwords_set.remove(old_tag)
+    allwords_set.add(new_tag)
+
+    allwords[index] = new_tag
+
+def wordlist_remove(wordtag):
+
+    index = wordlist_indexof(wordtag)
+    if not index:
+        raise ValueError(f"{old_tag} not found in wordlist, unable to remove")
+
+    old_tag = allwords[index]
+    allwords_set.remove(old_tag)
+    del allwords[index]
+
+def wordlist_insert(wordtag, position):
+    if wordtag in allwords_set:
+        raise ValueError(f"{wordtag} already exists in wordlist, cannot insert at position {position}")
+
+    # Note, don't actually insert the word at the specified position, because later wordlists
+    # may delete items and rearrange the order.  Instead, add it to the bottom of the list and
+    # save the desired position in allwords_positions, which will be used after the wordlist
+    # is finished to position it absolutely
+
+    allwords_set.add(wordtag)
+    allwords.append(wordtag)
+    allwords_positions[wordtag] = position
+
+def wordlist_append(wordtag):
+    if wordtag in allwords_set:
+        raise ValueError(f"{wordtag} already exists in wordlist, cannot be added again")
+
+    allwords.append(wordtag)
+    allwords_set.add(wordtag)
 
 
-media = []
-notes = []
-all_items = []
-
-# read through all the files to populate the synonyms and excludes lists
-for wordlist in args.wordlist:
-    with open(wordlist, newline='') as csvfile:
-        csvreader = csv.DictReader(csvfile)
-        for reqfield in ["pos", "spanish"]:
-            if reqfield not in csvreader.fieldnames:
-                raise ValueError(f"No '{reqfield}' field specified in file {wordlist}")
-
-        for row in csvreader:
-            if not row:
-                continue
-
-            if 'flags' in row and 'CLEAR' not in row['flags']:
-                continue
-
-            # Rank that is another word instead of a numeric value will replace pos:word specified
-            # or the first occurance of the word if the pos: is not specified
-            if 'rank' in row and not row['rank'][0].isdigit() and not row['rank'][0] == "-":
-                old_word = row['rank']
-                old_pos = ""
-                if ":" in row['rank']:
-                    old_word, old_pos = row['rank'].lower().split(":")
-                new_word = row['spanish'].lower()
-                new_pos = row['pos'].lower()
-                new_tag = make_tag(new_word, new_pos)
-
-                if old_pos:
-                    old_tag = make_tag(old_word, old_pos)
-                    item = allwords.pop(old_tag)
-                    item['spanish'] = new_word
-                    item['pos'] = new_pos
-                    allwords[newtag] = item
-                else:
-                    replaced=False
-                    for wordtag in list(allwords.keys()):
-                        item = allwords[wordtag]
-                        if item['spanish'].lower() == old_word:
-                            item = allwords.pop(wordtag)
-                            item['spanish'] = new_word
-                            item['pos'] = new_pos
-                            allwords[new_tag] = item
-                            replaced=True
-                            break
-                    if not replaced:
-                        raise ValueError(f"{old_word} not found, unable to replace with {new_word} ({new_pos}) from {wordlist}")
-
-
-            # Negative rank indicates that all previous instances of this word should be removed
-            elif 'rank' in row and int(row['rank']) < 0:
-                exclude_word = row['spanish'].lower()
-                exclude_pos = row['pos'].lower() if 'pos' in row and row['pos'] != "" else None
-                if exclude_pos:
-                    exclude_tag = make_tag(row['spanish'],row['pos'])
-                    if exclude_tag in allwords:
-                        allwords.pop(exclude_tag)
-                    else:
-                        print(f"{exclude_tag} was not removed because it is not in the wordlist")
-                else:
-                    found=False
-                    for wordtag in list(allwords.keys()):
-                        item = allwords[wordtag]
-                        if item['spanish'].lower() == exclude_word:
-                            found=True
-                            allwords.pop(wordtag)
-                    if not found:
-                        print(f"{exclude_word} was not removed because it is not in the wordlist")
-
-            else:
-                wordtag = make_tag(row['spanish'],row['pos'])
-                # exclude duplicates
-                if wordtag not in allwords:
-                    allwords[wordtag] = row
-
-# Build the items
-count=0
-for wordtag, row in allwords.items():
-    count+=1
-    if args.limit and count>args.limit:
-        break
-
-    item = build_item(row)
-
-    rank = row.get('rank', 0)
-    if rank and rank < len(all_items):
-        all_items.insert(rank-1, item)
-    else:
-        all_items.append(item)
-
-# Number the items and add tags to each group of 500 items
-count = 0
-for item in all_items:
-    count += 1
-    item['Rank'] = str(count)
-    item['tags'].append( str(math.ceil(count / 500)*500) )
 
 with open(args.json) as jsonfile:
     data = json.load(jsonfile)
@@ -456,23 +419,75 @@ card_model = genanki.Model(model_guid,
   css=data['model'][model_guid]['css']
 )
 
-_fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Display", "Audio" ]
+
+
+# read through all the files to populate the synonyms and excludes lists
+for wordlist in args.wordlist:
+    with open(wordlist, newline='') as csvfile:
+        csvreader = csv.DictReader(csvfile)
+        for reqfield in ["pos", "spanish"]:
+            if reqfield not in csvreader.fieldnames:
+                raise ValueError(f"No '{reqfield}' field specified in file {wordlist}")
+
+        for row in csvreader:
+            if not row:
+                continue
+
+            if 'flags' in row and 'CLEAR' not in row['flags']:
+                continue
+
+            item_tag = make_tag(row['spanish'],row['pos'])
+
+            # Position that is another word instead of a numeric value will replace pos:word specified
+            # or the first occurance of the word if the pos: is not specified
+            if 'position' in row and not row['position'][0].isdigit() and not row['position'][0] == "-":
+                wordlist_replace(row['position'], item_tag)
+
+            # Negative position indicates that all previous instances of this word should be removed
+            elif 'position' in row and int(row['position']) < 0:
+                wordlist_remove(item_tag)
+
+            # a digit in the position column indicates that it should be inserted at that position
+            elif 'position' in row and int(row['position']) >0 and int(row['position']) < len(allwords):
+                wordlist_insert(item_tag, int(row['position']))
+
+            # otherwise put it at the end of the list
+            else:
+                wordlist_append(item_tag)
+
+# Arrange any items with absolute positions
+for wordtag,position in sorted(allwords_positions.items(), key=lambda item: item[1]):
+    index = wordlist_indexof(wordtag)
+    if index != position:
+        allwords.pop(index)
+        allwords.insert(position, wordtag)
 
 rows = []
-for item in all_items:
+
+# Build the deck
+_fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Display", "Audio" ]
+
+limit = args.limit if args.limit else len(allwords)
+for index in range(limit):
+    word, pos = split_tag(allwords[index])
+
+    position=index+1
+    item = build_item(word, pos)
+    item['Rank'] = str(position)
+    item['tags'].append( str(math.ceil(position / 500)*500) )
+
     row = []
     for field in _fields:
         row.append(item[field])
 
-    note = MyNote( model = card_model, sort_field=row[4], fields = row, guid = item['guid'], tags = item['tags'] )
-    note._order = int(item['Rank'])
+    note = MyNote( model = card_model, sort_field=1, fields = row, guid = item['guid'], tags = item['tags'] )
+    note._order = position
     my_deck.add_note( note )
     rows.append(row)
 
 my_package = genanki.Package(my_deck)
 my_package.media_files = media
 my_package.write_to_file(args.deckname + '.apkg')
-
 
 if args.dump_sentence_ids:
     dump_sentences(args.dump_sentence_ids)
