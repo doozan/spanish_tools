@@ -495,6 +495,12 @@ if args.dump_sentence_ids:
 if args.dump_notes:
     with open(args.dump_notes, 'w', newline='') as outfile:
         csvwriter = csv.writer(outfile)
+
+        del _fields[7] # audio
+        del _fields[0] # rank
+
         csvwriter.writerow(_fields)
         for row in rows:
+            del row[7]
+            del row[0]
             csvwriter.writerow(row)
