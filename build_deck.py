@@ -178,24 +178,55 @@ def format_image(filename):
 def format_def(item):
 
     results = []
+    multi_pos = (len(item) > 1)
+
+    prev_display_pos = None
     for pos in item:
         common_pos = words.common_pos(pos)
         safe_pos = pos.replace("/", "_")
-        if pos in [ "m-f", "m/f" ]:
-            pos_tag = f'<span class="pos {common_pos} {safe_pos}">'
-        else:
-            pos_tag = f'<span class="pos {common_pos} {safe_pos}">{{{pos}}}'
+
+        # Don't prefix the def with the part of speech if there's only one pos
+        # for this entry (unless it's a verb with type of usage specified)
+        if not prev_display_pos and len(item)==1:
+            prev_display_pos = "{v}" if common_pos == "verb" else f"{{{pos}}}"
 
         for tag in item[pos]:
             if len(results):
                 results.append("<br>\n")
 
-            results.append(pos_tag)
+            classes = ["pos", common_pos]
+            if common_pos != safe_pos:
+                classes.append(safe_pos)
+
+            display_pos = f"{{{pos}}}"
+            display_tag = tag
+
+            # Only m/f and m-f nouns will have special pos in the tags
+            if common_pos == "noun" and pos in [ "m-f", "m/f" ]:
+                tag_pos, sep, other_tags = tag.partition(" ")
+                tag_pos = tag_pos.replace(",", "")
+                if tag_pos in [ "m", "f", "mf" ]:
+                    display_tag = other_tags
+                else:
+                    tag_pos = "mf"
+
+                classes.append(tag_pos)
+                display_pos = f"{{{tag_pos}}}"
+
+            elif common_pos == "verb" and pos in [ "vir","vitr","vr","vri","vrp","vrt","vtir","vtr" ]:
+                classes.append("reflexive")
+
+            if prev_display_pos == display_pos:
+                display_pos = ""
+            else:
+                prev_display_pos = display_pos
+
+            results.append(f'<span class="{" ".join(classes)}">{display_pos} ')
 
             usage = item[pos][tag]
 
-            if tag != "":
-                results.append(f'<span class="tag">[{tag}]:</span>')
+            if display_tag != "":
+                results.append(f'<span class="tag">[{display_tag}]:</span>')
 
             results.append(f'<span class="usage">{usage}</span>')
 
@@ -460,7 +491,7 @@ for wordtag,position in sorted(allwords_positions.items(), key=lambda item: item
     index = wordlist_indexof(wordtag)
     if index != position:
         allwords.pop(index)
-        allwords.insert(position, wordtag)
+        allwords.insert(position-1, wordtag)
 
 rows = []
 
