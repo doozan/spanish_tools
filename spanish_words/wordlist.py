@@ -71,11 +71,17 @@ class SpanishWordlist:
                 del self.allwords[word][pos][note]
 
             else:
+                found = False
                 for d in self.allwords[word][pos][note]:
                     if d.startswith(definition):
+                        found=True
                         self.allwords[word][pos][note].remove(d)
                 if not len(self.allwords[word][pos][note]):
+                    found=True
                     del self.allwords[word][pos][note]
+
+                if not found:
+                    print(f"{item} does not match any entries in wordlist, cannot be removed")
 
             # cleanup if we've deleted all of something
             if not len(self.allwords[word][pos]):
