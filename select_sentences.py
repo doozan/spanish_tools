@@ -47,7 +47,7 @@ class SentenceChooser:
             c = self._all_options[idx]
             checkbox = self._checkboxes[idx]
             checkbox.set_label("\n  ".join([c[0], c[1]]))
-            checkbox.set_state( f"{c[3]}:{c[4]}" in self._selected_items )
+            checkbox.set_state( f"{c[3]}:{c[4]}" in self._selected_items, do_callback=False )
 
     def randomize(self):
         random.shuffle(self._all_options)
@@ -173,6 +173,8 @@ if os.path.isfile(args.outfile):
                 continue
             word,pos,*selections = line.split(",")
             if len(selections):
+                # Strip duplicates
+                selections = list(dict.fromkeys(selections))
                 tag = f"{word}:{pos}"
                 all_selections[tag] = selections
 
@@ -190,6 +192,8 @@ else:
             word,pos,*selections = line.split(",")
             all_items.append( [word,pos] )
             if len(selections):
+                # Strip duplicates
+                selections = list(dict.fromkeys(selections))
                 default_selections[f"{word}:{pos}"] = selections
 
 
