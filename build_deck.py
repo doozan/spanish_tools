@@ -493,16 +493,21 @@ for wordtag,position in sorted(allwords_positions.items(), key=lambda item: item
         allwords.pop(index)
         allwords.insert(position-1, wordtag)
 
+
+if args.limit and args.limit < len(allwords):
+    allwords = allwords[:args.limit]
+    allwords_set = set(allwords)
+
 rows = []
 
 # Build the deck
 _fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Display", "Audio" ]
 
-limit = args.limit if args.limit else len(allwords)
-for index in range(limit):
-    word, pos = split_tag(allwords[index])
+position=0
+for wordtag in allwords:
+    word, pos = split_tag(wordtag)
 
-    position=index+1
+    position+=1
     item = build_item(word, pos)
     item['Rank'] = str(position)
     item['tags'].append( str(math.ceil(position / 500)*500) )
