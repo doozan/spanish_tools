@@ -76,13 +76,7 @@ class SpanishWords:
 
 
     def get_valid_lemmas(self, word, items, pos):
-        valid = []
-        for item in items:
-            lemma = self.wordlist.get_lemma(item, pos)
-            if lemma:
-                valid.append(lemma)
-            elif self.has_word(item, pos):
-                valid.append(item)
+        valid = [ item for item in items if self.has_word(item, pos) ]
 
         if len(valid):
             valid = list(dict.fromkeys(valid).keys())
