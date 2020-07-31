@@ -22,6 +22,7 @@ class sentences:
         self.tagdb = {}
         self.id_index = {}
         self.tagfixes = {}
+        self.tagfix_count = {}
         self.filter_ids = {}
         self.forced_ids = {}
         self.forced_ids_source = {}
@@ -51,11 +52,7 @@ class sentences:
         datafixes = dataprefix + ".ignore"
         if os.path.isfile(datafixes):
             with open(datafixes) as infile:
-                for line in infile:
-                    line = line.strip()
-                    if line.startswith("#"):
-                        continue
-                    self.filter_ids[int(line.split(" ")[0])] = 1
+                self.filter_ids = set( int(line.strip().split(" ",1)[0]) for line in infile if not line.startswith("#") )
 
         index=0
         with open(datafile) as infile:
@@ -75,6 +72,10 @@ class sentences:
                 self.add_tags_to_db(tags,index)
                 index+=1
 
+        for word,target in self.tagfixes.items():
+            if word not in self.tagfix_count:
+                print(f"Tagfix: {word} {target} does not match any sentences", file=sys.stderr)
+
         # Forced/preferred items must be processed last
         for source in [ "preferred", "forced" ]:
             dataforced = dataprefix+"."+source
@@ -88,8 +89,18 @@ class sentences:
                         continue
                     word,pos,*forced_itemtags = line.split(",")
                     wordtag = make_tag(word, pos)
-                    self.forced_ids[wordtag] = self.itemtags_to_ids(forced_itemtags)
-                    self.forced_ids_source[wordtag] = source
+                    ids = self.itemtags_to_ids(forced_itemtags)
+                    if None in ids:
+                        if source == "preferred":
+                            print(f"preferred sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
+                            continue
+                        else:
+                            for index in range(len(forced_itemtags)):
+                                if self.forced_ids[wordtag][index] is None:
+                                    raise ValueError(f"{source} sentences {forced_itemtags[index]} for {word},{pos} not found in database")
+                    else:
+                        self.forced_ids[wordtag] = ids
+                        self.forced_ids_source[wordtag] = source
 
 
     def strip_sentence(self, string):
@@ -108,12 +119,18 @@ class sentences:
                 for iword in words:
                     pos = ipos
 
-                    wordlist = [iword]
                     if iword in self.tagfixes and pos in self.tagfixes[iword]:
-                        wlist,pos = self.tagfixes[iword][ipos]
-                        wordlist = wlist.split("|")
+                        count = self.tagfix_count.get(iword,0)
+                        self.tagfix_count[iword] = count+1
 
-                    for word in wordlist:
+                        iword,pos = self.tagfixes[iword][ipos]
+
+
+                    xword,junk,xlemma = iword.partition("|")
+                    if not xlemma:
+                        xlemma = xword
+
+                    for word in [ f'@{xword}',xlemma ]:
 
                         if word not in self.tagdb:
                             self.tagdb[word] = {}

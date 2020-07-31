@@ -85,8 +85,10 @@ def tag_to_pos(tag):
 #            mismatch[f"{pos}:{lemma}"] = newlemma
 #            lemma = newlemma
 
-    return [ pos, lemma, "@"+word ]
+    if word != lemma:
+        return [ pos, f'{word}|{lemma}' ]
 
+    return [ pos, f'{word}' ]
 
 def group_tags(pos_tags):
 
@@ -94,18 +96,16 @@ def group_tags(pos_tags):
     for item in pos_tags:
         if not item:
             continue
-        pos, lemma, word = item
+        pos, wordtag = item
         if pos not in res:
-            res[pos] = [lemma, word]
+            res[pos] = [wordtag]
         else:
-            res[pos] += [lemma, word]
+            res[pos] += [wordtag]
 
     for pos,words in res.items():
         res[pos] = list(dict.fromkeys(words))
 
     return res
-
-#    return good_tags
 
 def get_interjections(string):
 
@@ -191,22 +191,30 @@ def print_tagged_data():
                     if not pos_tag:
                         continue
                     pos_tags.append(pos_tag)
-                    plemma = pos_tag[1]
+                    pword,junk,plemma = pos_tag[1].partition("|")
+                    if not plemma:
+                        plemma = pword
                     if "_" in plemma:
-                        pword = pos_tag[2][1:]
                         for word,lemma in zip( pword.split("_"), plemma.split("_") ):
-                            pos_tags.append(['split', lemma, '@'+word])
-
+                            if word != lemma:
+                                pos_tags.append(['split', f'{word}|{lemma}'])
+                            else:
+                                pos_tags.append(['split', f'{word}'])
 
             tags = group_tags(pos_tags)
 
-            # ignore sentences with the same adj/adv/noun/verb/pastparticiple combination
+            # ignore sentences with the same adj/adv/noun/verb/pastparticiple lemma combination
             unique_tags = []
-            for n in [ "adj", "adv", "noun", "verb", "part" ]:
-                if n not in tags:
+            for pos in [ "adj", "adv", "noun", "verb", "part" ]:
+                if pos not in tags:
                     continue
-                unique_tags += [t for t in tags[n] if not t.startswith("@")]
-            uniqueid = ":".join(sorted(set(unique_tags)))
+                for t in tags[pos]:
+                    word,junk,lemma = t.partition("|")
+                    if not lemma:
+                        lemma = word
+                    unique_tags.append(lemma)
+
+            uniqueid = "!".join(sorted(set(unique_tags)))
             if uniqueid in seen:
                 continue
             seen[uniqueid] = 1
