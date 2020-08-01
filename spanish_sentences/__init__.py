@@ -64,7 +64,7 @@ class sentences:
                 if eng_id in self.filter_ids or spa_id in self.filter_ids:
                     continue
 
-                self.sentencedb.append( (spanish, english, score, spa_id, eng_id) )
+                self.sentencedb.append( [spanish, english, score, spa_id, eng_id] )
                 self.grepdb.append(stripped)
 
                 self.id_index[f"{spa_id}:{eng_id}"] = index
@@ -176,6 +176,7 @@ class sentences:
 
         return list(results)
 
+
     def get_sentences_from_ids(self, ids):
         sentences = []
         sentences = [ self.sentencedb[idx] for idx in ids ]
@@ -184,7 +185,7 @@ class sentences:
 
     def get_best_sentence_ids(self, items, count):
 
-        sentences = []
+        sentences = {}
         source = None
 
         seen = set()
@@ -206,24 +207,30 @@ class sentences:
             else:
                 res = self.get_all_sentence_ids(word, pos)
                 available_ids = set(res['ids']) - set(item_ids)
-                item_ids += self.select_best_ids(available_ids, count, seen)
                 if not source:
                     source = res['source']
+                    item_ids = self.select_best_ids(available_ids, count, seen)
 
-            sentences.append(item_ids)
+                # Only accept 'literal' matches for the first pos
+                elif res['source'] not in [ 'literal' ]:
+                    item_ids = self.select_best_ids(available_ids, count, seen)
 
-        ids = []
+
+
+            sentences[pos] = item_ids
+
+        res = []
         for idx in range(count):
-            if len(ids)>=count:
+            if len(res)>=count:
                 break
-            for item in sentences:
-                if len(ids)>=count:
+            for pos,pos_ids in sentences.items():
+                if len(res)>=count:
                     break
 
-                if len(item)>idx:
-                    ids.append(item[idx])
+                if len(pos_ids)>idx:
+                    res.append( { 'id': pos_ids[idx], 'pos': pos, 'source': source } )
 
-        return { "ids": ids, "source": source }
+        return res
 
     def select_best_ids(self, available, count, seen):
 
@@ -295,9 +302,13 @@ class sentences:
     def get_sentences(self, items, count, forced_items=[]):
 
         res = self.get_best_sentence_ids(items, count)
+        source = res[0]['source'] if len(res) else None
+        sentences = []
+        for item in res:
+            data = self.sentencedb[item['id']]
+            sentences.append(data + [item['pos']])
 
-        sentences = self.get_sentences_from_ids(res['ids'])
-        return { "sentences": sentences, "matched": res['source'] }
+        return { "sentences": sentences, "matched": source }
 
 
     def get_all_pos(self, word):
