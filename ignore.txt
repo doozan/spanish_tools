@@ -1,6 +1,7 @@
 ah
 alfa
 ángel
+anne
 as
 auto
 autos
@@ -18,10 +19,12 @@ cal
 carmen
 chef
 chip
+christopher
 coca-cola
 cole
 comic
 cookie
+cory
 country
 cristina
 cuba
@@ -44,7 +47,9 @@ gays
 gen
 golf
 hacker
+hermes
 hey
+hitler
 hot
 hurra
 internet
@@ -73,6 +78,7 @@ luis
 maría
 marta
 mas
+miller
 mio
 mm
 nasa
@@ -110,6 +116,7 @@ stop
 super
 surf
 sushi
+tara
 test
 tests
 ticket
