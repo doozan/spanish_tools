@@ -53,27 +53,7 @@ class SpanishWords:
             if self.has_word(word, "noun"):
                 results.update(self.wordlist.lookup(word,"noun"))
 
-        results = self.filter_country_notes(results)
         return results
-
-    def filter_country_notes(self, alldefs):
-        if not alldefs:
-            return {}
-        res = {}
-        for pos,notes in alldefs.items():
-            res[pos] = {}
-            for note, defs in notes.items():
-                tags = { n.strip() for n in note.lower().split(',') }
-
-                # strip smaller country-specific usage if it's only listed for one country
-                overlap = tags & {"chile", "argentina", "venezuela", "peru", "uruguay", "el salvador", "colombia", "cuba", "honduras", "ecuador", "bolivia", "costa rica", "nicaragua", "dominican republic", "guatemala", "paraguay", "puerto rico", "panama", "caribbean", "philippines", "us", "united states", "new mexico", "louisiana"}
-                if len(overlap) == 1:
-                    if "mexico" not in tags and "spain" not in tags:
-                        continue
-                res[pos][note] = defs
-
-        return res
-
 
     def get_valid_lemmas(self, word, items, pos):
         valid = [ item for item in items if self.has_word(item, pos) ]

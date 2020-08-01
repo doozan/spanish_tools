@@ -303,6 +303,16 @@ class SpanishWordlist:
         else:
             self.irregular_verbs[verb].append(iverb)
 
+    def skip_note(self, note):
+        notes = { n.strip() for n in note.lower().split(',') }
+
+        # skip country-specific usage if it's only listed for one country unless it's listed along with a larger region
+        if 1 == len(notes & {"chile", "argentina", "venezuela", "peru", "uruguay", "el salvador", "colombia", "cuba", "honduras", "ecuador", "bolivia", "costa rica", "nicaragua", "dominican republic", "guatemala", "paraguay", "puerto rico", "panama", "caribbean", "philippines", "us", "united states", "new mexico", "louisiana"}) \
+            and not notes & {"mexico", "spain", "latin america", "central america", "latin american spanish"}:
+                return True
+
+        return False
+
     def process_line(self, line):
 
         if line.startswith("#"):
@@ -317,6 +327,9 @@ class SpanishWordlist:
         if res['pos'].startswith("meta-"):
             self.buffer_meta(res)
         else:
+            if self.skip_note(res['note']):
+                return
+
             is_first_pos_def = True
             cur_pos = self.common_pos(res['pos'])
 
@@ -829,10 +842,10 @@ class SpanishWordlist:
                 elif filter_pos != pos:
                     continue
 
-            # Filter out all defs that contain the filter_phrase
             for note, defs in notes.items():
 
                 for d in defs:
+                    # Filter out all defs that contain the filter_phrase
                     if filter_phrase and filter_phrase in d:
                         continue
                     if pos not in res:
