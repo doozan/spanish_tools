@@ -105,7 +105,7 @@ def build_wordlist():
 
     wordusage = {}
     count = 1
-    for k,item in sorted(freq.items(), key=lambda item: item[1]['count'], reverse=True):
+    for k,item in sorted(freq.items(), key=lambda item: (item[1]['count'], item[0]), reverse=True):
         pos,word = k.split(":")
 
         flags = get_word_flags(word, pos)
@@ -220,7 +220,7 @@ for word,item in lines.items():
 build_wordlist()
 
 print("count,spanish,pos,flags,usage")
-for k,item in sorted(wordlist.items(), key=lambda item: item[1]['count'], reverse=True):
+for k,item in sorted(wordlist.items(), key=lambda item: (item[1]['count'], item[1]['word']), reverse=True):
     if len(item['flags']) == 1 and "LITERAL" in item['flags']:
         item['flags'].append("CLEAR")
 
