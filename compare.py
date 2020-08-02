@@ -152,7 +152,7 @@ with open(args.file1) as infile, open(args.outfile,'w', newline='') as outfile:
             word = row['spanish']
             pos = row['pos']
             if merged[tag] != "common":
-                item['deftext'] = format_def(spanish_dictionary.lookup(word))
+                item['deftext'] = format_def(spanish_dictionary.lookup(word),get_all_pos=True)
 
                 if word in seen:
                     item['flags'] = "repeat"

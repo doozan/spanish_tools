@@ -1,26 +1,30 @@
 #!/usr/bin/python3
 # -*- python-mode -*-
 
-import genanki
+import argparse
 import csv
-import os
-import sys
-import math
+import genanki
 import json
+import math
+import os
 import re
+import sqlite3
+import sys
+
 import spanish_words
 import spanish_sentences
 import spanish_speech
-import argparse
 
 parser = argparse.ArgumentParser(description='Compile anki deck')
 parser.add_argument('deckname', help="Name of deck to build")
 parser.add_argument('-m', '--mediadir', help="Directory containing deck media resources (default: DECKNAME.media)")
 parser.add_argument('-w', '--wordlist', action='append', help="List of words to include/exclude from the deck (default: DECKNAME.json")
 parser.add_argument('-j', '--json',  help="JSON file with deck info (default: DECKNAME.json)")
+parser.add_argument('-s', '--short-defs',  help="CSV file with short definitions (default DECKNAME.shortdefs)")
 parser.add_argument('-d', '--dump-sentence-ids',  help="Dump high scoring sentence ids to file")
 parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
 parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
+parser.add_argument('--anki2', help="Compare notes against specified anki2 database")
 
 args = parser.parse_args()
 
@@ -32,6 +36,9 @@ if not args.wordlist:
 
 if not args.json:
     args.json = args.deckname + ".json"
+
+if not args.short_defs:
+    args.short_defs = args.deckname + ".shortdefs"
 
 if not os.path.isdir(args.mediadir):
     print(f"Deck directory does not exist: {args.mediadir}")
@@ -46,10 +53,23 @@ if not os.path.isfile(args.json):
     print(f"Deck JSON does not exist: {args.json}")
     exit(1)
 
+if not os.path.isfile(args.short_defs):
+    print(f"Shortdefs file does not exist: {args.short_defs}")
+    exit(1)
+
+db = None
+c = None
+
+if args.anki2:
+    if not os.path.isfile(args.anki2):
+        print(f"anki2 file does not exist: {args.anki2}")
+    db = sqlite3.connect(args.anki2)
+    c = db.cursor()
 
 allwords = []
 allwords_set = set()
 allwords_positions = {}
+shortdefs = {}
 
 words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
 spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
@@ -90,18 +110,14 @@ def save_dump_sentences(lookups):
         if not results:
             continue
 
-        if results['matched'] not in ('preferred', 'exact'):
+        if results['matched'] not in ('preferred', 'exact') and ' ' not in word:
             continue
 
         if len(results['sentences']) != 3:
             continue
 
-        all_good=True
-        for sentence in results['sentences']:
-            if sentence[2] not in [ 55, 56 ]:
-                all_good = False
 
-        if all_good:
+        if all( sentence[2] >= 55 for sentence in results['sentences'] ):
             ids = [ f"{sentence[3]}:{sentence[4]}" for sentence in results['sentences' ] ]
             dumpable_sentences[tag] = ids
 
@@ -120,6 +136,7 @@ def dump_sentences(filename):
 
 
 class MyNote(genanki.Note):
+
     def write_card_to_db(self, cursor, now_ts, deck_id, note_id, order, due):
       queue = 0
       cursor.execute('INSERT INTO cards VALUES(null,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);', (
@@ -143,6 +160,11 @@ class MyNote(genanki.Note):
       ))
 
     def write_to_db(self, cursor, now_ts, deck_id):
+
+        # Preserve the timestamp if it has been specified
+        if self.mod_ts:
+            now_ts = self.mod_ts
+
         cursor.execute('INSERT INTO notes VALUES(null,?,?,?,?,?,?,?,?,?,?);', (
             self.guid,                    # guid
             self.model.model_id,          # mid
@@ -175,7 +197,52 @@ def format_image(filename):
         return ""
     return f'<img src="{filename}" />'
 
-def format_def(item):
+def make_shortdef(defs, max_len=60):
+
+    # Don't build a shortdef if the current def is already short enough
+    length = 0
+    for pos in defs.values():
+        for item in pos.values():
+            length += len(item)
+
+    if length<=max_len:
+        return
+
+    usage = ""
+    pos = next(iter(defs))
+    tag = next(iter(defs[pos]))
+
+    shortdef = defs[pos][tag]
+
+    if len(shortdef) > max_len:
+        shortdef = shortdef.partition(';')[0].strip()
+
+    if len(shortdef) > max_len:
+        shortdef = shortdef.partition('(')[0].strip()
+
+    if len(shortdef) > max_len:
+        shortdef = shortdef.partition('[')[0].strip()
+
+    # Split on the "," closest to max length
+    if len(shortdef) > max_len:
+        end = 0
+        while True:
+           loc = shortdef.find(",", end+1)
+           if loc<1 or loc >= max_len:
+               break
+           end = loc
+
+        if end:
+            shortdef = shortdef[:end].strip()
+
+
+    if len(shortdef) > max_len:
+        eprint("Alert: Trouble shortening def: {shortdef}")
+
+    return { pos: { tag: shortdef } }
+
+
+def format_def(item,hide_word=None):
 
     results = []
     multi_pos = (len(item) > 1)
@@ -213,7 +280,7 @@ def format_def(item):
                 classes.append(tag_pos)
                 display_pos = f"{{{tag_pos}}}"
 
-            elif common_pos == "verb" and pos in [ "vir","vitr","vr","vri","vrp","vrt","vtir","vtr" ]:
+            elif common_pos == "verb" and pos in [ "vir","vitr","vr","vri","vrp","vrt","vtir","vtr", "vp", "vip", "vtp" ]:
                 classes.append("reflexive")
 
             if prev_display_pos == display_pos:
@@ -224,6 +291,12 @@ def format_def(item):
             results.append(f'<span class="{" ".join(classes)}">{display_pos} ')
 
             usage = item[pos][tag]
+
+            if hide_word and f"of {hide_word}" in usage:
+                new_usage = re.sub(f'of {hide_word}[^,;(]*', 'of ... ', usage).strip()
+                if len(item.keys()) == 1 and len(item[pos].keys()) == 1 and "," not in usage and ";" not in usage and "(" not in usage:
+                    eprint(f"Warning: obscured definition of {word} {pos} ({usage}) may be completely obscured")
+                usage = new_usage
 
             if display_tag != "":
                 results.append(f'<span class="tag">[{display_tag}]:</span>')
@@ -243,7 +316,7 @@ def validate_note(item):
     else:
         guidseen[item['guid']] = 1
 
-    for key in [ "Spanish", "English", "Part of Speech", "Audio" ]:
+    for key in [ "Spanish", "Definition", "Part of Speech", "Audio" ]:
         if item[key] == "":
             eprint(f"Missing {key} from {item}")
             return False
@@ -306,24 +379,30 @@ def get_phrase(word, pos, noun_type, femnoun):
         display = phrase
 
     return { "voice": voice, "phrase": phrase, "display": display }
-
+2
 
 
 def build_item(word, pos):
     spanish = word.strip()
     pos = pos.lower()
+    item_tag = make_tag(spanish, pos)
 
     english = ""
     noun_type = ""
-    usage = words.lookup(spanish, pos)
+    usage = words.lookup(spanish, pos, get_all_pos=True)
     syns = get_synonyms(spanish, pos)
     if usage and len(usage):
         english = format_def(usage)
         if pos == "noun":
-            noun_type = list(usage.keys())[0]
+            noun_type = next(iter(usage))
     else:
         print(row)
         raise ValueError("No english", spanish, pos)
+
+    shortdef = shortdefs.get(item_tag)
+    if not shortdef:
+        shortdef = make_shortdef(words.lookup(word, pos))
+    short_english = format_def(shortdef, hide_word=word) if shortdef else ""
 
     femnoun = words.wordlist.get_feminine_noun(spanish) if pos == "noun" else None
     tts_data = get_phrase(spanish,pos,noun_type,femnoun)
@@ -341,11 +420,12 @@ def build_item(word, pos):
         'Spanish': spanish,
         'Part of Speech': noun_type if pos == "noun" else pos,
         'Synonyms': ", ".join(syns),
-        'English': english,
+        'ShortDef': short_english,
+        'Definition': english,
         'Sentences': sentences,
         'Display': tts_data['display'],
         'Audio':   format_sound(sound),
-        'guid': genanki.guid_for(make_tag(spanish, pos), "Jeff's Spanish Deck")
+        'guid': genanki.guid_for(item_tag, "Jeff's Spanish Deck")
     }
 
 
@@ -431,12 +511,40 @@ def wordlist_append(wordtag):
     allwords.append(wordtag)
     allwords_set.add(wordtag)
 
+def load_shortdefs(filename):
+    with open(filename, newline='') as csvfile:
+        csvreader = csv.DictReader(csvfile)
+        for reqfield in ["spanish", "pos", "shortdef"]:
+            if reqfield not in csvreader.fieldnames:
+                raise ValueError(f"No '{reqfield}' field specified in file {filename}")
+        for row in csvreader:
+            if not row or row.get('shortdef',"") == "":
+                continue
 
+            common_pos = words.common_pos(row['pos'])
+            item_tag = make_tag(row['spanish'],common_pos)
+            shortdefs[item_tag] = { row['pos']: { '': row['shortdef'] } }
+
+
+def get_mod_timestamp(note):
+    if not c:
+        return
+
+    guid = note.guid
+    mid = note.model.model_id
+    flds = note._format_fields()
+    query = "SELECT mod FROM notes WHERE guid=? AND mid=? AND flds=?"
+    res = c.execute(query, (guid, mid, flds)).fetchone()
+
+    if res:
+        return res[0]
+
+load_shortdefs(args.short_defs)
 
 with open(args.json) as jsonfile:
     data = json.load(jsonfile)
 
-model_guid = list(data['model'].keys())[0]
+model_guid = next(iter(data['model']))
 model_name = data['model'][model_guid]['name']
 deck_guid = 1587078062419
 
@@ -501,7 +609,7 @@ if args.limit and args.limit < len(allwords):
 rows = []
 
 # Build the deck
-_fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "English", "Sentences", "Display", "Audio" ]
+_fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "ShortDef", "Definition", "Sentences", "Display", "Audio" ]
 
 position=0
 for wordtag in allwords:
@@ -517,6 +625,8 @@ for wordtag in allwords:
         row.append(item[field])
 
     note = MyNote( model = card_model, sort_field=1, fields = row, guid = item['guid'], tags = item['tags'] )
+    # preserve the mod timestamp if the note matches with the database
+    note.mod_ts = get_mod_timestamp(note)
     note._order = position
     my_deck.add_note( note )
     rows.append(row)

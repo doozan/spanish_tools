@@ -504,11 +504,7 @@ class SpanishWordlist:
         return word.translate(self._trantab)
 
     def get_feminine_noun(self, word):
-
-        tag = "f:"+word
-        if tag in self.xnouns:
-            return self.xnouns[tag]
-
+        return self.xnouns.get(f'f:{word}')
 
     def guess_feminine_noun(self, word):
 
@@ -533,9 +529,7 @@ class SpanishWordlist:
 
 
     def get_masculine_noun(self, word):
-        tag = "m:"+word
-        if tag in self.xnouns:
-            return self.xnouns[tag]
+        return self.xnouns.get(f'm:{word}')
 
     def guess_masculine_noun(self, word):
         # if it doesn't end with a there are no good rules

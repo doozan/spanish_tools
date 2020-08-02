@@ -42,6 +42,7 @@ class SpanishWords:
             if pos in [ "adj", "noun" ]:
                 lemma = self.get_lemma(word,pos)
                 results.update(self.wordlist.lookup(lemma,pos))
+            # TODO: catch mistaged past participles, fixed in wiki, can remove this after 8/20 wiki update
             elif pos == "verb" and not word.endswith("r") and not word.endswith("rse"):
                 continue
             else:
@@ -49,14 +50,14 @@ class SpanishWords:
 
         return results
 
-    def get_valid_lemmas(self, word, items, pos):
+    def get_valid_lemmas(self, word, pos, items):
         valid = [ item for item in items if self.has_word(item, pos) ]
 
         if len(valid):
-            valid = list(dict.fromkeys(valid).keys())
+            valid = dict.fromkeys(valid).keys()
             if len(valid) > 1 and word in valid:
                 valid.remove(word)
-        return valid
+        return list(valid)
 
     def get_synonyms(self, word, pos):
         word = word.lower().strip()
@@ -78,7 +79,7 @@ class SpanishWords:
                 return [lemma]
 
             maybe_lemmas = self.adj.get_lemma(word)
-            lemmas = self.get_valid_lemmas(word, maybe_lemmas, pos)
+            lemmas = self.get_valid_lemmas(word, pos, maybe_lemmas)
             if len(lemmas):
                 return lemmas
 
@@ -99,9 +100,19 @@ class SpanishWords:
                     return [lemma]
 
                 maybe_lemmas = self.noun.make_singular(word)
-                lemmas = self.get_valid_lemmas(word, maybe_lemmas, pos)
-                if len(lemmas):
-                    return lemmas
+                lemmas = self.get_valid_lemmas(word, pos, maybe_lemmas)
+
+                # check for masculine versions of any lemmas
+                # actrices -> actriz -> actor
+                macho_lemmas = []
+                for word in lemmas:
+                    masc = self.wordlist.get_masculine_noun(word)
+                    if not masc:
+                        masc = word
+                    macho_lemmas.append(masc)
+
+                if len(macho_lemmas):
+                    return macho_lemmas
 
             return [word]
 

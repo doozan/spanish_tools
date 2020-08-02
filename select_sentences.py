@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(description='Select sentences for word')
 parser.add_argument('word', nargs="?", default=None, help="word")
 parser.add_argument('pos',  nargs="?", default=None, help="part of speech")
 parser.add_argument('--infile', help="If word not provided, read word list from file")
-parser.add_argument('--outfile', default="sentences.csv", help="File to save sentence selections")
+parser.add_argument('--outfile', default="spanish_data/sentences.forced", help="File to save sentence selections")
 args = parser.parse_args()
 
 all_selections = {}

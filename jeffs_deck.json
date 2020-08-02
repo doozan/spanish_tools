@@ -41,7 +41,7 @@
           "media": []
         },
         {
-          "name": "English",
+          "name": "ShortDef",
           "ord": 4,
           "sticky": false,
           "rtl": false,
@@ -50,7 +50,7 @@
           "media": []
         },
         {
-          "name": "Sentences",
+          "name": "Definition",
           "ord": 5,
           "sticky": false,
           "rtl": false,
@@ -59,7 +59,7 @@
           "media": []
         },
         {
-          "name": "Display",
+          "name": "Sentences",
           "ord": 6,
           "sticky": false,
           "rtl": false,
@@ -68,8 +68,17 @@
           "media": []
         },
         {
-          "name": "Audio",
+          "name": "Display",
           "ord": 7,
+          "sticky": false,
+          "rtl": false,
+          "font": "Arial",
+          "size": 20,
+          "media": []
+        },
+        {
+          "name": "Audio",
+          "ord": 8,
           "sticky": false,
           "rtl": false,
           "font": "Arial",
@@ -80,7 +89,7 @@
       "id": 1587075402744,
       "latexPost": "\\end{document}",
       "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
-      "mod": 1596123839,
+      "mod": 1596399428,
       "name": "Spanish5k-40320",
       "req": [
         [
@@ -88,7 +97,7 @@
           "any",
           [
             2,
-            7
+            8
           ]
         ],
         [
@@ -97,7 +106,8 @@
           [
             2,
             3,
-            4
+            4,
+            5
           ]
         ]
       ],
@@ -108,7 +118,7 @@
           "name": "Forward",
           "ord": 0,
           "qfmt": "<div class=\"pos\">{{Part of Speech}}</div>\n<div style=\"display:none;\">{{Audio}}</div>\n",
-          "afmt": "{{Display}}\n<div class=\"pos\">{{Part of Speech}} {{Rank}}</div>\n{{#Synonyms}}<div class=\"synonyms\">[also {{Synonyms}}]</div>\n{{/Synonyms}}\n\n<hr id=answer>\n\n{{English}}\n<br><br>\n{{Sentences}}",
+          "afmt": "{{Display}}\n<div class=\"pos\">{{Part of Speech}} {{Rank}}</div>\n{{#Synonyms}}<div class=\"synonyms\">[also {{Synonyms}}]</div>\n{{/Synonyms}}\n\n<hr id=answer>\n\n{{#ShortDef}}{{ShortDef}}{{/ShortDef}}\n{{Definition}}\n<br><br>\n{{Sentences}}",
           "did": null,
           "bqfmt": "",
           "bafmt": "",
@@ -118,8 +128,8 @@
         {
           "name": "Reverse",
           "ord": 1,
-          "qfmt": "{{English}}\n<div class=\"pos\">{{Part of Speech}}</div>\n{{#Synonyms}}<div class=\"synonyms\">[not {{Synonyms}}]</div>\n{{/Synonyms}}\n",
-          "afmt": "{{English}}\n<div class=\"pos\">{{Part of Speech}} {{Rank}}</div>\n{{#Synonyms}}<div class=\"synonyms\">[not {{Synonyms}}]</div>\n{{/Synonyms}}\n<div style=\"display:none;\">{{Audio}}</div>\n\n<hr id=answer>\n\n{{Display}}\n<br><br>\n{{Sentences}}",
+          "qfmt": "{{#ShortDef}}{{ShortDef}}{{/ShortDef}}\n{{^ShortDef}}{{Definition}}{{/ShortDef}}\n<div class=\"pos\">{{Part of Speech}}</div>\n{{#Synonyms}}<div class=\"synonyms\">[not {{Synonyms}}]</div>\n{{/Synonyms}}\n",
+          "afmt": "{{#ShortDef}}{{ShortDef}}{{/ShortDef}}\n{{Definition}}\n<div class=\"pos\">{{Part of Speech}} {{Rank}}</div>\n{{#Synonyms}}<div class=\"synonyms\">[not {{Synonyms}}]</div>\n{{/Synonyms}}\n<div style=\"display:none;\">{{Audio}}</div>\n\n<hr id=answer>\n\n{{Display}}\n<br><br>\n{{Sentences}}",
           "did": null,
           "bqfmt": "",
           "bafmt": "",
@@ -128,7 +138,7 @@
         }
       ],
       "type": 0,
-      "usn": 305,
+      "usn": -1,
       "vers": []
     }
   }
