@@ -29,29 +29,23 @@ class SpanishWords:
         else:
             return self.wordlist._has_word(word, pos)
 
-    def lookup(self, word, pos):
+    def get_all_pos(self, word):
+        return self.wordlist.get_all_pos(word)
+
+    def lookup(self, word, pos, get_all_pos=True):
         results = self.wordlist.lookup(word, pos)
 
-        if pos == "adj":
-            if self.has_word(word, "noun"):
-                results.update(self.wordlist.lookup(word,"noun"))
-            #if self.verb.is_past_participle(word):
-            #    lemma = self.get_lemma(word, "verb")
-            #    results['adj'].update({'verb': f'past particple of {lemma}'})
+        if not get_all_pos:
+            return results
 
-        elif pos == "noun":
-            word_adj = self.get_lemma(word, "adj")
-            if self.has_word(word_adj, "adj"):
-                results.update(self.wordlist.lookup(word_adj,"adj"))
-            #if self.verb.is_past_participle(word):
-            #    lemma = self.get_lemma(word, "verb")
-            #    results['adj'].update({'verb': f'past particple of {lemma}'})
-
-        elif pos != "interj":
-            if self.has_word(word, "adj"):
-                results.update(self.wordlist.lookup(word,"adj"))
-            if self.has_word(word, "noun"):
-                results.update(self.wordlist.lookup(word,"noun"))
+        for pos in self.get_all_pos(word):
+            if pos in [ "adj", "noun" ]:
+                lemma = self.get_lemma(word,pos)
+                results.update(self.wordlist.lookup(lemma,pos))
+            elif pos == "verb" and not word.endswith("r") and not word.endswith("rse"):
+                continue
+            else:
+                results.update(self.wordlist.lookup(word,pos))
 
         return results
 
