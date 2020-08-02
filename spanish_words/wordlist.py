@@ -381,18 +381,18 @@ class SpanishWordlist:
         if word not in self.allwords:
             return []
 
-        return list(dict.fromkeys([self.common_pos(k) for k in self.allwords[word].keys() ]))
+        return dict.fromkeys( [ self.common_pos(k) for k in self.allwords[word] ]).keys()
 
 
     def has_verb(self, word):
         if word not in self.allwords:
             return False
-        return any( self.pos_is_verb(k) for k in self.allwords[word].keys())
+        return any( self.pos_is_verb(k) for k in self.allwords[word])
 
     def has_noun(self, word):
         if word not in self.allwords:
             return False
-        return any( self.pos_is_noun(k) for k in self.allwords[word].keys())
+        return any( self.pos_is_noun(k) for k in self.allwords[word])
 
     def _has_word(self, word, pos=None):
         if not word or word not in self.allwords:
@@ -404,12 +404,14 @@ class SpanishWordlist:
             return self.has_noun(word)
         elif pos == "verb":
             return self.has_verb(word)
-        elif pos in self.allwords[word].keys():
+        elif pos in self.allwords[word]:
             return True
         return False
 
     def do_analysis(self, word, alldefs):
 
+        # If there are independent defs for masculine and feminine use,
+        # tag it as m-f
         if len( {"m","f","mf"} & alldefs.keys() ) > 1:
             alldefs['m-f'] = {}
             for oldpos in ['f', 'mf', 'm']:
@@ -419,9 +421,11 @@ class SpanishWordlist:
                         alldefs['m-f'][newnote] = use
                     del alldefs[oldpos]
 
+        # Tag f-el nouns
         elif "f" in alldefs and word in self.el_f_nouns:
             alldefs["f-el"] = alldefs.pop("f")
 
+        # Check for feminine equivalent nouns and tag as m/f
         elif "m" in alldefs:
 
             # If this has a "-a" feminine counterpart, reclassify the "m" defs as "m/f"
@@ -479,7 +483,7 @@ class SpanishWordlist:
                 if syn in self.allwords: # and pos in self.allwords[syn]:
                     synonyms.append(syn)
 
-        return list(dict.fromkeys(synonyms).keys())
+        return dict.fromkeys(synonyms).keys()
 
 
     def is_feminized_noun(self, word, masculine=""):
