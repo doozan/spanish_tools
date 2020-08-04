@@ -21,7 +21,7 @@ def format_sentences(sentences):
 def get_sentences(spanish, pos, count):
 
     usage = words.lookup(spanish, pos)
-    all_usage_pos = { words.common_pos(k):1 for k in usage.keys() }.keys()
+    all_usage_pos = { words.common_pos(k):1 for k in usage }.keys() if usage else [ pos ]
     lookups = [ [ spanish, pos ] for pos in all_usage_pos ]
     results = spanish_sentences.get_sentences(lookups, 3)
 

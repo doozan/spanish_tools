@@ -197,7 +197,9 @@ class sentences:
             item_ids = []
 
             wordtag = make_tag(word, pos)
-            forced_ids = self.forced_ids.get(wordtag,[])
+            forced_ids = [x for x in self.forced_ids.get(wordtag,[]) if
+                    self.sentencedb[x][IDX_SPAID] not in seen and 
+                    self.sentencedb[x][IDX_ENGID] not in seen]
             if len(forced_ids):
                 source = self.forced_ids_source[wordtag]
                 item_ids = forced_ids[:count]
