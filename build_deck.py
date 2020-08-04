@@ -7,9 +7,13 @@ import genanki
 import json
 import math
 import os
+import psutil
 import re
 import sqlite3
+import subprocess
 import sys
+import time
+import urllib.request
 
 import spanish_words
 import spanish_sentences
@@ -19,12 +23,13 @@ parser = argparse.ArgumentParser(description='Compile anki deck')
 parser.add_argument('deckname', help="Name of deck to build")
 parser.add_argument('-m', '--mediadir', help="Directory containing deck media resources (default: DECKNAME.media)")
 parser.add_argument('-w', '--wordlist', action='append', help="List of words to include/exclude from the deck (default: DECKNAME.json")
-parser.add_argument('-j', '--json',  help="JSON file with deck info (default: DECKNAME.json)")
 parser.add_argument('-s', '--short-defs',  help="CSV file with short definitions (default DECKNAME.shortdefs)")
 parser.add_argument('-d', '--dump-sentence-ids',  help="Dump high scoring sentence ids to file")
 parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
 parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
-parser.add_argument('--anki2', help="Compare notes against specified anki2 database")
+parser.add_argument('--model',  help="Read model data from JSON file (default: DECKNAME.model, unless --anki is provided)")
+parser.add_argument('--anki', help="Read/write data from specified anki profile")
+
 
 args = parser.parse_args()
 
@@ -33,9 +38,6 @@ if not args.mediadir:
 
 if not args.wordlist:
     args.wordlist = [ args.deckname + ".csv" ]
-
-if not args.json:
-    args.json = args.deckname + ".json"
 
 if not args.short_defs:
     args.short_defs = args.deckname + ".shortdefs"
@@ -49,32 +51,123 @@ for wordlist in args.wordlist:
         print(f"Wordlist file does not exist: {wordlist}")
         exit(1)
 
-if not os.path.isfile(args.json):
-    print(f"Deck JSON does not exist: {args.json}")
-    exit(1)
-
 if not os.path.isfile(args.short_defs):
     print(f"Shortdefs file does not exist: {args.short_defs}")
     exit(1)
 
-db = None
-c = None
+_deck_name = "6001 Spanish Vocab"
 
-if args.anki2:
-    if not os.path.isfile(args.anki2):
-        print(f"anki2 file does not exist: {args.anki2}")
-    db = sqlite3.connect(args.anki2)
-    c = db.cursor()
+db_notes = {}
+db_timestamps = {}
+
+package_filename = os.path.join(os.getcwd(), args.deckname + ".apkg")
 
 allwords = []
 allwords_set = set()
 allwords_positions = {}
 shortdefs = {}
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
-spanish_sentences = spanish_sentences.sentences("spanish_data/sentences.json")
+words = None
+sentences = None
 
 media = []
+
+
+def init_data():
+    global words
+    global sentences
+
+    words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
+    sentences = spanish_sentences.sentences("spanish_data/sentences.json")
+
+def load_db(filename):
+    if any("/usr/bin/anki" in p.info['cmdline'] for p in psutil.process_iter(['cmdline'])):
+        print("Anki is running, cannot continue")
+        exit(1)
+
+    return sqlite3.connect(filename)
+
+def load_db_model(c):
+
+    models = json.loads(c.execute("SELECT models FROM col").fetchone()[0])
+    return models['1587075402744']
+
+
+def load_db_notes(c):
+    decks = json.loads(c.execute("SELECT decks FROM col").fetchone()[0])
+
+    col_deck_guid=0
+    for item,val in decks.items():
+        if val['name'] == _deck_name:
+            col_deck_guid = val['id']
+            break
+
+    query = """
+SELECT
+    c.id,n.guid,n.mod,n.flds,n.tags
+FROM
+    cards AS c
+LEFT JOIN
+    notes AS n
+ON
+    c.nid = n.id
+WHERE
+    c.did=?;
+"""
+
+    db_notes = {}
+    for cid,guid,mod,flds,tags in c.execute(query, (col_deck_guid,)).fetchall():
+
+        fields = flds.split(chr(31))
+
+        if guid in db_notes:
+            db_notes[guid]['cards'].append(cid)
+        else:
+            db_notes[guid] = {'word': f"{fields[2]} {fields[1]}", 'cards': [ cid ], 'flds': flds, 'tags': tags, 'mod': mod}
+
+    return db_notes
+
+
+def make_card_model(data):
+    return genanki.Model(data['id'],
+        data['name'],
+        fields=data['flds'],
+        templates=data['tmpls'],
+        css=data['css']
+    )
+
+def get_note_hash(guid,flds,tags):
+    tags = " ".join(sorted(tags.strip().split(" ")))
+    return hash(json.dumps([guid,flds,tags]))
+
+def get_mod_timestamp(note):
+    if not c:
+        return
+
+    guid = note.guid
+    flds = note._format_fields()
+    tags = note._format_tags()
+
+    hashval = get_note_hash(guid,flds,tags)
+    return db_timestamps.get(hashval)
+
+
+def request(action, **params):
+    return {'action': action, 'params': params, 'version': 6}
+
+def invoke(action, **params):
+    requestJson = json.dumps(request(action, **params)).encode('utf-8')
+    response = json.load(urllib.request.urlopen(urllib.request.Request('http://localhost:8765', requestJson)))
+    if len(response) != 2:
+        raise Exception('response has an unexpected number of fields')
+    if 'error' not in response:
+        raise Exception('response is missing required error field')
+    if 'result' not in response:
+        raise Exception('response is missing required result field')
+    if response['error'] is not None:
+        raise Exception(response['error'])
+    return response['result']
+
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -83,12 +176,57 @@ def fail(*args, **kwargs):
     eprint(*args, **kwargs)
     exit(1)
 
+def sync_anki(profile):
+    print("Starting Anki")
+    proc = subprocess.Popen(["/usr/bin/anki","--lang=en",f"--profile={profile}"])
+
+    tries=120
+    while tries:
+        try:
+            result = invoke('deckNames')
+
+        except urllib.error.URLError:
+            time.sleep(1)
+        else:
+            break
+        tries-=1
+
+    if not tries:
+        print("Failed to start Anki or problem running AnkiConnect")
+        proc.terminate()
+        exit(1)
+
+    result = invoke('importPackage', path=package_filename)
+
+    removed_cards = []
+
+    for item in db_notes.keys()-deck_guids:
+        print(f"removed: {db_notes[item]['word']}")
+        removed_cards += db_notes[item]['cards']
+
+    if len(removed_cards):
+        print(f"removing {removed_cards}")
+        result = invoke('changeDeck', cards=removed_cards, deck="Removed")
+
+        time.sleep(6)
+
+    # Do this again to force a database save
+    result = invoke('importPackage', path=package_filename)
+
+    result = invoke('sync')
+
+    # And again just to settle things after the sync
+    result = invoke('importPackage', path=package_filename)
+
+    proc.terminate()
+
+
 def format_sentences(sentences):
     return "<br>\n".join( f'<span class="spa">{item[0]}</span><br>\n<span class="eng">{item[1]}</span>' for item in sentences )
 
 def get_sentences(items, count):
 
-    results = spanish_sentences.get_sentences(items, count)
+    results = sentences.get_sentences(items, count)
 
     if len(results['sentences']):
         return format_sentences(results['sentences'])
@@ -106,7 +244,7 @@ def save_dump_sentences(lookups):
         if tag in dumpable_sentences:
             continue
 
-        results = spanish_sentences.get_sentences( [ [word,pos] ], 3)
+        results = sentences.get_sentences( [ [word,pos] ], 3)
         if not results:
             continue
 
@@ -379,7 +517,6 @@ def get_phrase(word, pos, noun_type, femnoun):
         display = phrase
 
     return { "voice": voice, "phrase": phrase, "display": display }
-2
 
 
 def build_item(word, pos):
@@ -430,7 +567,6 @@ def build_item(word, pos):
 
 
     tags = [ noun_type if pos == "noun" else pos ]
-    tags.append("NEW")
     if "tags" in row and row['tags'] != "":
         for tag in row['tags'].split(" "):
             tags.append(tag)
@@ -526,37 +662,50 @@ def load_shortdefs(filename):
             shortdefs[item_tag] = { row['pos']: { '': row['shortdef'] } }
 
 
-def get_mod_timestamp(note):
-    if not c:
-        return
 
-    guid = note.guid
-    mid = note.model.model_id
-    flds = note._format_fields()
-    query = "SELECT mod FROM notes WHERE guid=? AND mid=? AND flds=?"
-    res = c.execute(query, (guid, mid, flds)).fetchone()
 
-    if res:
-        return res[0]
+model_data = None
+if args.anki:
+    ankidb = os.path.join( os.path.expanduser("~"), ".local/share/Anki2", args.anki, "collection.anki2" )
+    if not os.path.isfile(ankidb):
+        print("Cannot find anki database:", ankidb)
+        exit(1)
+
+    db = load_db(ankidb)
+    c = db.cursor()
+
+    if not args.model:
+        model_data = load_db_model(c)
+
+    db_notes = load_db_notes(c)
+    for guid, item in db_notes.items():
+        hashval = get_note_hash(guid,item['flds'],item['tags'])
+        db_timestamps[hashval] = item['mod']
+
+    c.close()
+    db.close()
+
+if not model_data:
+
+    if not args.model:
+        args.model = args.deckname + ".model"
+
+    if not os.path.isfile(args.model):
+        print(f"Model JSON does not exist: {args.model}")
+        exit(1)
+
+    with open(args.model) as jsonfile:
+        model_data = json.load(jsonfile)
+
+
+card_model = make_card_model(model_data)
+deck_guid = 1587078062419
+my_deck = genanki.Deck(int(deck_guid),_deck_name, "The 6001 most frequenly used Spanish words - with audio, comprehensive definitions, and usage sentences")
+
+
+init_data()
 
 load_shortdefs(args.short_defs)
-
-with open(args.json) as jsonfile:
-    data = json.load(jsonfile)
-
-model_guid = next(iter(data['model']))
-model_name = data['model'][model_guid]['name']
-deck_guid = 1587078062419
-
-my_deck = genanki.Deck(int(deck_guid),'Spanish top 5000-revised', "5000 common Spanish words")
-
-# Create a template for anki card
-card_model = genanki.Model(model_guid,
-  model_name,
-  fields=data['model'][model_guid]['flds'],
-  templates=data['model'][model_guid]['tmpls'],
-  css=data['model'][model_guid]['css']
-)
 
 
 
@@ -612,6 +761,7 @@ rows = []
 _fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "ShortDef", "Definition", "Sentences", "Display", "Audio" ]
 
 position=0
+deck_guids = set()
 for wordtag in allwords:
     word, pos = split_tag(wordtag)
 
@@ -627,13 +777,33 @@ for wordtag in allwords:
     note = MyNote( model = card_model, sort_field=1, fields = row, guid = item['guid'], tags = item['tags'] )
     # preserve the mod timestamp if the note matches with the database
     note.mod_ts = get_mod_timestamp(note)
+    if not note.mod_ts:
+        if item['guid'] not in db_notes:
+            print(f"added: {wordtag}")
+        else:
+            print(f"changed: {wordtag}")
+            old_data = db_notes[item['guid']]
+            if old_data['flds'] != note._format_fields():
+                old_fields = old_data['flds'].split(chr(31))
+                new_fields = note._format_fields().split(chr(31))
+                for idx in range(len(old_fields)):
+                    old = old_fields[idx]
+                    new = new_fields[idx]
+                    if old != new:
+                        print(f"  field {idx}: {old} => {new}")
+            else:
+                print(f"  old tags: {old_data['tags']}")
+                print(f"  new tags: {note._format_tags()}")
+
+    deck_guids.add(item['guid'])
+
     note._order = position
     my_deck.add_note( note )
     rows.append(row)
 
 my_package = genanki.Package(my_deck)
 my_package.media_files = media
-my_package.write_to_file(args.deckname + '.apkg')
+my_package.write_to_file(package_filename)
 
 if args.dump_sentence_ids:
     dump_sentences(args.dump_sentence_ids)
@@ -650,3 +820,6 @@ if args.dump_notes:
             del row[7]
             del row[0]
             csvwriter.writerow(row)
+
+if args.anki:
+    sync_anki(args.anki)
