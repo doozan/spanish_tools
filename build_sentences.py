@@ -62,14 +62,11 @@ def tag_to_pos(tag):
         return None
 
     if pos != "propnoun":
-#        if pos != "num" and "_" in lemma:
-#            print(f"c-c-combo: {pos} {lemma}: {word}", file=sys.stderr)
-#            return None
         word = word.lower()
 
     # Use our lemmas so they're the same when we lookup against other things we've lemmatized
     # Unless it's a phrase, then use their lemma
-    if pos in ("noun", "adj", "part"):
+    if pos in ("noun", "adj", "part", "adv"):
         lemma = words.get_lemma(word, pos)
 
     # fix for freeling not generating lemmas for verbs with a pronoun suffix
