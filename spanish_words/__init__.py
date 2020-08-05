@@ -7,8 +7,8 @@ import sys
 import os
 
 class SpanishWords:
-    def __init__(self, dictionary):
-        self.wordlist = SpanishWordlist(dictionary, self)
+    def __init__(self, dictionary, data_dir, custom_dir):
+        self.wordlist = SpanishWordlist(self, dictionary, data_dir, custom_dir)
         self.adj = SpanishAdjectives()
         self.noun = SpanishNouns()
         self.verb = SpanishVerbs(self.wordlist.irregular_verbs)

@@ -15,7 +15,7 @@ def make_tag(word, pos):
 
 class sentences:
 
-    def __init__(self, datafile):
+    def __init__(self, sentences="sentences.json", data_dir=None, custom_dir=None):
 
         self.grepdb = []
         self.sentencedb = []
@@ -27,17 +27,19 @@ class sentences:
         self.forced_ids = {}
         self.forced_ids_source = {}
 
+        if not data_dir:
+            data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
 
-        dataprefix = os.path.splitext(datafile)[0]
+        if not custom_dir:
+            custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
 
-
-        if not os.path.isfile(datafile):
-            raise FileNotFoundError(f"Cannot open file: '{datafile}'")
+        dataprefix = os.path.splitext(sentences)[0]
 
         # Tagfixes must be loaded before the main file
-        datafixes = dataprefix + ".tagfixes"
-        if os.path.isfile(datafixes):
-            with open(datafixes) as infile:
+        for datafile in [ os.path.join(dirname, dataprefix + ".tagfixes") for dirname in [ data_dir, custom_dir ] if dirname ]:
+            if not os.path.isfile(datafile):
+                continue
+            with open(datafile) as infile:
                 for line in infile:
                     line = line.strip()
                     if line.startswith("#") or not ":" in line:
@@ -49,10 +51,15 @@ class sentences:
                     self.tagfixes[oldword][oldpos] = [newword, newpos]
 
         # Ignore list must be loaded before the main file
-        datafixes = dataprefix + ".ignore"
-        if os.path.isfile(datafixes):
-            with open(datafixes) as infile:
+        for datafile in [ os.path.join(dirname, dataprefix + ".ignore") for dirname in [ data_dir, custom_dir ] if dirname ]:
+            if not os.path.isfile(datafile):
+                continue
+            with open(datafile) as infile:
                 self.filter_ids = set( int(line.strip().split(" ",1)[0]) for line in infile if not line.startswith("#") )
+
+        datafile = os.path.join(data_dir, sentences)
+        if not os.path.isfile(datafile):
+            raise FileNotFoundError(f"Cannot open file: '{datafile}'")
 
         index=0
         with open(datafile) as infile:
@@ -78,29 +85,29 @@ class sentences:
 
         # Forced/preferred items must be processed last
         for source in [ "preferred", "forced" ]:
-            dataforced = dataprefix+"."+source
-            if not os.path.isfile(dataforced):
-                continue
-            with open(dataforced) as infile:
+            for datafile in [ os.path.join(dirname, dataprefix + "." + source) for dirname in [ data_dir, custom_dir ] if dirname ]:
+                if not os.path.isfile(datafile):
+                    continue
+                with open(datafile) as infile:
 
-                for line in infile:
-                    line = line.strip()
-                    if line.startswith("#"):
-                        continue
-                    word,pos,*forced_itemtags = line.split(",")
-                    wordtag = make_tag(word, pos)
-                    ids = self.itemtags_to_ids(forced_itemtags)
-                    if None in ids:
-                        if source == "preferred":
-                            print(f"preferred sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
+                    for line in infile:
+                        line = line.strip()
+                        if line.startswith("#"):
                             continue
+                        word,pos,*forced_itemtags = line.split(",")
+                        wordtag = make_tag(word, pos)
+                        ids = self.itemtags_to_ids(forced_itemtags)
+                        if None in ids:
+                            if source == "preferred":
+                                print(f"preferred sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
+                                continue
+                            else:
+                                for index in range(len(forced_itemtags)):
+                                    if self.forced_ids[wordtag][index] is None:
+                                        raise ValueError(f"{source} sentences {forced_itemtags[index]} for {word},{pos} not found in database")
                         else:
-                            for index in range(len(forced_itemtags)):
-                                if self.forced_ids[wordtag][index] is None:
-                                    raise ValueError(f"{source} sentences {forced_itemtags[index]} for {word},{pos} not found in database")
-                    else:
-                        self.forced_ids[wordtag] = ids
-                        self.forced_ids_source[wordtag] = source
+                            self.forced_ids[wordtag] = ids
+                            self.forced_ids_source[wordtag] = source
 
 
     def strip_sentence(self, string):

@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 # -*- python-mode -*-
 
-import sys
-import spanish_words
+import os
 import re
+import sys
 
+from spanish_words import SpanishWords
 
-spanish = None
+words = None
 all_plurals = {}
 
 _unstresstab = str.maketrans("áéíóú", "aeiou")
@@ -41,16 +42,16 @@ def get_useful_data(word, meta, data):
             if "m" in data:
                 useful_data["m"] = data["m"]
                 for xnoun in data["m"]:
-                    if not spanish.has_word(xnoun, "noun"):
+                    if not words.has_word(xnoun, "noun"):
                         dprint(f"MISSING: {xnoun} is referenced by {word}, but has no entry")
-                    elif word != xnoun and spanish.wordlist.get_feminine_noun(xnoun) != word:
+                    elif word != xnoun and words.wordlist.get_feminine_noun(xnoun) != word:
                         dprint(f"NOTICE: One way masculine noun link: {word} -> {xnoun} but not {xnoun} -> {word}")
             if "f" in data:
                 useful_data["f"] = data["f"]
                 for xnoun in data["f"]:
-                    if not spanish.has_word(xnoun, "noun"):
+                    if not words.has_word(xnoun, "noun"):
                         dprint(f"MISSING: {xnoun} is referenced by {word}, but has no entry")
-                    elif word != xnoun and spanish.wordlist.get_masculine_noun(xnoun) != word:
+                    elif word != xnoun and words.wordlist.get_masculine_noun(xnoun) != word:
                         dprint(f"NOTICE: One way feminine noun link: {word} -> {xnoun} but not {xnoun} -> {word}")
 
         gender = "m" if "f" in data else "f"
@@ -231,8 +232,8 @@ def get_adjective_forms(singular, gender):
 
 def main():
 
-    global spanish
-    spanish = spanish_words.SpanishWords(dictionary=_args.infile)
+    global words
+    words = SpanishWords(dictionary=_args.dictionary, data_dir=_args.data_dir, custom_dir=_args.custom_dir)
 
     seen = {}
     prev_fem = ""
@@ -240,7 +241,7 @@ def main():
     prev_pos = ""
     with open(_args.infile) as infile:
         for line in infile:
-            item = spanish.wordlist.parse_line(line)
+            item = words.wordlist.parse_line(line)
 
             word = item['word']
             pos = item['pos']
@@ -259,7 +260,7 @@ def main():
             if pos == "f":
                 first_def = word != prev_fem
 
-                masculine = spanish.wordlist.get_masculine_noun(word)
+                masculine = words.wordlist.get_masculine_noun(word)
                 res = re.search("(feminine noun|female equivalent) of ([^,;:()]+)", definition)
                 if res:
 
@@ -274,7 +275,7 @@ def main():
                         masculine = def_masculine
 
                     if first_def:
-                        if not spanish.wordlist.is_feminized_noun(word):
+                        if not words.wordlist.is_feminized_noun(word):
                             dprint(f"ERROR: NOHEAD {word} uses feminine noun/equivalent of in first definition, but does not declare masculine noun in es-noun")
                             meta_type = "meta-noun"
                             meta_data = {"m": [masculine]}
@@ -283,7 +284,7 @@ def main():
                         dprint(f"INFO: {word} uses feminine noun, but not in its first definition {prev_fem}")
 
                 if masculine:
-                    other_fem = spanish.wordlist.get_feminine_noun(masculine)
+                    other_fem = words.wordlist.get_feminine_noun(masculine)
                     if not other_fem:
                         dprint(f"NOTICE: {word} has unrequited partner: {masculine}")
                     elif other_fem != word:
@@ -324,7 +325,7 @@ def main():
                     print_meta(word, meta_type, meta_data)
                 continue
 
-            data = spanish.wordlist.parse_tags(definition)
+            data = words.wordlist.parse_tags(definition)
             print_useful_meta(word, pos, data)
 
             if word not in seen:
@@ -344,6 +345,24 @@ if __name__ == "__main__":
     parser.add_argument('infile', help="Input file")
     parser.add_argument('--dry-run', help="Don't print output line", action="store_true")
     parser.add_argument('--debug', help="Print cleanup information about messy items", action="store_true")
+    parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
+    parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.json)")
+    parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
+    parser.add_argument('--custom-dir', help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')")
+    args = parser.parse_args()
+
+    if not args.dictionary:
+        args.dictionary="es-en.txt"
+
+    if not args.sentences:
+        args.sentences="sentences.json"
+
+    if not args.data_dir:
+        args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
+
+    if not args.custom_dir:
+        args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
+
     _args = parser.parse_args()
 
     main()

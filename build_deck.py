@@ -15,9 +15,9 @@ import sys
 import time
 import urllib.request
 
-import spanish_words
 import spanish_sentences
 import spanish_speech
+from spanish_words import SpanishWords
 
 parser = argparse.ArgumentParser(description='Compile anki deck')
 parser.add_argument('deckname', help="Name of deck to build")
@@ -29,9 +29,23 @@ parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
 parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
 parser.add_argument('--model',  help="Read model data from JSON file (default: DECKNAME.model, unless --anki is provided)")
 parser.add_argument('--anki', help="Read/write data from specified anki profile")
-
-
+parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
+parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.json)")
+parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
+parser.add_argument('--custom-dir', help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')")
 args = parser.parse_args()
+
+if not args.dictionary:
+    args.dictionary="es-en.txt"
+
+if not args.sentences:
+    args.sentences="sentences.json"
+
+if not args.data_dir:
+    args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
+
+if not args.custom_dir:
+    args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
 
 if not args.mediadir:
     args.mediadir = args.deckname + ".media"
@@ -77,8 +91,8 @@ def init_data():
     global words
     global sentences
 
-    words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
-    sentences = spanish_sentences.sentences("spanish_data/sentences.json")
+    words = SpanishWords(dictionary=args.dictionary, data_dir=args.data_dir, custom_dir=args.custom_dir)
+    sentences = spanish_sentences.sentences(sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir)
 
 def load_db(filename):
     if any("/usr/bin/anki" in p.info['cmdline'] for p in psutil.process_iter(['cmdline'])):
@@ -781,7 +795,6 @@ for wordtag in allwords:
         if item['guid'] not in db_notes:
             print(f"added: {wordtag}")
         else:
-            print(f"changed: {wordtag}")
             old_data = db_notes[item['guid']]
             if old_data['flds'] != note._format_fields():
                 old_fields = old_data['flds'].split(chr(31))
@@ -790,7 +803,10 @@ for wordtag in allwords:
                     old = old_fields[idx]
                     new = new_fields[idx]
                     if old != new:
-                        print(f"  field {idx}: {old} => {new}")
+                        if idx == 6:
+                            print(f"{wordtag} sentences changed")
+                        else:
+                            print(f"{wordtag}  field {idx}: {old} => {new}")
             else:
                 print(f"  old tags: {old_data['tags']}")
                 print(f"  new tags: {note._format_tags()}")

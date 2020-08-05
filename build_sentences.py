@@ -2,20 +2,29 @@
 # -*- python-mode -*-
 
 import argparse
-import sys
-import os
-import re
 import ijson
 import json
-import spanish_words
-import bz2
+import os
+import re
 
-
+from spanish_words import SpanishWords
 
 parser = argparse.ArgumentParser(description='Manage tagged sentences')
-parser.add_argument('--tags', nargs=1, help="Merged tagged data with original data")
 parser.add_argument('sentences', default="spa.txt", help="Master sentences file with spanish/english sentences (default spa.txt)")
+parser.add_argument('--tags', nargs=1, help="Merged tagged data with original data")
+parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
+parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
+parser.add_argument('--custom-dir', help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')")
 args = parser.parse_args()
+
+if not args.dictionary:
+    args.dictionary="es-en.txt"
+
+if not args.data_dir:
+    args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
+
+if not args.custom_dir:
+    args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
 
 if not os.path.isfile(args.sentences):
     raise FileNotFoundError(f"Cannot open: {args.sentences}")
@@ -23,7 +32,7 @@ if not os.path.isfile(args.sentences):
 if args.tags and not os.path.isfile(args.tags[0]):
     raise FileNotFoundError(f"Cannot open: {args.tags}")
 
-words = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
+words = SpanishWords(dictionary=args.dictionary, data_dir=args.data_dir, custom_dir=args.custom_dir)
 
 mismatch = {}
 

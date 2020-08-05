@@ -21,7 +21,7 @@ noun_tags = set([
 
 
 class SpanishWordlist:
-    def __init__(self, dictionary=None, parent=None):
+    def __init__(self, parent=None, dictionary="es-en.txt", data_dir=None, custom_dir=None):
         self.irregular_verbs = {}
         self.xnouns = {}
         self.lemmas = {}
@@ -30,9 +30,7 @@ class SpanishWordlist:
         self.meta_buffer = []
         self.parent=parent
         if dictionary:
-            self.load_dictionary(dictionary)
-#            for verb,vdata in self.irregular_verbs.items():
-#                print(f'"{verb}": {vdata},')
+            self.load_dictionary(dictionary, data_dir, custom_dir)
         self._trantab = str.maketrans("áéíóú", "aeiou")
 
         self.el_f_nouns = [ 'abra', 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia',
@@ -341,7 +339,16 @@ class SpanishWordlist:
             self.prev_pos = cur_pos
 
 
-    def load_dictionary(self, datafile):
+    def load_dictionary(self, filename, data_dir, custom_dir):
+        dataprefix = os.path.splitext(filename)[0]
+
+        if not data_dir:
+            data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
+
+        if not custom_dir:
+            custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
+
+        datafile = os.path.join(data_dir, filename)
         if not os.path.isfile(datafile):
             raise FileNotFoundError(f"Cannot open dictionary: '{datafile}'")
 
@@ -349,24 +356,10 @@ class SpanishWordlist:
             for line in infile:
                 self.process_line(line)
 
-        # Show statistics about mismatched male/female nouns
-        #missing = []
-        #for k,v in self.xnouns.items():
-        #    if v not in self.allwords:
-        #        missing.append(v)
-        #print(f"{len(missing)} missing nouns")
-        #print(missing[0], missing[1], missing[2])
-
-        #missing = []
-        #for k,v in self.allwords.items():
-        #    if self.is_feminized_noun(k) and not "f:"+k in self.xnouns:
-        #        missing.append(k)
-        #print(f"{len(missing)} feminine nouns are not included in their masculine noun's headword")
-        #print(missing[0], missing[1], missing[2])
-        #print(", ".join(missing))
-
-        if os.path.isfile(str(datafile) + ".custom"):
-            with open(str(datafile)+".custom") as infile:
+        for custom in [ os.path.join(dirname, dataprefix + ".custom") for dirname in [ data_dir, custom_dir ] if dirname ]:
+            if not os.path.isfile(custom):
+                continue
+            with open(custom) as infile:
                 for line in infile:
                     if line.strip().startswith("#") or line.strip() == "":
                         continue

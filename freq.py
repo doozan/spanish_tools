@@ -1,27 +1,41 @@
 #!/usr/bin/python3
 # -*- python-mode -*-
 
-import glob
-import csv
-import re
-import os
-import sys
 import argparse
-import spanish_words
-import spanish_sentences
+import os
+import re
+
 import get_best_pos
+from spanish_words import SpanishWords
+import spanish_sentences
 
 parser = argparse.ArgumentParser(description='Lemmatize frequency list')
-parser.add_argument('--ignore', nargs=1, help="List of words to ignore")
 parser.add_argument('file', help="Frequency list")
+parser.add_argument('--ignore', nargs=1, help="List of words to ignore")
+parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
+parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.json)")
+parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
+parser.add_argument('--custom-dir', help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')")
 args = parser.parse_args()
 
 if args.ignore and not os.path.isfile(args.ignore[0]):
     raise FileNotFoundError(f"Cannot open: {args.ignore}")
 
+if not args.dictionary:
+    args.dictionary="es-en.txt"
 
-spanish = spanish_words.SpanishWords(dictionary="spanish_data/es-en.txt")
-sentences = spanish_sentences.sentences("spanish_data/sentences.json")
+if not args.sentences:
+    args.sentences="sentences.json"
+
+if not args.data_dir:
+    args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
+
+if not args.custom_dir:
+    args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
+
+words = SpanishWords(dictionary=args.dictionary, data_dir=args.data_dir, custom_dir=args.custom_dir)
+sentences = spanish_sentences.sentences(sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir)
+
 
 ignore = {}
 freq = {}
@@ -79,7 +93,7 @@ def get_word_flags(word,pos):
         flags.append(flag("LETTER"))
 
 
-    if not spanish.has_word(word, pos):
+    if not words.has_word(word, pos):
         flags.append(flag("NODEF"))
 
     res = sentences.get_sentences([[word,pos]],1)
@@ -199,9 +213,9 @@ with open(args.file) as infile:
         if word in ignore:
             continue
 
-        posrank = get_best_pos.get_ranked_pos(word, spanish, sentences)
+        posrank = get_best_pos.get_ranked_pos(word, words, sentences)
         pos = posrank[0]['pos'] if posrank else "none"
-        lemma = spanish.get_lemma(word, pos)
+        lemma = words.get_lemma(word, pos)
         lines[word] = {'pos':pos, 'count':count, 'lemma':lemma, 'posrank':posrank}
         if "|" not in lemma:
             add_count(lemma, pos, count, word)
