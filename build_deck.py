@@ -27,7 +27,7 @@ parser.add_argument('-s', '--short-defs',  help="CSV file with short definitions
 parser.add_argument('-d', '--dump-sentence-ids',  help="Dump high scoring sentence ids to file")
 parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
 parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
-parser.add_argument('--model',  help="Read model data from JSON file (default: DECKNAME.model, unless --anki is provided)")
+parser.add_argument('--deckinfo',  help="Read model/deck info from JSON file (default: DECKNAME.json)")
 parser.add_argument('--anki', help="Read/write data from specified anki profile")
 parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
 parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.json)")
@@ -69,8 +69,6 @@ if not os.path.isfile(args.short_defs):
     print(f"Shortdefs file does not exist: {args.short_defs}")
     exit(1)
 
-_deck_name = "6001 Spanish Vocab"
-
 db_notes = {}
 db_timestamps = {}
 
@@ -94,25 +92,19 @@ def init_data():
     words = SpanishWords(dictionary=args.dictionary, data_dir=args.data_dir, custom_dir=args.custom_dir)
     sentences = spanish_sentences.sentences(sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir)
 
-def load_db(filename):
+def load_db_notes(filename, deck_name):
     if any("/usr/bin/anki" in p.info['cmdline'] for p in psutil.process_iter(['cmdline'])):
         print("Anki is running, cannot continue")
         exit(1)
 
-    return sqlite3.connect(filename)
+    db = sqlite3.connect(filename)
+    c = db.cursor()
 
-def load_db_model(c):
-
-    models = json.loads(c.execute("SELECT models FROM col").fetchone()[0])
-    return models['1587075402744']
-
-
-def load_db_notes(c):
     decks = json.loads(c.execute("SELECT decks FROM col").fetchone()[0])
 
     col_deck_guid=0
     for item,val in decks.items():
-        if val['name'] == _deck_name:
+        if val['name'] == deck_name:
             col_deck_guid = val['id']
             break
 
@@ -155,9 +147,6 @@ def get_note_hash(guid,flds,tags):
     return hash(json.dumps([guid,flds,tags]))
 
 def get_mod_timestamp(note):
-    if not c:
-        return
-
     guid = note.guid
     flds = note._format_fields()
     tags = note._format_tags()
@@ -676,45 +665,30 @@ def load_shortdefs(filename):
             shortdefs[item_tag] = { row['pos']: { '': row['shortdef'] } }
 
 
+if not args.deckinfo:
+    args.deckinfo = args.deckname + ".json"
 
+if not os.path.isfile(args.deckinfo):
+    print(f"Model JSON does not exist: {args.deckinfo}")
+    exit(1)
 
-model_data = None
+with open(args.deckinfo) as jsonfile:
+    deck_info = json.load(jsonfile)
+
+card_model = make_card_model(deck_info['model'])
+deck_guid = deck_info['deck']['id']
+my_deck = genanki.Deck(int(deck_guid),deck_info['deck']['name'],deck_info['deck']['desc'])
+
 if args.anki:
     ankidb = os.path.join( os.path.expanduser("~"), ".local/share/Anki2", args.anki, "collection.anki2" )
     if not os.path.isfile(ankidb):
         print("Cannot find anki database:", ankidb)
         exit(1)
 
-    db = load_db(ankidb)
-    c = db.cursor()
-
-    if not args.model:
-        model_data = load_db_model(c)
-
-    db_notes = load_db_notes(c)
+    db_notes = load_db_notes(ankidb, deck_info['deck']['name'])
     for guid, item in db_notes.items():
         hashval = get_note_hash(guid,item['flds'],item['tags'])
         db_timestamps[hashval] = item['mod']
-
-    c.close()
-    db.close()
-
-if not model_data:
-
-    if not args.model:
-        args.model = args.deckname + ".model"
-
-    if not os.path.isfile(args.model):
-        print(f"Model JSON does not exist: {args.model}")
-        exit(1)
-
-    with open(args.model) as jsonfile:
-        model_data = json.load(jsonfile)
-
-
-card_model = make_card_model(model_data)
-deck_guid = 1587078062419
-my_deck = genanki.Deck(int(deck_guid),_deck_name, "The 6001 most frequenly used Spanish words - with audio, comprehensive definitions, and usage sentences")
 
 
 init_data()
