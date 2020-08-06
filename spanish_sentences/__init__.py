@@ -205,7 +205,7 @@ class sentences:
 
             wordtag = make_tag(word, pos)
             forced_ids = [x for x in self.forced_ids.get(wordtag,[]) if
-                    self.sentencedb[x][IDX_SPAID] not in seen and 
+                    self.sentencedb[x][IDX_SPAID] not in seen and
                     self.sentencedb[x][IDX_ENGID] not in seen]
             if len(forced_ids):
                 source = self.forced_ids_source[wordtag]
@@ -215,7 +215,7 @@ class sentences:
 
             else:
                 res = self.get_all_sentence_ids(word, pos)
-                available_ids = set(res['ids']) - set(item_ids)
+                available_ids = [ x for x in res['ids'] if x not in item_ids ]
                 if not source:
                     source = res['source']
                     item_ids = self.select_best_ids(available_ids, count, seen)
@@ -223,8 +223,6 @@ class sentences:
                 # Only accept 'literal' matches for the first pos
                 elif res['source'] not in [ 'literal' ]:
                     item_ids = self.select_best_ids(available_ids, count, seen)
-
-
 
             sentences[pos] = item_ids
 
@@ -241,15 +239,14 @@ class sentences:
 
         return res
 
-    def select_best_ids(self, available, count, seen):
+    def select_best_ids(self, all_ids, count, seen):
 
-        ids = []
         source = ""
 
         # Find the hightest scoring sentences without repeating the english or spanish ids
         # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
         scored = {}
-        for i in available:
+        for i in all_ids:
             s = self.sentencedb[i]
             score = s[IDX_SCORE]
             if not score in scored:
@@ -258,33 +255,42 @@ class sentences:
             scored[score]['eng_ids'].add(s[IDX_ENGID])
             scored[score]['spa_ids'].add(s[IDX_SPAID])
 
+
         available = []
+        selected = []
+        needed = count
+
+        # for each group of scored sentences:
+        # if the group offers less than we need, add them all to ids
+        # if it has more, add them all to available and let the selector choose
         for score in sorted( scored.keys(), reverse=True ):
-            for i in scored[score]['ids']:
+
+            for i in sorted(scored[score]['ids']):
                 s = self.sentencedb[i]
                 if s[IDX_ENGID] not in seen and s[IDX_SPAID] not in seen:
                     seen.add(s[IDX_ENGID])
                     seen.add(s[IDX_SPAID])
                     available.append(i)
 
-                if len(available) >= count:
-                    break
-
-            if len(available) >= count:
+            if len(available) >= needed:
                 break
+            elif len(available):
+                needed -= len(available)
+                selected += available
+                available = []
 
         available = sorted(available)
 
-        if len(available) <= count:
-            ids = available
+        if len(available) <= needed:
+            selected += available
 
         else:
-            step = len(available)/(count+1.0)
+            step = len(available)/(needed+1.0)
 
             # select sentences over an even distribution of the range
-            ids = [ available[math.ceil(i*step)] for i in range(count) ]
+            selected += [ available[math.ceil(i*step)] for i in range(needed) ]
 
-        return ids
+        return selected
 
     def get_all_sentence_ids(self, lookup, pos):
         ids = []
