@@ -133,11 +133,11 @@ class sentences:
                         iword,pos = self.tagfixes[iword][ipos]
 
 
-                    xword,junk,xlemma = iword.partition("|")
-                    if not xlemma:
-                        xlemma = xword
+                    xword,*xlemmas = iword.split("|")
+                    if not xlemmas:
+                        xlemmas = [xword]
 
-                    for word in [ f'@{xword}',xlemma ]:
+                    for word in [f'@{xword}'] + xlemmas:
 
                         if word not in self.tagdb:
                             self.tagdb[word] = {}
