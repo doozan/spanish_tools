@@ -26,6 +26,7 @@ parser.add_argument('-w', '--wordlist', action='append', help="List of words to 
 parser.add_argument('-s', '--short-defs',  help="CSV file with short definitions (default DECKNAME.shortdefs)")
 parser.add_argument('-d', '--dump-sentence-ids',  help="Dump high scoring sentence ids to file")
 parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
+parser.add_argument('-r', '--dump-removed',  help="Dump list of removed note ids to file (requires --anki)")
 parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
 parser.add_argument('--deckinfo',  help="Read model/deck info from JSON file (default: DECKNAME.json)")
 parser.add_argument('--anki', help="Read/write data from specified anki profile")
@@ -69,6 +70,10 @@ if not os.path.isfile(args.short_defs):
     print(f"Shortdefs file does not exist: {args.short_defs}")
     exit(1)
 
+if args.dump_removed and not args.anki:
+    print("Use of --dump-removed requires --anki profile to be specified")
+    exit(1)
+
 db_notes = {}
 db_timestamps = {}
 
@@ -93,10 +98,6 @@ def init_data():
     sentences = spanish_sentences.sentences(sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir)
 
 def load_db_notes(filename, deck_name):
-    if any("/usr/bin/anki" in p.info['cmdline'] for p in psutil.process_iter(['cmdline'])):
-        print("Anki is running, cannot continue")
-        exit(1)
-
     db = sqlite3.connect(filename)
     c = db.cursor()
 
@@ -110,7 +111,7 @@ def load_db_notes(filename, deck_name):
 
     query = """
 SELECT
-    c.id,n.guid,n.mod,n.flds,n.tags
+    c.id,n.id,n.guid,n.mod,n.flds,n.tags
 FROM
     cards AS c
 LEFT JOIN
@@ -122,14 +123,14 @@ WHERE
 """
 
     db_notes = {}
-    for cid,guid,mod,flds,tags in c.execute(query, (col_deck_guid,)).fetchall():
+    for cid,nid,guid,mod,flds,tags in c.execute(query, (col_deck_guid,)).fetchall():
 
         fields = flds.split(chr(31))
 
         if guid in db_notes:
             db_notes[guid]['cards'].append(cid)
         else:
-            db_notes[guid] = {'word': f"{fields[2]} {fields[1]}", 'cards': [ cid ], 'flds': flds, 'tags': tags, 'mod': mod}
+            db_notes[guid] = {'word': f"{fields[2]} {fields[1]}", 'cards': [ cid ], 'flds': flds, 'tags': tags, 'mod': mod, 'nid': nid}
 
     return db_notes
 
@@ -154,75 +155,12 @@ def get_mod_timestamp(note):
     hashval = get_note_hash(guid,flds,tags)
     return db_timestamps.get(hashval)
 
-
-def request(action, **params):
-    return {'action': action, 'params': params, 'version': 6}
-
-def invoke(action, **params):
-    requestJson = json.dumps(request(action, **params)).encode('utf-8')
-    response = json.load(urllib.request.urlopen(urllib.request.Request('http://localhost:8765', requestJson)))
-    if len(response) != 2:
-        raise Exception('response has an unexpected number of fields')
-    if 'error' not in response:
-        raise Exception('response is missing required error field')
-    if 'result' not in response:
-        raise Exception('response is missing required result field')
-    if response['error'] is not None:
-        raise Exception(response['error'])
-    return response['result']
-
-
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 def fail(*args, **kwargs):
     eprint(*args, **kwargs)
     exit(1)
-
-def sync_anki(profile):
-    print("Starting Anki")
-    proc = subprocess.Popen(["/usr/bin/anki","--lang=en",f"--profile={profile}"])
-
-    tries=120
-    while tries:
-        try:
-            result = invoke('deckNames')
-
-        except urllib.error.URLError:
-            time.sleep(1)
-        else:
-            break
-        tries-=1
-
-    if not tries:
-        print("Failed to start Anki or problem running AnkiConnect")
-        proc.terminate()
-        exit(1)
-
-    result = invoke('importPackage', path=package_filename)
-
-    removed_cards = []
-
-    for item in db_notes.keys()-deck_guids:
-        print(f"removed: {db_notes[item]['word']}")
-        removed_cards += db_notes[item]['cards']
-
-    if len(removed_cards):
-        print(f"removing {removed_cards}")
-        result = invoke('changeDeck', cards=removed_cards, deck="Removed")
-
-        time.sleep(6)
-
-    # Do this again to force a database save
-    result = invoke('importPackage', path=package_filename)
-
-    result = invoke('sync')
-
-    # And again just to settle things after the sync
-    result = invoke('importPackage', path=package_filename)
-
-    proc.terminate()
-
 
 def format_sentences(sentences):
     return "<br>\n".join( f'<span class="spa">{item[0]}</span><br>\n<span class="eng">{item[1]}</span>' for item in sentences )
@@ -771,5 +709,7 @@ if args.dump_notes:
             del row[0]
             csvwriter.writerow(row)
 
-if args.anki:
-    sync_anki(args.anki)
+if args.dump_removed:
+    with open(args.dump_removed, "w") as outfile:
+        for guid in db_notes.keys()-deck_guids:
+            outfile.write(str(db_notes[guid]['nid']))
