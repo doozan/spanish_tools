@@ -45,7 +45,7 @@ class SpanishWordlist:
         definition = item['def']
 
         if not word or word not in self.allwords:
-            print(f"{item} does not match any entries in wordlist, cannot be removed")
+            print(f"{item} does not match any entries in wordlist, cannot be removed", file=sys.stderr)
             return
 
         if not pos:
@@ -53,7 +53,7 @@ class SpanishWordlist:
             return
 
         if pos not in self.allwords[word]:
-            print(f"{item} does not match any entries in wordlist, cannot be removed")
+            print(f"{item} does not match any entries in wordlist, cannot be removed", file=sys.stderr)
             return
 
         if not note and not definition:
@@ -62,7 +62,7 @@ class SpanishWordlist:
         else:
 
             if note not in self.allwords[word][pos]:
-                print(f"{item} does not match any entries in wordlist, cannot be removed")
+                print(f"{item} does not match any entries in wordlist, cannot be removed", file=sys.stderr)
                 return
 
             if not definition:
@@ -79,7 +79,7 @@ class SpanishWordlist:
                     del self.allwords[word][pos][note]
 
                 if not found:
-                    print(f"{item} does not match any entries in wordlist, cannot be removed")
+                    print(f"{item} does not match any entries in wordlist, cannot be removed", file=sys.stderr)
 
             # cleanup if we've deleted all of something
             if not len(self.allwords[word][pos]):
@@ -263,7 +263,7 @@ class SpanishWordlist:
                     self.add_lemma(word, lemma, "noun")
 
             else:
-                print(f"unknown nmeta value: {k} in {word}")
+                print(f"unknown nmeta value: {k} in {word}", file=sys.stderr)
 
         return
 
@@ -275,18 +275,18 @@ class SpanishWordlist:
 
         tags = self.parse_tags(item['def'])
         if "pattern" not in tags or "stem" not in tags:
-            print(f"Bad vmeta data for {verb}: {item['def']}")
+            print(f"Bad vmeta data for {verb}: {item['def']}", file=sys.stderr)
             return
 
         iverb = { "pattern": tags["pattern"][0],
                   "stems": tags["stem"] }
 
         if ending == iverb["pattern"]:
-#            print(f"Useless pattern declaration {verb}: {item}")
+#            print(f"Useless pattern declaration {verb}: {item}", file=sys.stderr)
             return
 
         if iverb["pattern"] not in paradigms[ending]:
-            print(f"Bad pattern specified in vmeta for {verb}: {item['def']}")
+            print(f"Bad pattern specified in vmeta for {verb}: {item['def']}", file=sys.stderr)
             return
 
         # Ignore reflexives if the non-reflexive is in the database
@@ -586,7 +586,7 @@ class SpanishWordlist:
 
         # This only applies to one entry in the 4/20/2020 wiktionary dump
         if not res:
-    #        print("DOES NOT MATCH REGEX: '%s'"% data.strip())
+    #        print("DOES NOT MATCH REGEX: '%s'"% data.strip(), file=sys.stderr)
             return {'word':'', 'pos':'', 'note': '', 'syn': '', 'def': ''}
 
         word = res.group('word').strip()
