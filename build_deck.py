@@ -338,51 +338,6 @@ def format_image(filename):
         return ""
     return f'<img src="{filename}" />'
 
-def make_shortdef(defs, max_len=60):
-
-    # Don't build a shortdef if the current def is already short enough
-    length = 0
-    for pos in defs.values():
-        for item in pos.values():
-            length += len(item)
-
-    if length<=max_len:
-        return
-
-    usage = ""
-    pos = next(iter(defs))
-    tag = next(iter(defs[pos]))
-
-    shortdef = defs[pos][tag]
-
-    if len(shortdef) > max_len:
-        shortdef = shortdef.partition(';')[0].strip()
-
-    if len(shortdef) > max_len:
-        shortdef = shortdef.partition('(')[0].strip()
-
-    if len(shortdef) > max_len:
-        shortdef = shortdef.partition('[')[0].strip()
-
-    # Split on the "," closest to max length
-    if len(shortdef) > max_len:
-        end = 0
-        while True:
-           loc = shortdef.find(",", end+1)
-           if loc<1 or loc >= max_len:
-               break
-           end = loc
-
-        if end:
-            shortdef = shortdef[:end].strip()
-
-
-    if len(shortdef) > max_len:
-        eprint("Alert: Trouble shortening def: {shortdef}")
-
-    return { pos: { tag: shortdef } }
-
-
 def format_def(item,hide_word=None):
 
     results = []
@@ -433,10 +388,13 @@ def format_def(item,hide_word=None):
 
             usage = item[pos][tag]
 
-            if hide_word and f"of {hide_word}" in usage:
-                new_usage = re.sub(f'of {hide_word}[^,;(]*', 'of ... ', usage).strip()
-                if len(item.keys()) == 1 and len(item[pos].keys()) == 1 and "," not in usage and ";" not in usage and "(" not in usage:
+            if hide_word:
+                new_usage = re.sub(r"(apocopic form|diminutive|ellipsis|clipping) of [^,:;(]*", r"\1 of ... ", usage).strip()
+
+                if new_usage != usage and len(item.keys()) == 1 and len(item[pos].keys()) == 1 \
+                        and "," not in usage and ";" not in usage and "(" not in usage and ":" not in usage:
                     eprint(f"Warning: obscured definition of {word} {pos} ({usage}) may be completely obscured")
+
                 usage = new_usage
 
             if display_tag != "":
@@ -541,8 +499,10 @@ def build_item(word, pos):
 
     shortdef = shortdefs.get(item_tag)
     if not shortdef:
-        shortdef = make_shortdef(words.lookup(word, pos))
+        shortdef = words.lookup(word, pos, max_length=60)
     short_english = format_def(shortdef, hide_word=word) if shortdef else ""
+    if short_english == english:
+        short_english = ""
 
     femnoun = words.wordlist.get_feminine_noun(spanish) if pos == "noun" else None
     tts_data = get_phrase(spanish,pos,noun_type,femnoun)

@@ -32,7 +32,7 @@ class SpanishWords:
     def get_all_pos(self, word):
         return self.wordlist.get_all_pos(word)
 
-    def lookup(self, word, pos, get_all_pos=True):
+    def lookup(self, word, pos, get_all_pos=True, max_length=0):
         results = self.wordlist.lookup(word, pos)
 
         if not get_all_pos:
@@ -42,13 +42,139 @@ class SpanishWords:
             if pos in [ "adj", "noun" ]:
                 lemma = self.get_lemma(word,pos)
                 results.update(self.wordlist.lookup(lemma,pos))
-            # TODO: catch mistaged past participles, fixed in wiki, can remove this after 8/20 wiki update
+            # TODO: catch mistagged past participles, fixed in wiki, can remove this after 8/20 wiki update
             elif pos == "verb" and not word.endswith("r") and not word.endswith("rse"):
                 continue
             else:
                 results.update(self.wordlist.lookup(word,pos))
 
+
+        if max_length:
+            results = self.shorten_defs(results, max_length)
+
         return results
+
+
+    # Get a shorter definition having less than max_len characters
+    #
+    # Definitions separated by commas are assumed to be synonyms, while semicolons
+    # separate distinct usage.  Synonyms may be dropped to save space
+    #
+    # Return up to two distinct usages from the given definitions
+    #
+    # For nouns with male/female parts, try to include a definition for each gender
+    #
+    # For verbs with reflexive/non-reflexive, try to include a definition for each use
+    #
+    # If there are tagged/untagged uses, try to include the untagged and the first tagged usage
+    #
+    # Otherwise, try to include the first two distinct uses
+    #
+    def shorten_defs(self, defs, max_len=60):
+
+        first_pos = next(iter(defs))
+
+        shortdefs = {}
+
+        if first_pos in ["m-f", "mf", "m/f"]:
+            pos = first_pos
+            shortdefs[pos] = {}
+            for tag,value in defs[pos].items():
+                for gender in ['m', 'f']:
+                    if tag.startswith(gender) and not any( x.startswith(gender) for x in shortdefs[pos] ):
+                        shortdefs[pos][tag] = value
+
+            if not len(shortdefs[pos]):
+                tag = next(iter(defs[pos]))
+                shortdefs[pos][tag] = defs[pos][tag]
+
+        elif first_pos.startswith("v"):
+            for pos,tags in defs.items():
+                if not pos.startswith("v"):
+                    continue
+
+                # Always take the first verb def, then check each pronomial or reflexive def
+                if shortdefs != {} and "p" not in pos and "r" not in pos:
+                    continue
+
+                # Limit to the first pronomial or reflexive def
+                for existing in shortdefs:
+                    if "p" in existing or "r" in existing:
+                        continue
+
+                # Use the first definition
+                for tag,val in tags.items():
+                    shortdefs[pos] = { tag: val }
+                    break
+
+                ## Take the untagged value, no matter the order
+                #for tag,value in tags.items():
+                #    if shortdefs[pos] == {} or tag == "":
+                #        shortdefs[pos] = { tag: value }
+
+        else:
+            pos = first_pos
+            tags = defs[pos]
+            shortdefs[pos] = {}
+
+            # Use the first definition
+            for tag,val in tags.items():
+                shortdefs[pos] = { tag: val }
+                break
+
+        # If there's only one usage, try to take two definitions from it
+        pos = next(iter(shortdefs))
+        if len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
+            tag = next(iter(shortdefs[pos]))
+            first_def, junk, other_defs = shortdefs[pos][tag].partition(";")
+            if other_defs and len(other_defs):
+                shortdefs[pos][tag] = first_def
+                shortdefs[pos][";"] = other_defs
+
+        # If there's one usage, and it doesn't contain mulitple defs
+        # take the second tag of the first pos
+        # or the first tag of the second pos
+        if len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
+            if len(defs[pos]) > 1:
+                next_tag = list(defs[pos].keys())[1]
+                shortdefs[pos][next_tag] = defs[pos][next_tag]
+            elif len(defs) > 1:
+                next_pos = list(defs.keys())[1]
+                tag = next(iter(defs[next_pos]))
+                shortdefs[next_pos] = { tag: defs[next_pos][tag] }
+
+        for separator in [ ';', '(', '[' ]:
+            for pos,tags in shortdefs.items():
+                for tag,value in tags.items():
+                    shortdefs[pos][tag] = value.partition(separator)[0].strip()
+
+            if sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) <= max_len:
+                break
+
+        # If it's still too long, strip the last , until less than max length or no more , to strip
+        can_strip=True
+        while can_strip and sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) > max_len:
+            can_strip=False
+            for pos,tags in shortdefs.items():
+                for tag,value in tags.items():
+                    strip_pos = value.rfind(",")
+                    if strip_pos > 0:
+                        can_strip=True
+                        shortdefs[pos][tag] = value[:strip_pos].strip()
+                        if sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) <= max_len:
+                            break
+
+        if sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) > max_len:
+            print(f"Alert: Trouble shortening def: {shortdefs}", file=sys.stderr)
+
+        # Rejoin any defs that we split out
+        pos = next(iter(shortdefs))
+        if ";" in shortdefs[pos]:
+            otherdef = shortdefs[pos].pop(';')
+            tag = next(iter(shortdefs[pos]))
+            shortdefs[pos][tag] += "; " + otherdef
+
+        return shortdefs
 
     def get_valid_lemmas(self, word, pos, items):
         valid = [ item for item in items if self.has_word(item, pos) ]
