@@ -20,7 +20,7 @@ def get_filename(voice, phrase):
 def text_to_mp3(voice, phrase, filename):
     engine = "neural" if voice == "Lupa" else "standard"
     response = polly.synthesize_speech(
-                Engine=engine,
+                #Engine=engine,
                 VoiceId=voice,
                 OutputFormat='mp3',
                 Text = phrase)
