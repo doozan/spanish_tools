@@ -418,6 +418,8 @@ def get_phrase(word, pos, noun_type, femnoun):
     return { "voice": voice, "phrase": phrase, "display": display }
 
 
+seen_clues = {}
+
 def build_item(word, pos):
     spanish = word.strip()
     pos = pos.lower()
@@ -439,6 +441,15 @@ def build_item(word, pos):
     if not shortdef:
         shortdef = words.lookup(word, pos, max_length=60)
     short_english = format_def(shortdef, hide_word=word) if shortdef else ""
+
+    defs = [ value for pos,tags in shortdef.items() for tag,value in tags.items() ]
+    seen_tag = "|".join(syns + sorted(defs))
+    if seen_tag in seen_clues:
+        eprint(f"Warning: {seen_tag} is used by {item_tag} and {seen_clues[seen_tag]}")
+#        exit()
+    else:
+        seen_clues[seen_tag] = item_tag
+
     if short_english == english:
         short_english = ""
 
