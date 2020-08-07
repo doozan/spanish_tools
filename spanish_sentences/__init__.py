@@ -22,6 +22,7 @@ class sentences:
         self.tagdb = {}
         self.id_index = {}
         self.tagfixes = {}
+        self.tagfix_sentences = {}
         self.tagfix_count = {}
         self.filter_ids = {}
         self.forced_ids = {}
@@ -44,11 +45,17 @@ class sentences:
                     line = line.strip()
                     if line.startswith("#") or not ":" in line:
                         continue
+                    line,junk,id_string = line.partition("@")
                     oldword,oldpos,newword,newpos = line.split(":")
 
-                    if oldword not in self.tagfixes:
-                        self.tagfixes[oldword] = {}
-                    self.tagfixes[oldword][oldpos] = [newword, newpos]
+                    if len(id_string):
+                        for sid in id_string.split(","):
+                            sid = int(sid.strip())
+                            if not sid in self.tagfix_sentences:
+                                self.tagfix_sentences[sid] = {}
+                            self.tagfix_sentences[sid][f"{oldword}:{oldpos}"] = [newword, newpos]
+                    else:
+                        self.tagfixes[f"{oldword}:{oldpos}"] = [newword, newpos]
 
         # Ignore list must be loaded before the main file
         for datafile in [ os.path.join(dirname, dataprefix + ".ignore") for dirname in [ data_dir, custom_dir ] if dirname ]:
@@ -76,12 +83,18 @@ class sentences:
 
                 self.id_index[f"{spa_id}:{eng_id}"] = index
 
-                self.add_tags_to_db(tags,index)
+                self.add_tags_to_db(tags,index,spa_id)
                 index+=1
 
-        for word,target in self.tagfixes.items():
-            if word not in self.tagfix_count:
-                print(f"Tagfix: {word} {target} does not match any sentences", file=sys.stderr)
+        for old,new in self.tagfixes.items():
+            if old not in self.tagfix_count:
+                print(f"Tagfix: {old} {new} does not match any sentences", file=sys.stderr)
+
+        for sid,tagfixes in self.tagfix_sentences.items():
+            for old,new in tagfixes.items():
+                fixid = f"{old}@{sid}"
+                if fixid not in self.tagfix_count:
+                    print(f"Tagfix: {fixid} {new} does not match any sentences", file=sys.stderr)
 
         # Forced/preferred items must be processed last
         for source in [ "preferred", "forced" ]:
@@ -116,7 +129,7 @@ class sentences:
 
     # tags are in the form:
     # { pos: [word1, word2] }
-    def add_tags_to_db(self, tags, index):
+    def add_tags_to_db(self, tags, index, sid):
         for tagpos,words in tags.items():
 
             # Past participles count as both adjectives and verbs
@@ -126,12 +139,21 @@ class sentences:
                 for iword in words:
                     pos = ipos
 
-                    if iword in self.tagfixes and pos in self.tagfixes[iword]:
-                        count = self.tagfix_count.get(iword,0)
-                        self.tagfix_count[iword] = count+1
+                    fixid = f"{iword}:{ipos}"
+                    newword,newpos = None,None
+                    if sid in self.tagfix_sentences:
+                        newword,newpos = self.tagfix_sentences[sid].get(fixid,[None,None])
+                    if newword:
+                        fixid = f"{iword}:{ipos}@{sid}"
+                    else:
+                        newword,newpos = self.tagfixes.get(fixid,[None,None])
 
-                        iword,pos = self.tagfixes[iword][ipos]
+                    if newword:
+                        count = self.tagfix_count.get(fixid,0)
+                        self.tagfix_count[fixid] = count+1
 
+                        iword = newword
+                        pos = newpos
 
                     xword,*xlemmas = iword.split("|")
                     if not xlemmas:
