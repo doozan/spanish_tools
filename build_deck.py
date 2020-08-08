@@ -517,6 +517,14 @@ def wordlist_indexof(target):
         if word == target:
             return index
 
+def wordlist_insert_after(target, wordtag):
+    index = wordlist_indexof(target)
+    if not index:
+        raise ValueError(f"{target} not found in wordlist, unable to insert {wordtag} after it")
+
+    allwords.insert(index+1,wordtag)
+    allwords_set.add(wordtag)
+
 def wordlist_replace(old_tag, new_tag):
 
     index = wordlist_indexof(old_tag)
@@ -623,22 +631,31 @@ for wordlist in args.wordlist:
 
             item_tag = make_tag(row['spanish'],row['pos'])
 
-            # Position that is another word instead of a numeric value will replace pos:word specified
-            # or the first occurance of the word if the pos: is not specified
-            if 'position' in row and not row['position'][0].isdigit() and not row['position'][0] == "-":
-                wordlist_replace(row['position'], item_tag)
+
+            position = row.get("position",None)
+            if not position:
+                wordlist_append(item_tag)
+
+            # +pos:word indicates that the entry should be positioned immedialy after the specified pos:word
+            # or after the first occurance of word if pos: is not specified
+            elif position.startswith("+"):
+                wordlist_insert_after(position[1:], item_tag)
+
+            # pos:word will replace the specific pos:word or the first occurance of the word if pos: is not specified
+            elif not position[0].isdigit() and position[0] != "-":
+                wordlist_replace(position, item_tag)
 
             # Negative position indicates that all previous instances of this word should be removed
-            elif 'position' in row and int(row['position']) < 0:
+            elif int(position) < 0:
                 wordlist_remove(item_tag)
 
             # a digit in the position column indicates that it should be inserted at that position
-            elif 'position' in row and int(row['position']) >0 and int(row['position']) < len(allwords):
-                wordlist_insert(item_tag, int(row['position']))
+            elif int(position) >0 and int(position) < len(allwords):
+                wordlist_insert(item_tag, int(position))
 
             # otherwise put it at the end of the list
             else:
-                wordlist_append(item_tag)
+                raise ValueError("Position {position} does not exist, ignoring")
 
 # Arrange any items with absolute positions
 for wordtag,position in sorted(allwords_positions.items(), key=lambda item: item[1]):
@@ -646,6 +663,9 @@ for wordtag,position in sorted(allwords_positions.items(), key=lambda item: item
     if index != position:
         allwords.pop(index)
         allwords.insert(position-1, wordtag)
+
+    word, pos = split_tag(wordtag)
+    print(f"Absolute position for {wordtag}, consider using relative: ~{allwords[position-2]},{word},{pos}", file=sys.stderr)
 
 
 if args.limit and args.limit < len(allwords):
