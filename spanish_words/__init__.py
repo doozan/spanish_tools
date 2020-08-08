@@ -70,7 +70,7 @@ class SpanishWords:
     #
     # Otherwise, try to include the first two distinct uses
     #
-    def shorten_defs(self, defs, max_len=60):
+    def shorten_defs(self, defs, max_len=60, only_first_def=False):
 
         first_pos = next(iter(defs))
 
@@ -93,8 +93,11 @@ class SpanishWords:
                 if not pos.startswith("v"):
                     continue
 
+                if len(shortdefs) and only_first_def:
+                    continue
+
                 # Always take the first verb def, then check each pronomial or reflexive def
-                if shortdefs != {} and "p" not in pos and "r" not in pos:
+                if len(shortdefs) and "p" not in pos and "r" not in pos:
                     continue
 
                 # Limit to the first pronomial or reflexive def
@@ -124,7 +127,7 @@ class SpanishWords:
 
         # If there's only one usage, try to take two definitions from it
         pos = next(iter(shortdefs))
-        if len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
+        if not only_first_def and len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
             tag = next(iter(shortdefs[pos]))
             first_def, junk, other_defs = shortdefs[pos][tag].partition(";")
             if other_defs and len(other_defs):
@@ -134,7 +137,7 @@ class SpanishWords:
         # If there's one usage, and it doesn't contain mulitple defs
         # take the second tag of the first pos
         # or the first tag of the second pos
-        if len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
+        if not only_first_def and len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
             if len(defs[pos]) > 1:
                 next_tag = list(defs[pos].keys())[1]
                 shortdefs[pos][next_tag] = defs[pos][next_tag]
@@ -164,15 +167,25 @@ class SpanishWords:
                         if sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) <= max_len:
                             break
 
+
+        # Rejoin any defs that we split out, unless it's a dup or too long
+        pos = next(iter(shortdefs))
+        if not only_first_def and ";" in shortdefs[pos]:
+            tag = next(iter(shortdefs[pos]))
+
+            # If the second def is the same as the first def, retry without splitting the def
+            if shortdefs[pos][tag] == shortdefs[pos][';']:
+                shortdefs = self.shorten_defs(defs, max_len=max_len, only_first_def=True)
+            else:
+                otherdef = shortdefs[pos].pop(';')
+                shortdefs[pos][tag] += "; " + otherdef
+
+        # If it's too long, try with just one definition
+        if not only_first_def and sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) > max_len:
+            shortdefs = self.shorten_defs(defs, max_len=max_len, only_first_def=True)
+
         if sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) > max_len:
             print(f"Alert: Trouble shortening def: {shortdefs}", file=sys.stderr)
-
-        # Rejoin any defs that we split out
-        pos = next(iter(shortdefs))
-        if ";" in shortdefs[pos]:
-            otherdef = shortdefs[pos].pop(';')
-            tag = next(iter(shortdefs[pos]))
-            shortdefs[pos][tag] += "; " + otherdef
 
         return shortdefs
 
