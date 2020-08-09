@@ -313,7 +313,7 @@ def format_def(item,hide_word=None):
             usage = item[pos][tag]
 
             if hide_word:
-                new_usage = re.sub(r"(apocopic form|diminutive|ellipsis|clipping) of [^,:;(]*", r"\1 of ... ", usage).strip()
+                new_usage = re.sub(r"(apocopic form|diminutive|ellipsis|clipping|superlative) of [^,:;(]*", r"\1 of ... ", usage).strip()
 
                 if new_usage != usage and len(item.keys()) == 1 and len(item[pos].keys()) == 1 \
                         and "," not in usage and ";" not in usage and "(" not in usage and ":" not in usage:
