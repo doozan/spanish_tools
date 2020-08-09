@@ -19,83 +19,28 @@ import spanish_sentences
 import spanish_speech
 from spanish_words import SpanishWords
 
-parser = argparse.ArgumentParser(description='Compile anki deck')
-parser.add_argument('deckname', help="Name of deck to build")
-parser.add_argument('-m', '--mediadir', help="Directory containing deck media resources (default: DECKNAME.media)")
-parser.add_argument('-w', '--wordlist', action='append', help="List of words to include/exclude from the deck (default: DECKNAME.json")
-parser.add_argument('-s', '--short-defs',  help="CSV file with short definitions (default DECKNAME.shortdefs)")
-parser.add_argument('-d', '--dump-sentence-ids',  help="Dump high scoring sentence ids to file")
-parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
-parser.add_argument('-r', '--dump-removed',  help="Dump list of removed note ids to file (requires --anki)")
-parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
-parser.add_argument('--deckinfo',  help="Read model/deck info from JSON file (default: DECKNAME.json)")
-parser.add_argument('--anki', help="Read/write data from specified anki profile")
-parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
-parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.json)")
-parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
-parser.add_argument('--custom-dir', help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')")
-args = parser.parse_args()
-
-if not args.dictionary:
-    args.dictionary="es-en.txt"
-
-if not args.sentences:
-    args.sentences="sentences.json"
-
-if not args.data_dir:
-    args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
-
-if not args.custom_dir:
-    args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
-
-if not args.mediadir:
-    args.mediadir = args.deckname + ".media"
-
-if not args.wordlist:
-    args.wordlist = [ args.deckname + ".csv" ]
-
-if not args.short_defs:
-    args.short_defs = args.deckname + ".shortdefs"
-
-if not os.path.isdir(args.mediadir):
-    print(f"Deck directory does not exist: {args.mediadir}")
-    exit(1)
-
-for wordlist in args.wordlist:
-    if not os.path.isfile(wordlist):
-        print(f"Wordlist file does not exist: {wordlist}")
-        exit(1)
-
-if not os.path.isfile(args.short_defs):
-    print(f"Shortdefs file does not exist: {args.short_defs}")
-    exit(1)
-
-if args.dump_removed and not args.anki:
-    print("Use of --dump-removed requires --anki profile to be specified")
-    exit(1)
+_words = None
+_sentences = None
 
 db_notes = {}
 db_timestamps = {}
-
-package_filename = os.path.join(os.getcwd(), args.deckname + ".apkg")
 
 allwords = []
 allwords_set = set()
 allwords_positions = {}
 shortdefs = {}
 
-words = None
-sentences = None
-
 media = []
 
+args = None
 
-def init_data():
-    global words
-    global sentences
 
-    words = SpanishWords(dictionary=args.dictionary, data_dir=args.data_dir, custom_dir=args.custom_dir)
-    sentences = spanish_sentences.sentences(sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir)
+def init_data(dictionary, sentences, data_dir, custom_dir):
+    global _words
+    global _sentences
+
+    _words = SpanishWords(dictionary=dictionary, data_dir=data_dir, custom_dir=custom_dir)
+    _sentences = spanish_sentences.sentences(sentences=sentences, data_dir=data_dir, custom_dir=custom_dir)
 
 def load_db_notes(filename, deck_name):
     db = sqlite3.connect(filename)
@@ -167,7 +112,7 @@ def format_sentences(sentences):
 
 def get_sentences(items, count):
 
-    results = sentences.get_sentences(items, count)
+    results = _sentences.get_sentences(items, count)
 
     if len(results['sentences']):
         return format_sentences(results['sentences'])
@@ -185,7 +130,7 @@ def save_dump_sentences(lookups):
         if tag in dumpable_sentences:
             continue
 
-        results = sentences.get_sentences( [ [word,pos] ], 3)
+        results = _sentences.get_sentences( [ [word,pos] ], 3)
         if not results:
             continue
 
@@ -283,7 +228,7 @@ def format_def(item,hide_word=None):
 
     prev_display_pos = None
     for pos in item:
-        common_pos = words.common_pos(pos)
+        common_pos = _words.common_pos(pos)
         safe_pos = pos.replace("/", "_")
 
         # Don't prefix the def with the part of speech if there's only one pos
@@ -322,6 +267,7 @@ def format_def(item,hide_word=None):
             else:
                 prev_display_pos = display_pos
 
+            classes += sorted(get_location_classes(tag))
             results.append(f'<span class="{" ".join(classes)}">{display_pos} ')
 
             usage = item[pos][tag]
@@ -331,7 +277,7 @@ def format_def(item,hide_word=None):
 
                 if new_usage != usage and len(item.keys()) == 1 and len(item[pos].keys()) == 1 \
                         and "," not in usage and ";" not in usage and "(" not in usage and ":" not in usage:
-                    eprint(f"Warning: obscured definition of {word} {pos} ({usage}) may be completely obscured")
+                    eprint(f"Warning: obscured definition: ({usage}) may be completely obscured")
 
                 usage = new_usage
 
@@ -361,7 +307,7 @@ def validate_note(item):
     return True
 
 def get_synonyms(word, pos, limit=5):
-    items = words.get_synonyms(word,pos)
+    items = _words.get_synonyms(word,pos)
     return [ k for k in items if make_tag(k,pos) in allwords_set ][:limit]
 
 #_FEMALE1 = "Lupe"
@@ -400,7 +346,7 @@ def get_phrase(word, pos, noun_type, femnoun):
             phrase = f"los {word}"
         elif noun_type == "m/f":
             voice = _MALE1
-            if femnoun in words.wordlist.el_f_nouns:
+            if femnoun in _words.wordlist.el_f_nouns:
                 phrase = f"el {femnoun}. el {word}"
                 display = f"el {femnoun}/el {word}"
             else:
@@ -418,28 +364,99 @@ def get_phrase(word, pos, noun_type, femnoun):
     return { "voice": voice, "phrase": phrase, "display": display }
 
 
+_REGIONS = {
+    "caribbean": {
+        "cuba",
+        "dominican republic",
+        "puerto rico",
+        "panama",
+        "venezuela",
+        "colombia"
+    },
+    "central america": {
+        "costa rica",
+        "el salvador",
+        "guatemala",
+        "honduras",
+        "nicaragua",
+        "panama",
+    },
+    "latin america": set(),
+    "mexico": set(),
+    "south america": {
+        "argentina",
+        "bolivia",
+        "chile",
+        "colombia",
+        "ecuador",
+        "paraguay",
+        "peru",
+        "uruguay",
+        "venezuela",
+    },
+    "spain": set(),
+    "philippines": set(),
+    "united states": {
+        "california",
+        "louisiana",
+        "new mexico",
+        "texas"
+    },
+}
+
+_PLACE_TO_REGION = { item:region for region,items in _REGIONS.items() for item in items }
+
+def get_location_classes(tag_string):
+    items = { t.strip() for t in tag_string.lower().split(',') }
+
+    places = items & _PLACE_TO_REGION.keys()
+    regions = items & _REGIONS.keys()
+
+    meta_classes = set()
+
+    if len(places)==1 and len(regions) == 0:
+        meta_classes.add("only-"+next(iter(places)))
+
+    place_regions = set()
+    for place in places:
+        place_regions.add(_PLACE_TO_REGION[place])
+
+    if len(regions | place_regions) == 1:
+        meta_classes.add("only-"+next(iter(regions|place_regions)))
+
+#    all_places = places
+#    for region in regions:
+#        all_places |= _PLACES[region]
+
+
+    # Special case handling for "latin america"
+    if (len(places) or len(regions)) and not len( (regions|place_regions) - { "caribbean","central america","mexico","south america","united states","latin america" }):
+        meta_classes.add("only-latin-america")
+
+    return [ item.replace(" ", "-") for item in regions | places | meta_classes ]
+
+
 seen_clues = {}
 
-def build_item(word, pos):
+def build_item(word, pos, mediadir):
     spanish = word.strip()
     pos = pos.lower()
     item_tag = make_tag(spanish, pos)
 
     english = ""
     noun_type = ""
-    usage = words.lookup(spanish, pos, get_all_pos=True)
+    usage = _words.lookup(spanish, pos, get_all_pos=True)
     syns = get_synonyms(spanish, pos)
     if usage and len(usage):
         english = format_def(usage)
         if pos == "noun":
             noun_type = next(iter(usage))
     else:
-        print(row)
         raise ValueError("No english", spanish, pos)
 
     shortdef = shortdefs.get(item_tag)
     if not shortdef:
-        shortdef = words.lookup(word, pos, max_length=60)
+        shortdef = _words.lookup(word, pos, max_length=60)
     short_english = format_def(shortdef, hide_word=word) if shortdef else ""
 
     defs = [ value for pos,tags in shortdef.items() for tag,value in tags.items() ]
@@ -453,11 +470,11 @@ def build_item(word, pos):
     if short_english == english:
         short_english = ""
 
-    femnoun = words.wordlist.get_feminine_noun(spanish) if pos == "noun" else None
+    femnoun = _words.wordlist.get_feminine_noun(spanish) if pos == "noun" else None
     tts_data = get_phrase(spanish,pos,noun_type,femnoun)
-    sound = spanish_speech.get_speech(tts_data['voice'], tts_data['phrase'], args.mediadir)
+    sound = spanish_speech.get_speech(tts_data['voice'], tts_data['phrase'], mediadir)
 
-    all_usage_pos = { words.common_pos(k):1 for k in usage.keys() }.keys()
+    all_usage_pos = { _words.common_pos(k):1 for k in usage.keys() }.keys()
     lookups = [ [ spanish, pos ] for pos in all_usage_pos ]
     sentences = get_sentences(lookups, 3)
     save_dump_sentences(lookups)
@@ -479,12 +496,12 @@ def build_item(word, pos):
 
 
     tags = [ noun_type if pos == "noun" else pos ]
-    if "tags" in row and row['tags'] != "":
-        for tag in row['tags'].split(" "):
-            tags.append(tag)
+#    if "tags" in row and row['tags'] != "":
+#        for tag in row['tags'].split(" "):
+#            tags.append(tag)
     item['tags'] = tags
 
-    FILE=os.path.join(args.mediadir, sound)
+    FILE=os.path.join(mediadir, sound)
     if os.path.isfile(FILE):
         media.append(FILE)
     else:
@@ -577,170 +594,235 @@ def load_shortdefs(filename):
             if not row or row.get('shortdef',"") == "":
                 continue
 
-            common_pos = words.common_pos(row['pos'])
+            common_pos = _words.common_pos(row['pos'])
             item_tag = make_tag(row['spanish'],common_pos)
             shortdefs[item_tag] = { row['pos']: { '': row['shortdef'] } }
 
+def main():
 
-if not args.deckinfo:
-    args.deckinfo = args.deckname + ".json"
+    global allwords
+    global args
 
-if not os.path.isfile(args.deckinfo):
-    print(f"Model JSON does not exist: {args.deckinfo}")
-    exit(1)
+    parser = argparse.ArgumentParser(description='Compile anki deck')
+    parser.add_argument('deckname', help="Name of deck to build")
+    parser.add_argument('-m', '--mediadir', help="Directory containing deck media resources (default: DECKNAME.media)")
+    parser.add_argument('-w', '--wordlist', action='append', help="List of words to include/exclude from the deck (default: DECKNAME.json")
+    parser.add_argument('-s', '--short-defs',  help="CSV file with short definitions (default DECKNAME.shortdefs)")
+    parser.add_argument('-d', '--dump-sentence-ids',  help="Dump high scoring sentence ids to file")
+    parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
+    parser.add_argument('-r', '--dump-removed',  help="Dump list of removed note ids to file (requires --anki)")
+    parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
+    parser.add_argument('--deckinfo',  help="Read model/deck info from JSON file (default: DECKNAME.json)")
+    parser.add_argument('--anki', help="Read/write data from specified anki profile")
+    parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
+    parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.json)")
+    parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
+    parser.add_argument('--custom-dir', help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')")
+    args = parser.parse_args()
 
-with open(args.deckinfo) as jsonfile:
-    deck_info = json.load(jsonfile)
+    if not args.dictionary:
+        args.dictionary="es-en.txt"
 
-card_model = make_card_model(deck_info['model'])
-deck_guid = deck_info['deck']['id']
-my_deck = genanki.Deck(int(deck_guid),deck_info['deck']['name'],deck_info['deck']['desc'])
+    if not args.sentences:
+        args.sentences="sentences.json"
 
-if args.anki:
-    ankidb = os.path.join( os.path.expanduser("~"), ".local/share/Anki2", args.anki, "collection.anki2" )
-    if not os.path.isfile(ankidb):
-        print("Cannot find anki database:", ankidb)
+    if not args.data_dir:
+        args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
+
+    if not args.custom_dir:
+        args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
+
+    if not args.mediadir:
+        args.mediadir = args.deckname + ".media"
+
+    if not args.wordlist:
+        args.wordlist = [ args.deckname + ".csv" ]
+
+    if not args.short_defs:
+        args.short_defs = args.deckname + ".shortdefs"
+
+    if not os.path.isdir(args.mediadir):
+        print(f"Deck directory does not exist: {args.mediadir}")
         exit(1)
 
-    db_notes = load_db_notes(ankidb, deck_info['deck']['name'])
-    for guid, item in db_notes.items():
-        hashval = get_note_hash(guid,item['flds'],item['tags'])
-        db_timestamps[hashval] = item['mod']
+    for wordlist in args.wordlist:
+        if not os.path.isfile(wordlist):
+            print(f"Wordlist file does not exist: {wordlist}")
+            exit(1)
+
+    if not os.path.isfile(args.short_defs):
+        print(f"Shortdefs file does not exist: {args.short_defs}")
+        exit(1)
+
+    if args.dump_removed and not args.anki:
+        print("Use of --dump-removed requires --anki profile to be specified")
+        exit(1)
 
 
-init_data()
+    if not args.deckinfo:
+        args.deckinfo = args.deckname + ".json"
 
-load_shortdefs(args.short_defs)
+    if not os.path.isfile(args.deckinfo):
+        print(f"Model JSON does not exist: {args.deckinfo}")
+        exit(1)
+
+    with open(args.deckinfo) as jsonfile:
+        deck_info = json.load(jsonfile)
+
+    card_model = make_card_model(deck_info['model'])
+    deck_guid = deck_info['deck']['id']
+    my_deck = genanki.Deck(int(deck_guid),deck_info['deck']['name'],deck_info['deck']['desc'])
+
+    if args.anki:
+        ankidb = os.path.join( os.path.expanduser("~"), ".local/share/Anki2", args.anki, "collection.anki2" )
+        if not os.path.isfile(ankidb):
+            print("Cannot find anki database:", ankidb)
+            exit(1)
+
+        db_notes = load_db_notes(ankidb, deck_info['deck']['name'])
+        for guid, item in db_notes.items():
+            hashval = get_note_hash(guid,item['flds'],item['tags'])
+            db_timestamps[hashval] = item['mod']
+
+
+    init_data(args.dictionary, args.sentences, args.data_dir, args.custom_dir)
+
+    load_shortdefs(args.short_defs)
 
 
 
-# read through all the files to populate the synonyms and excludes lists
-for wordlist in args.wordlist:
-    with open(wordlist, newline='') as csvfile:
-        csvreader = csv.DictReader(csvfile)
-        for reqfield in ["pos", "spanish"]:
-            if reqfield not in csvreader.fieldnames:
-                raise ValueError(f"No '{reqfield}' field specified in file {wordlist}")
+    # read through all the files to populate the synonyms and excludes lists
+    for wordlist in args.wordlist:
+        with open(wordlist, newline='') as csvfile:
+            csvreader = csv.DictReader(csvfile)
+            for reqfield in ["pos", "spanish"]:
+                if reqfield not in csvreader.fieldnames:
+                    raise ValueError(f"No '{reqfield}' field specified in file {wordlist}")
 
-        for row in csvreader:
-            if not row:
-                continue
+            for row in csvreader:
+                if not row:
+                    continue
 
-            if 'flags' in row and 'CLEAR' not in row['flags']:
-                continue
+                if 'flags' in row and 'CLEAR' not in row['flags']:
+                    continue
 
-            item_tag = make_tag(row['spanish'],row['pos'])
+                item_tag = make_tag(row['spanish'],row['pos'])
 
 
-            position = row.get("position",None)
-            if not position:
-                wordlist_append(item_tag)
+                position = row.get("position",None)
+                if not position:
+                    wordlist_append(item_tag)
 
-            # +pos:word indicates that the entry should be positioned immedialy after the specified pos:word
-            # or after the first occurance of word if pos: is not specified
-            elif position.startswith("+"):
-                wordlist_insert_after(position[1:], item_tag)
+                # +pos:word indicates that the entry should be positioned immedialy after the specified pos:word
+                # or after the first occurance of word if pos: is not specified
+                elif position.startswith("+"):
+                    wordlist_insert_after(position[1:], item_tag)
 
-            # pos:word will replace the specific pos:word or the first occurance of the word if pos: is not specified
-            elif not position[0].isdigit() and position[0] != "-":
-                wordlist_replace(position, item_tag)
+                # pos:word will replace the specific pos:word or the first occurance of the word if pos: is not specified
+                elif not position[0].isdigit() and position[0] != "-":
+                    wordlist_replace(position, item_tag)
 
-            # Negative position indicates that all previous instances of this word should be removed
-            elif int(position) < 0:
-                wordlist_remove(item_tag)
+                # Negative position indicates that all previous instances of this word should be removed
+                elif int(position) < 0:
+                    wordlist_remove(item_tag)
 
-            # a digit in the position column indicates that it should be inserted at that position
-            elif int(position) >0 and int(position) < len(allwords):
-                wordlist_insert(item_tag, int(position))
+                # a digit in the position column indicates that it should be inserted at that position
+                elif int(position) >0 and int(position) < len(allwords):
+                    wordlist_insert(item_tag, int(position))
 
-            # otherwise put it at the end of the list
+                # otherwise put it at the end of the list
+                else:
+                    raise ValueError("Position {position} does not exist, ignoring")
+
+    # Arrange any items with absolute positions
+    for wordtag,position in sorted(allwords_positions.items(), key=lambda item: item[1]):
+        index = wordlist_indexof(wordtag)
+        if index != position:
+            allwords.pop(index)
+            allwords.insert(position-1, wordtag)
+
+        word, pos = split_tag(wordtag)
+        print(f"Absolute position for {wordtag}, consider using relative: ~{allwords[position-2]},{word},{pos}", file=sys.stderr)
+
+
+    if args.limit and args.limit < len(allwords):
+        allwords = allwords[:args.limit]
+        allwords_set = set(allwords)
+
+    rows = []
+
+    # Build the deck
+    _fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "ShortDef", "Definition", "Sentences", "Display", "Audio" ]
+
+    position=0
+    deck_guids = set()
+    for wordtag in allwords:
+        word, pos = split_tag(wordtag)
+
+        position+=1
+        item = build_item(word, pos, args.mediadir)
+        item['Rank'] = str(position)
+        item['tags'].append( str(math.ceil(position / 500)*500) )
+
+        row = []
+        for field in _fields:
+            row.append(item[field])
+
+        note = MyNote( model = card_model, sort_field=1, fields = row, guid = item['guid'], tags = item['tags'] )
+        # preserve the mod timestamp if the note matches with the database
+        note.mod_ts = get_mod_timestamp(note)
+        if not note.mod_ts:
+            if item['guid'] not in db_notes:
+                print(f"added: {wordtag}")
             else:
-                raise ValueError("Position {position} does not exist, ignoring")
+                old_data = db_notes[item['guid']]
+                if old_data['flds'] != note._format_fields():
+                    old_fields = old_data['flds'].split(chr(31))
+                    new_fields = note._format_fields().split(chr(31))
+                    for idx in range(len(old_fields)):
+                        old = old_fields[idx]
+                        new = new_fields[idx]
+                        if old != new:
+                            if idx == 6:
+                                print(f"{wordtag} sentences changed")
+                            else:
+                                print(f"{wordtag}  field {idx}: {old} => {new}")
+                else:
+                    print(f"  old tags: {old_data['tags']}")
+                    print(f"  new tags: {note._format_tags()}")
 
-# Arrange any items with absolute positions
-for wordtag,position in sorted(allwords_positions.items(), key=lambda item: item[1]):
-    index = wordlist_indexof(wordtag)
-    if index != position:
-        allwords.pop(index)
-        allwords.insert(position-1, wordtag)
+        deck_guids.add(item['guid'])
 
-    word, pos = split_tag(wordtag)
-    print(f"Absolute position for {wordtag}, consider using relative: ~{allwords[position-2]},{word},{pos}", file=sys.stderr)
+        note._order = position
+        my_deck.add_note( note )
+        rows.append(row)
+
+    package_filename = os.path.join(os.getcwd(), args.deckname + ".apkg")
+    my_package = genanki.Package(my_deck)
+    my_package.media_files = media
+    my_package.write_to_file(package_filename)
+
+    if args.dump_sentence_ids:
+        dump_sentences(args.dump_sentence_ids)
+
+    if args.dump_notes:
+        with open(args.dump_notes, 'w', newline='') as outfile:
+            csvwriter = csv.writer(outfile)
+
+            del _fields[7] # audio
+            del _fields[0] # rank
+
+            csvwriter.writerow(_fields)
+            for row in rows:
+                del row[7]
+                del row[0]
+                csvwriter.writerow(row)
+
+    if args.dump_removed:
+        with open(args.dump_removed, "w") as outfile:
+            for guid in db_notes.keys()-deck_guids:
+                outfile.write(str(db_notes[guid]['nid']))
 
 
-if args.limit and args.limit < len(allwords):
-    allwords = allwords[:args.limit]
-    allwords_set = set(allwords)
-
-rows = []
-
-# Build the deck
-_fields = [ "Rank", "Spanish", "Part of Speech", "Synonyms", "ShortDef", "Definition", "Sentences", "Display", "Audio" ]
-
-position=0
-deck_guids = set()
-for wordtag in allwords:
-    word, pos = split_tag(wordtag)
-
-    position+=1
-    item = build_item(word, pos)
-    item['Rank'] = str(position)
-    item['tags'].append( str(math.ceil(position / 500)*500) )
-
-    row = []
-    for field in _fields:
-        row.append(item[field])
-
-    note = MyNote( model = card_model, sort_field=1, fields = row, guid = item['guid'], tags = item['tags'] )
-    # preserve the mod timestamp if the note matches with the database
-    note.mod_ts = get_mod_timestamp(note)
-    if not note.mod_ts:
-        if item['guid'] not in db_notes:
-            print(f"added: {wordtag}")
-        else:
-            old_data = db_notes[item['guid']]
-            if old_data['flds'] != note._format_fields():
-                old_fields = old_data['flds'].split(chr(31))
-                new_fields = note._format_fields().split(chr(31))
-                for idx in range(len(old_fields)):
-                    old = old_fields[idx]
-                    new = new_fields[idx]
-                    if old != new:
-                        if idx == 6:
-                            print(f"{wordtag} sentences changed")
-                        else:
-                            print(f"{wordtag}  field {idx}: {old} => {new}")
-            else:
-                print(f"  old tags: {old_data['tags']}")
-                print(f"  new tags: {note._format_tags()}")
-
-    deck_guids.add(item['guid'])
-
-    note._order = position
-    my_deck.add_note( note )
-    rows.append(row)
-
-my_package = genanki.Package(my_deck)
-my_package.media_files = media
-my_package.write_to_file(package_filename)
-
-if args.dump_sentence_ids:
-    dump_sentences(args.dump_sentence_ids)
-
-if args.dump_notes:
-    with open(args.dump_notes, 'w', newline='') as outfile:
-        csvwriter = csv.writer(outfile)
-
-        del _fields[7] # audio
-        del _fields[0] # rank
-
-        csvwriter.writerow(_fields)
-        for row in rows:
-            del row[7]
-            del row[0]
-            csvwriter.writerow(row)
-
-if args.dump_removed:
-    with open(args.dump_removed, "w") as outfile:
-        for guid in db_notes.keys()-deck_guids:
-            outfile.write(str(db_notes[guid]['nid']))
+if __name__ == "__main__":
+    main()
