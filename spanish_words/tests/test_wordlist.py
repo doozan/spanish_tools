@@ -9,7 +9,6 @@ obj = None
 
 
 def test_general(tmp_path):
-    wordlist = SpanishWordlist()
 
     datafile = tmp_path / "dictionary.txt"
     print(datafile)
@@ -31,7 +30,8 @@ zelo {m} :: obsolete form of celo
 test {m} :: testing
 test {m} :: obsoleto form of terst
 """)
-    wordlist.load_dictionary(datafile)
+    wordlist = SpanishWordlist(dictionary="dictionary.txt", data_dir=tmp_path, custom_dir=tmp_path)
+   # wordlist.load_dictionary("dictionary.txt", tmp_path, tmp_path)
 
     assert wordlist._has_word("amigo") == True
     assert wordlist._has_word("amigo", "noun") == True
@@ -109,22 +109,22 @@ test {m} :: obsoleto form of terst
 
 def test_init():
     global obj
-    obj = SpanishWordlist()
+    obj = SpanishWordlist(dictionary="es-en.txt", data_dir="../spanish_data", custom_dir="../spanish_custom")
 
 def test_init_dictionary():
     load_dictionary = obj.load_dictionary
 
     with pytest.raises(FileNotFoundError) as e_info:
-         load_dictionary("not_a_file") == "yes"
+         load_dictionary("not_a_file","","") == "yes"
 
-    load_dictionary("spanish_data/es-en.txt")
+    load_dictionary("es-en.txt", "../spanish_data", "../spanish_custom")
 
 def test_get_all_pos():
     get_all_pos = obj.get_all_pos
-    assert get_all_pos("notaword") == []
-    assert get_all_pos("hablar") == ["verb"]
-    assert get_all_pos("casa") == ["noun"]
-    assert get_all_pos("rojo") == ["adj", "noun"]
+    assert list(get_all_pos("notaword")) == []
+    assert list(get_all_pos("hablar")) == ["verb"]
+    assert list(get_all_pos("casa")) == ["noun"]
+    assert list(get_all_pos("rojo")) == ["adj", "noun"]
 
 def test_has_word():
     has_word = obj._has_word
@@ -191,7 +191,7 @@ def test_lookup():
 
     # m/f detection
     res = lookup("alumno", "noun")
-    assert res == {'m/f': {'': 'pupil, student'}}
+    assert res == {'m/f': {'': 'pupil, student, learner'}}
 
     res = lookup("abuelo", "noun")
     assert res == {'m/f': {'f': 'grandmother', 'f, colloquial': 'old woman', 'm': 'grandfather', 'm, colloquial, affectionate': 'an elderly person'}} 
@@ -363,21 +363,6 @@ def test_get_split_defs():
     }
 
     assert obj.get_split_defs(defs) == [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3'], ['d1', 'd2'], ['e1', 'e2 (stuff, more; stuff)', 'e3'], ['f1']]
-
-# TODO: Update this when the funcition gets fixed
-def test_get_best_defs():
-    defs = [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3'], ['d1', 'd2'], ['e1', 'e2 (stuff, more; stuff)', 'e3'], ['f1']]
-    assert obj.get_best_defs(defs, 2) == defs
-#    assert obj.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 2) == [ ";def1", ";def2" ]
-#    assert obj.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 3) == [ ";def1", ";def2", ";def3" ]
-#    assert obj.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 4) == [ ";def1", "def1-syn1", ";def2", ";def3" ]
-#    assert obj.get_best_defs([ ";def1", "def1-syn1", "def1-syn2", ";def2", ";def3", "def3-syn1" ], 5) == [ ";def1", "def1-syn1", ";def2", ";def3", "def3-syn1" ]
-
-#def test_defs_to_string():
-#    defs = [['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1', 'c2', 'c3'], ['d1', 'd2'], ['e1', 'e2 (stuff, more; stuff)', 'e3'], ['f1']]
-#    assert obj.defs_to_string(defs, "noun") == "a1, a2, a3; b1, b2; c1, c2, c3; d1, d2; e1, e2 (stuff, more; stuff), e3; f1"
-#    defs = [["run", "jog"], [ "sprint" ]]
-#    assert obj.defs_to_string(defs, "verb") == "to run, jog; to sprint"
 
 def test_filter_defs():
 
