@@ -346,7 +346,7 @@ if __name__ == "__main__":
     parser.add_argument('--dry-run', help="Don't print output line", action="store_true")
     parser.add_argument('--debug', help="Print cleanup information about messy items", action="store_true")
     parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
-    parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.json)")
+    parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.tsv)")
     parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
     parser.add_argument('--custom-dir', help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')")
     args = parser.parse_args()
@@ -355,7 +355,7 @@ if __name__ == "__main__":
         args.dictionary="es-en.txt"
 
     if not args.sentences:
-        args.sentences="sentences.json"
+        args.sentences="sentences.tsv"
 
     if not args.data_dir:
         args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")

@@ -11,6 +11,7 @@ from spanish_words import SpanishWords
 
 parser = argparse.ArgumentParser(description='Manage tagged sentences')
 parser.add_argument('sentences', default="spa.txt", help="Master sentences file with spanish/english sentences (default spa.txt)")
+parser.add_argument('--credits', action='store_true', help="Print sentence credits only")
 parser.add_argument('--tags', nargs=1, help="Merged tagged data with original data")
 parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
 parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
@@ -165,6 +166,28 @@ def print_untagged_sentences():
         print(sdata[1])
         first=False
 
+def print_credits():
+    sentences = load_sentences()
+
+    users = {}
+
+    for english,spanish,credits,score in sentences.values():
+        res = re.match(r"CC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)", credits)
+        eng_id, eng_user, spa_id, spa_user = res.groups()
+        for user in [ eng_user, spa_user ]:
+            if not user in users:
+                users[user] = []
+        users[eng_user].append(eng_id)
+        users[spa_user].append(spa_id)
+
+    print(f"CC-BY 2.0 (France) Attribution: tatoeba.org")
+    for user, sentences in sorted(users.items(), key=lambda item: (len(item[1])*-1, item[0])):
+        count = len(sentences)
+        if count>1:
+            print(f"{user} ({len(sentences)}) #{', #'.join(sorted(sentences))}\n")
+        else:
+            print(f"{user} #{', #'.join(sorted(sentences))}")
+
 
 def print_tagged_data():
 
@@ -175,8 +198,6 @@ def print_tagged_data():
 
     with open(args.tags[0], 'r', encoding="utf-8") as infile:
 
-        first=True
-        print("[")
         seen = {}
         index = 0
 
@@ -230,29 +251,13 @@ def print_tagged_data():
             if interj:
                 tags['interj'] = list(map(str.lower, interj))
 
-            res = re.match(r"CC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)", credits)
-            eng_id, eng_user, spa_id, spa_user = res.groups()
+            tag_str = " ".join([ f":{tag}," + ",".join(items) for tag,items in tags.items() ])
 
-            english = json.dumps(english, ensure_ascii=False)
-            spanish = json.dumps(spanish, ensure_ascii=False)
-            tags = json.dumps(tags, ensure_ascii=False)
-            credits = json.dumps(credits, ensure_ascii=False)
+            print(f"{english}\t{spanish}\t{credits}\t{str(score).zfill(2)}\t{tag_str}")
 
-            if not first:
-                print(",\n")
-            else:
-                first = False
-
-            print(\
-f"""[{score}, {eng_id}, "{eng_user}", {spa_id}, "{spa_user}",
-{english},
-{spanish},
-{tags}]""", end="")
-
-        print("\n]")
-
-
-if not (args.tags):
-    print_untagged_sentences()
-else:
+if args.credits:
+    print_credits()
+elif args.tags:
     print_tagged_data()
+else:
+    print_untagged_sentences()

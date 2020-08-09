@@ -19,6 +19,15 @@ import spanish_sentences
 import spanish_speech
 from spanish_words import SpanishWords
 
+# For the sentence arrays
+IDX_SPANISH=0
+IDX_ENGLISH=1
+IDX_SCORE=2
+IDX_SPAID=3
+IDX_ENGID=4
+IDX_SPAUSER=5
+IDX_ENGUSER=6
+
 _words = None
 _sentences = None
 
@@ -110,14 +119,45 @@ def fail(*args, **kwargs):
 def format_sentences(sentences):
     return "<br>\n".join( f'<span class="spa">{item[0]}</span><br>\n<span class="eng">{item[1]}</span>' for item in sentences )
 
+
 def get_sentences(items, count):
 
     results = _sentences.get_sentences(items, count)
+    save_credits(results)
 
     if len(results['sentences']):
         return format_sentences(results['sentences'])
 
     return ""
+
+credits = {}
+def save_credits(results):
+    if not args.dump_credits:
+        return
+
+    for sentence in results['sentences']:
+        spa_user = sentence[IDX_SPAUSER]
+        eng_user = sentence[IDX_ENGUSER]
+        spa_id = sentence[IDX_SPAID]
+        eng_id = sentence[IDX_ENGID]
+
+        for user in [spa_user, eng_user]:
+            if user not in credits:
+                credits[user] = []
+        credits[spa_user].append(str(spa_id))
+        credits[eng_user].append(str(eng_id))
+
+def dump_credits(filename):
+    with open(filename, "w") as outfile:
+        outfile.write(f"The definitions in this deck come from wiktionary.org and are used in accordance with the with the CC-BY-SA license.\n\n")
+        outfile.write(f"The sentences in this deck were contributed to tatoeba.org by the following users and are used in accordance with the CC-BY 2.0 license:\n\n")
+        for user, sentences in sorted(credits.items(), key=lambda item: (len(item[1])*-1, item[0])):
+            count = len(sentences)
+            if count>1:
+                outfile.write(f"{user} ({len(sentences)}) #{', #'.join(sorted(sentences))}\n")
+            else:
+                outfile.write(f"{user} #{', #'.join(sorted(sentences))}\n")
+
 
 
 dumpable_sentences = {}
@@ -141,8 +181,8 @@ def save_dump_sentences(lookups):
             continue
 
 
-        if all( sentence[2] >= 55 for sentence in results['sentences'] ):
-            ids = [ f"{sentence[3]}:{sentence[4]}" for sentence in results['sentences' ] ]
+        if all( sentence[IDX_SCORE] >= 55 for sentence in results['sentences'] ):
+            ids = [ f"{sentence[IDX_SPAID]}:{sentence[IDX_ENGID]}" for sentence in results['sentences' ] ]
             dumpable_sentences[tag] = ids
 
 
@@ -238,7 +278,7 @@ def format_def(item,hide_word=None):
 
         for tag in item[pos]:
             if len(results):
-                results.append("<br>\n")
+                results.append("\n")
 
             classes = ["pos", common_pos]
             if common_pos != safe_pos:
@@ -509,7 +549,7 @@ def build_item(word, pos, mediadir):
 
 
     if not validate_note(item):
-        exit()
+        exit(1)
 
     return item
 
@@ -607,15 +647,16 @@ def main():
     parser.add_argument('deckname', help="Name of deck to build")
     parser.add_argument('-m', '--mediadir', help="Directory containing deck media resources (default: DECKNAME.media)")
     parser.add_argument('-w', '--wordlist', action='append', help="List of words to include/exclude from the deck (default: DECKNAME.json")
-    parser.add_argument('-s', '--short-defs',  help="CSV file with short definitions (default DECKNAME.shortdefs)")
-    parser.add_argument('-d', '--dump-sentence-ids',  help="Dump high scoring sentence ids to file")
-    parser.add_argument('-n', '--dump-notes',  help="Dump notes to file")
-    parser.add_argument('-r', '--dump-removed',  help="Dump list of removed note ids to file (requires --anki)")
+    parser.add_argument('--short-defs',  help="CSV file with short definitions (default DECKNAME.shortdefs)")
     parser.add_argument('-l', '--limit', type=int, help="Limit deck to N entries")
+    parser.add_argument('--dump-sentence-ids',  help="Dump high scoring sentence ids to file")
+    parser.add_argument('--dump-credits',  help="Dump high scoring sentence ids to file")
+    parser.add_argument('--dump-notes',  help="Dump notes to file")
+    parser.add_argument('--dump-removed',  help="Dump list of removed note ids to file (requires --anki)")
     parser.add_argument('--deckinfo',  help="Read model/deck info from JSON file (default: DECKNAME.json)")
     parser.add_argument('--anki', help="Read/write data from specified anki profile")
     parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
-    parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.json)")
+    parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.tsv)")
     parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
     parser.add_argument('--custom-dir', help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')")
     args = parser.parse_args()
@@ -624,7 +665,7 @@ def main():
         args.dictionary="es-en.txt"
 
     if not args.sentences:
-        args.sentences="sentences.json"
+        args.sentences="sentences.tsv"
 
     if not args.data_dir:
         args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
@@ -823,6 +864,8 @@ def main():
             for guid in db_notes.keys()-deck_guids:
                 outfile.write(str(db_notes[guid]['nid']))
 
+    if args.dump_credits:
+        dump_credits(args.dump_credits)
 
 if __name__ == "__main__":
     main()

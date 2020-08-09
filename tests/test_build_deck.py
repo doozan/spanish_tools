@@ -19,7 +19,7 @@ def test_get_location_classes():
 def test_init_data():
     init_data = build_deck.init_data
 
-    init_data("es-en.txt", "sentences.json", "../spanish_data", "../spanish_custom")
+    init_data("es-en.txt", "sentences.tsv", "../spanish_data", "../spanish_custom")
 
 def test_format_def():
     format_def = build_deck.format_def

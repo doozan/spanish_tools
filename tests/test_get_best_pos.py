@@ -5,7 +5,7 @@ import get_best_pos
 
 def test_get_best_pos():
     words = spanish_words.SpanishWords(dictionary="es-en.txt", data_dir="../spanish_data", custom_dir="../spanish_custom")
-    sentences = spanish_sentences.sentences("sentences.json", data_dir="../spanish_data", custom_dir="../spanish_custom")
+    sentences = spanish_sentences.sentences("sentences.tsv", data_dir="../spanish_data", custom_dir="../spanish_custom")
 
     test_words = {
     "pesos": "noun",

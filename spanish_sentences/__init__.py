@@ -1,21 +1,22 @@
-import sys
 import math
-import re
 import os
-import json
+import re
+import sys
 
 IDX_SPANISH=0
 IDX_ENGLISH=1
 IDX_SCORE=2
 IDX_SPAID=3
 IDX_ENGID=4
+IDX_SPAUSER=5
+IDX_ENGUSER=6
 
 def make_tag(word, pos):
     return pos.lower() + ":" + word.lower()
 
 class sentences:
 
-    def __init__(self, sentences="sentences.json", data_dir=None, custom_dir=None):
+    def __init__(self, sentences="sentences.tsv", data_dir=None, custom_dir=None):
 
         self.grepdb = []
         self.sentencedb = []
@@ -70,15 +71,26 @@ class sentences:
 
         index=0
         with open(datafile) as infile:
-            data = json.load(infile)
-            for line in data:
-                score, eng_id, eng_user, spa_id, spa_user, english, spanish, tags = line
-                stripped = self.strip_sentence(spanish).strip()
+            for line in infile:
+                res = re.match(r"([^\t]*)\t([^\t]*)\tCC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)\t([^\t]*)\t([^\t]*)\n", line)
+                if not res:
+                    continue
+                english,spanish,eng_id,eng_user,spa_id,spa_user,score,tag_str = res.groups()
+                eng_id = int(eng_id)
+                spa_id = int(spa_id)
+                score = int(score)
+
+                tags = { }
+                for tag_items in tag_str[1:].split(":"):
+                    tag,*items = tag_items.strip().split(",")
+                    tags[tag] = items
+
+                stripped = "".join(re.sub('[^ a-záéíñóúü]+', '', spanish.lower()).split())
 
                 if eng_id in self.filter_ids or spa_id in self.filter_ids:
                     continue
 
-                self.sentencedb.append( [spanish, english, score, spa_id, eng_id] )
+                self.sentencedb.append( [spanish, english, score, spa_id, eng_id, spa_user, eng_user] )
                 self.grepdb.append(stripped)
 
                 self.id_index[f"{spa_id}:{eng_id}"] = index
@@ -122,11 +134,6 @@ class sentences:
                             self.forced_ids[wordtag] = ids
                             self.forced_ids_source[wordtag] = source
 
-
-    def strip_sentence(self, string):
-        stripped = re.sub('[^ a-zA-ZáéíñóúüÁÉÍÑÓÚÜ]+', '', string).lower()
-        return re.sub(' +', ' ', stripped)
-
     # tags are in the form:
     # { pos: [word1, word2] }
     def add_tags_to_db(self, tags, index, sid):
@@ -161,13 +168,17 @@ class sentences:
 
                     for word in [f'@{xword}'] + xlemmas:
 
-                        if word not in self.tagdb:
-                            self.tagdb[word] = {}
+                        tags = self.tagdb.get(word)
+                        if not tags:
+                            tags = { pos: [index] }
+                            self.tagdb[word] = { pos: [index] }
+                        else:
+                            items = tags.get(pos)
+                            if not items:
+                                tags[pos] = [index]
+                            else:
+                                items.append(index)
 
-                        if pos not in self.tagdb[word]:
-                            self.tagdb[word][pos] = []
-
-                        self.tagdb[word][pos].append(index)
 
 
     def get_ids_from_phrase(self, phrase):

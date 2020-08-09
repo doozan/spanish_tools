@@ -13,7 +13,7 @@ parser.add_argument('pos', nargs="?", default="", help="part of speech")
 parser.add_argument('count', nargs="?", default=3, type=int, help="Max sentences to retrieve")
 parser.add_argument('--strict', action='store_true', help="Only show sentences matching the specified pos")
 parser.add_argument('--dictionary', help="Dictionary file name (DEFAULT: es-en.txt)")
-parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.json)")
+parser.add_argument('--sentences', help="Sentences file name (DEFAULT: sentences.tsv)")
 parser.add_argument('--data-dir', help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')")
 parser.add_argument('--custom-dir', help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')")
 args = parser.parse_args()
@@ -22,7 +22,7 @@ if not args.dictionary:
     args.dictionary="es-en.txt"
 
 if not args.sentences:
-    args.sentences="sentences.json"
+    args.sentences="sentences.tsv"
 
 if not args.data_dir:
     args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
