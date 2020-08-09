@@ -100,10 +100,9 @@ class SpanishWords:
                 if len(shortdefs) and "p" not in pos and "r" not in pos:
                     continue
 
-                # Limit to the first pronomial or reflexive def
-                for existing in shortdefs:
-                    if "p" in existing or "r" in existing:
-                        continue
+                # Limit to two defs (first + pronom or reflexive)
+                if len(shortdefs)>=2:
+                    continue
 
                 # Use the first definition
                 for tag,val in tags.items():

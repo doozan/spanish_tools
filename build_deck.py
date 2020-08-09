@@ -405,6 +405,7 @@ def get_phrase(word, pos, noun_type, femnoun):
 
 
 _REGIONS = {
+    "canary islands": set(),
     "caribbean": {
         "cuba",
         "dominican republic",
@@ -499,7 +500,7 @@ def build_item(word, pos, mediadir):
         shortdef = _words.lookup(word, pos, max_length=60)
     short_english = format_def(shortdef, hide_word=word) if shortdef else ""
 
-    defs = [ value for pos,tags in shortdef.items() for tag,value in tags.items() ]
+    defs = [ value.strip() for pos,tags in shortdef.items() for tag,def_str in tags.items() for def1 in def_str.split(";") for value in def1.split(",") ]
     seen_tag = "|".join(syns + sorted(defs))
     if seen_tag in seen_clues:
         eprint(f"Warning: {seen_tag} is used by {item_tag} and {seen_clues[seen_tag]}")
