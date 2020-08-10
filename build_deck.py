@@ -154,7 +154,10 @@ def dump_credits(filename):
         for user, sentences in sorted(credits.items(), key=lambda item: (len(item[1])*-1, item[0])):
             count = len(sentences)
             if count>1:
-                outfile.write(f"{user} ({len(sentences)}) #{', #'.join(sorted(sentences))}\n")
+                if count>5:
+                    outfile.write(f"{user} ({len(sentences)}) #{', #'.join(sorted(sentences[:3]))} and {len(sentences)-3} others\n")
+                else:
+                    outfile.write(f"{user} ({len(sentences)}) #{', #'.join(sorted(sentences))}\n")
             else:
                 outfile.write(f"{user} #{', #'.join(sorted(sentences))}\n")
 
