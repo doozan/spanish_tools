@@ -166,10 +166,12 @@ class SpanishWords:
                         if sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) <= max_len:
                             break
 
+        if only_first_def:
+            return shortdefs
 
         # Rejoin any defs that we split out, unless it's a dup or too long
         pos = next(iter(shortdefs))
-        if not only_first_def and ";" in shortdefs[pos]:
+        if ";" in shortdefs[pos]:
             tag = next(iter(shortdefs[pos]))
 
             # If the second def is the same as the first def, retry without splitting the def
@@ -180,7 +182,7 @@ class SpanishWords:
                 shortdefs[pos][tag] += "; " + otherdef
 
         # If it's too long, try with just one definition
-        if not only_first_def and sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) > max_len:
+        if sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) > max_len:
             shortdefs = self.shorten_defs(defs, max_len=max_len, only_first_def=True)
 
         if sum( len(pos)+len(tag)+len(value) for pos,tags in shortdefs.items() for tag,value in tags.items() ) > max_len:
