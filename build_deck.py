@@ -261,6 +261,12 @@ def format_image(filename):
         return ""
     return f'<img src="{filename}" />'
 
+def format_syns(deck, extra):
+    deck_str = f"""<span class="syn deck">{", ".join(deck)}</span>""" if len(deck) else ""
+    separator = ", " if len(deck_str) else ""
+    extra_str = f"""<span class="syn extra">{separator}{", ".join(extra)}</span>""" if len(extra) else ""
+    return deck_str+extra_str
+
 def format_def(item,hide_word=None):
 
     results = []
@@ -346,9 +352,11 @@ def validate_note(item):
 
     return True
 
-def get_synonyms(word, pos, limit=5):
+def get_synonyms(word, pos, limit=5, only_in_deck=True):
     items = _words.get_synonyms(word,pos)
-    return [ k for k in items if make_tag(k,pos) in allwords_set ][:limit]
+    if only_in_deck:
+        return [ k for k in items if make_tag(k,pos) in allwords_set ][:limit]
+    return list(items)[:limit]
 
 #_FEMALE1 = "Lupe"
 _FEMALE1 = "Penelope"
@@ -487,7 +495,9 @@ def build_item(word, pos, mediadir):
     english = ""
     noun_type = ""
     usage = _words.lookup(spanish, pos, get_all_pos=True)
-    syns = get_synonyms(spanish, pos)
+    deck_syns = get_synonyms(spanish, pos, 5, only_in_deck=True)
+    extra_syns = [k for k in get_synonyms(spanish, pos, 5, only_in_deck=False) if k not in deck_syns] if len(deck_syns)<5 else []
+
     if usage and len(usage):
         english = format_def(usage)
         if pos == "noun":
@@ -501,7 +511,7 @@ def build_item(word, pos, mediadir):
     short_english = format_def(shortdef, hide_word=word) if shortdef else ""
 
     defs = [ value.strip() for pos,tags in shortdef.items() for tag,def_str in tags.items() for def1 in def_str.split(";") for value in def1.split(",") ]
-    seen_tag = "|".join(syns + sorted(defs))
+    seen_tag = "|".join(deck_syns + sorted(defs))
     if seen_tag in seen_clues:
         eprint(f"Warning: {seen_tag} is used by {item_tag} and {seen_clues[seen_tag]}")
 #        exit()
@@ -526,7 +536,7 @@ def build_item(word, pos, mediadir):
     item = {
         'Spanish': spanish,
         'Part of Speech': noun_type if pos == "noun" else pos,
-        'Synonyms': ", ".join(syns),
+        'Synonyms': format_syns(deck_syns, extra_syns),
         'ShortDef': short_english,
         'Definition': english,
         'Sentences': sentences,
@@ -642,6 +652,7 @@ def load_shortdefs(filename):
 def main():
 
     global allwords
+    global allwords_set
     global args
 
     parser = argparse.ArgumentParser(description='Compile anki deck')
