@@ -94,7 +94,7 @@ class SpanishWords:
                     continue
 
                 if len(shortdefs) and only_first_def:
-                    continue
+                    break
 
                 # Always take the first verb def, then check each pronomial or reflexive def
                 if len(shortdefs) and "p" not in pos and "r" not in pos:
@@ -102,7 +102,7 @@ class SpanishWords:
 
                 # Limit to two defs (first + pronom or reflexive)
                 if len(shortdefs)>=2:
-                    continue
+                    break
 
                 # Use the first definition
                 for tag,val in tags.items():
@@ -145,6 +145,18 @@ class SpanishWords:
                 tag = next(iter(defs[next_pos]))
                 shortdefs[next_pos] = { tag: defs[next_pos][tag] }
 
+        # Always include interjection definitions
+        if "interj" in defs and pos != "interj":
+            pos = "interj"
+            tags = defs[pos]
+            shortdefs[pos] = {}
+
+            # Use the first definition
+            for tag,val in tags.items():
+                shortdefs[pos] = { tag: val }
+                break
+
+        # Split and shorten until short enough
         for separator in [ ';', '(', '[' ]:
             for pos,tags in shortdefs.items():
                 for tag,value in tags.items():
