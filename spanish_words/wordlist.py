@@ -34,7 +34,7 @@ class SpanishWordlist:
         self._trantab = str.maketrans("áéíóú", "aeiou")
 
         self.el_f_nouns = [ 'abra', 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia',
-                'area', 'arma', 'arpa', 'asma', 'aula', 'habla', 'hada', 'hacha', 'hambre', 'águila']
+                'area', 'arma', 'arpa', 'asma', 'aula', 'ave', 'habla', 'hada', 'hacha', 'hambre', 'águila']
 
         self.prev_pos = "xx"
 
