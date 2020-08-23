@@ -1,9 +1,9 @@
 import csv
 import argparse
 
-parser = argparse.ArgumentParser(description='Compare two wordlists')
-parser.add_argument('file1', help="Primary wordlist")
-parser.add_argument('file2', help="Words to compare against")
+parser = argparse.ArgumentParser(description="Compare two wordlists")
+parser.add_argument("file1", help="Primary wordlist")
+parser.add_argument("file2", help="Words to compare against")
 args = parser.parse_args()
 
 cleanpos = {
@@ -13,21 +13,20 @@ cleanpos = {
     "f-el": "noun",
     "m-f": "noun",
     "m/f": "noun",
-
-    'v': 'verb',
+    "v": "verb",
 }
 
 lists = {}
 
-for filename in [ args.file1, args.file2 ]:
+for filename in [args.file1, args.file2]:
     with open(filename) as infile:
         csvreader = csv.DictReader(infile)
         listtag = filename
         lists[listtag] = {}
         for row in csvreader:
-            pos = cleanpos.get(row['pos'], row['pos'])
+            pos = cleanpos.get(row["pos"], row["pos"])
             pos = pos.lower()
-            tag = row['spanish'].lower()
+            tag = row["spanish"].lower()
             if tag not in lists[listtag]:
                 lists[listtag][tag] = []
             if pos not in lists[listtag][tag]:
@@ -44,10 +43,10 @@ for k in overlap:
         new_pos[k] = 1
 
 for k in new_pos:
-    print("~ %s %s -> %s"%(k, lists[list1][k], lists[list2][k]))
+    print("~ %s %s -> %s" % (k, lists[list1][k], lists[list2][k]))
 
 for k in lists[list1].keys() - lists[list2].keys():
-    print("- %s%s" %(k, lists[list1][k]))
+    print("- %s%s" % (k, lists[list1][k]))
 
 for k in lists[list2].keys() - lists[list1].keys():
-    print("+ %s%s" %(k, lists[list2][k]))
+    print("+ %s%s" % (k, lists[list2][k]))
