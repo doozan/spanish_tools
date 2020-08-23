@@ -591,7 +591,8 @@ def wordlist_indexof(target):
 def wordlist_insert_after(target, wordtag):
     index = wordlist_indexof(target)
     if not index:
-        raise ValueError(f"{target} not found in wordlist, unable to insert {wordtag} after it")
+        eprint(f"ERROR: {target} not found in wordlist, unable to insert {wordtag} after it")
+        return
 
     allwords.insert(index+1,wordtag)
     allwords_set.add(wordtag)
@@ -600,7 +601,8 @@ def wordlist_replace(old_tag, new_tag):
 
     index = wordlist_indexof(old_tag)
     if not index:
-        raise ValueError(f"{old_tag} not found in wordlist, unable to replace with {new_tag}")
+        eprint(f"ERROR: {old_tag} not found in wordlist, unable to replace with {new_tag}")
+        return
 
     old_tag = allwords[index]
     allwords_set.remove(old_tag)
@@ -612,7 +614,8 @@ def wordlist_remove(wordtag):
 
     index = wordlist_indexof(wordtag)
     if not index:
-        raise ValueError(f"{old_tag} not found in wordlist, unable to remove")
+        eprint(f"ERROR: {wordtag} not found in wordlist, unable to remove")
+        return
 
     old_tag = allwords[index]
     allwords_set.remove(old_tag)
@@ -620,7 +623,8 @@ def wordlist_remove(wordtag):
 
 def wordlist_insert(wordtag, position):
     if wordtag in allwords_set:
-        raise ValueError(f"{wordtag} already exists in wordlist, cannot insert at position {position}")
+        eprint(f"ERROR: {wordtag} already exists in wordlist, cannot insert at position {position}")
+        return
 
     # Note, don't actually insert the word at the specified position, because later wordlists
     # may delete items and rearrange the order.  Instead, add it to the bottom of the list and
@@ -633,7 +637,8 @@ def wordlist_insert(wordtag, position):
 
 def wordlist_append(wordtag):
     if wordtag in allwords_set:
-        raise ValueError(f"{wordtag} already exists in wordlist, cannot be added again")
+        eprint(f"ERROR: {wordtag} already exists in wordlist, cannot be added again")
+        return
 
     allwords.append(wordtag)
     allwords_set.add(wordtag)
