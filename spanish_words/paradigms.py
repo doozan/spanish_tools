@@ -3,7 +3,7 @@
 
 paradigms = {}
 paradigms['-ar'] = {}
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar (revision: 39594417)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar (revision: 39594417, scraped 2020-09-25 08:35:13.829302)
 paradigms['-ar'][''] = {
 
 "patterns": {
@@ -37,7 +37,7 @@ paradigms['-ar'][''] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/andar (revision: 38983576)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/andar (revision: 38983576, scraped 2020-09-25 08:35:14.342606)
 paradigms['-ar']['andar'] = {
 
 "description": "Irregular preterite, subjunctive imperfect, and subjunctive future forms.",
@@ -53,7 +53,7 @@ paradigms['-ar']['andar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/dar (revision: 42870481)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/dar (revision: 42870481, scraped 2020-09-25 08:35:15.077520)
 paradigms['-ar']['dar'] = {
 
 "description": "Irregular in the preterite and imperfect and future subjunctive.",
@@ -73,7 +73,7 @@ paradigms['-ar']['dar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/errar (revision: 38953759)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/errar (revision: 38953759, scraped 2020-09-25 08:35:15.571660)
 paradigms['-ar']['errar'] = {
 
 "description": "Rule: 'e' becomes 'ye' in stressed syllables, except in Latin America, where it is conjugated normally.",
@@ -91,7 +91,7 @@ paradigms['-ar']['errar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/estar (revision: 38898639)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/estar (revision: 38898639, scraped 2020-09-25 08:35:16.183177)
 paradigms['-ar']['estar'] = {
 
 "patterns": {
@@ -111,7 +111,7 @@ paradigms['-ar']['estar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/jugar (revision: 38953772)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/jugar (revision: 38953772, scraped 2020-09-25 08:35:16.693538)
 paradigms['-ar']['jugar'] = {
 
 "description": "Rule: 'u' becomes 'ue' in stressed syllables; 'g' becomes a 'gu' before 'e'.",
@@ -130,7 +130,7 @@ paradigms['-ar']['jugar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-car (revision: 38953852)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-car (revision: 38953852, scraped 2020-09-25 08:35:17.201569)
 paradigms['-ar']['-car'] = {
 
 "description": "c becomes qu before e.",
@@ -148,7 +148,7 @@ paradigms['-ar']['-car'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-car i-í (revision: 38953857)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-car i-í (revision: 38953857, scraped 2020-09-25 08:35:17.948183)
 paradigms['-ar']['-car i-í'] = {
 
 "description": "Rule: stressed 'í' in certain conjugations; 'c' becomes a 'qu' before 'e'.",
@@ -167,7 +167,7 @@ paradigms['-ar']['-car i-í'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-car o-ue (revision: 38953785)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-car o-ue (revision: 38953785, scraped 2020-09-25 08:35:18.532707)
 paradigms['-ar']['-car o-ue'] = {
 
 "description": "Rule: 'o' becomes 'ue' in stressed syllables; 'c' becomes 'qu' before 'e'.",
@@ -186,7 +186,7 @@ paradigms['-ar']['-car o-ue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-gar (revision: 42200840)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-gar (revision: 42200840, scraped 2020-09-25 08:35:19.147375)
 paradigms['-ar']['-gar'] = {
 
 "description": "Rule: 'g' becomes a 'gu' before 'e'.",
@@ -204,7 +204,7 @@ paradigms['-ar']['-gar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-gar e-ie (revision: 41135808)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-gar e-ie (revision: 41135808, scraped 2020-09-25 08:35:19.762112)
 paradigms['-ar']['-gar e-ie'] = {
 
 "description": "Rule: 'e' becomes 'ie' in stressed syllables; 'g' becomes a 'gu' before 'e'.",
@@ -223,7 +223,7 @@ paradigms['-ar']['-gar e-ie'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-gar i-í (revision: 38953867)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-gar i-í (revision: 38953867, scraped 2020-09-25 08:35:20.273906)
 paradigms['-ar']['-gar i-í'] = {
 
 "description": "Rule: stressed 'í' in certain syllables; 'g' becomes a 'gu' before 'e'.",
@@ -242,7 +242,7 @@ paradigms['-ar']['-gar i-í'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-gar o-ue (revision: 38953871)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-gar o-ue (revision: 38953871, scraped 2020-09-25 08:35:20.802280)
 paradigms['-ar']['-gar o-ue'] = {
 
 "description": "Rule: 'o' becomes a 'ue' in stressed syllables; 'g' becomes a 'gu' before 'e'.",
@@ -261,7 +261,7 @@ paradigms['-ar']['-gar o-ue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-guar (revision: 38953828)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-guar (revision: 38953828, scraped 2020-09-25 08:35:21.416433)
 paradigms['-ar']['-guar'] = {
 
 "description": "Rule: unstressed 'u'; 'gu' becomes 'gü' before 'e'.",
@@ -279,7 +279,7 @@ paradigms['-ar']['-guar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-izar (revision: 58927462)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-izar (revision: 58927462, scraped 2020-09-25 08:35:22.018646)
 paradigms['-ar']['-izar'] = {
 
 "description": "Rule: stressed 'í' in certain conjugations; the 'z' becomes a 'c' before 'e'.",
@@ -298,7 +298,7 @@ paradigms['-ar']['-izar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-eizar (revision: 58927419)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-eizar (revision: 58927419, scraped 2020-09-25 08:35:22.637874)
 paradigms['-ar']['-eizar'] = {
 
 "description": "Rule: the 'i' becomes 'í' in stressed syllables; the 'z' becomes a 'c' before 'e'.",
@@ -317,7 +317,7 @@ paradigms['-ar']['-eizar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-zar (revision: 42200837)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-zar (revision: 42200837, scraped 2020-09-25 08:35:23.140858)
 paradigms['-ar']['-zar'] = {
 
 "description": "Rule: 'z' becomes a 'c' before 'e'.",
@@ -335,7 +335,7 @@ paradigms['-ar']['-zar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-zar e-ie (revision: 38953835)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-zar e-ie (revision: 38953835, scraped 2020-09-25 08:35:23.756049)
 paradigms['-ar']['-zar e-ie'] = {
 
 "description": "Rule: 'e' becomes a 'ie' in stressed syllables; 'z' changes to 'c' before 'e'.",
@@ -354,7 +354,7 @@ paradigms['-ar']['-zar e-ie'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-zar go-güe (revision: 38969327)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-zar go-güe (revision: 38969327, scraped 2020-09-25 08:35:24.378604)
 paradigms['-ar']['-zar go-güe'] = {
 
 "description": "Rule: 'o' becomes a 'ue' and 'g' becomes a 'gü' in stressed syllables; 'z' becomes a 'c' before 'e'.",
@@ -373,7 +373,7 @@ paradigms['-ar']['-zar go-güe'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-zar o-ue (revision: 38953845)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/-zar o-ue (revision: 38953845, scraped 2020-09-25 08:35:24.947409)
 paradigms['-ar']['-zar o-ue'] = {
 
 "description": "Rule: 'o' becomes a 'ue' in stressed syllables; 'z' becomes a 'c' before 'e'.",
@@ -392,7 +392,7 @@ paradigms['-ar']['-zar o-ue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/e-ie (revision: 42200835)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/e-ie (revision: 42200835, scraped 2020-09-25 08:35:25.555678)
 paradigms['-ar']['e-ie'] = {
 
 "description": "Rule: 'e' becomes an 'ie' in stressed syllables.",
@@ -410,7 +410,7 @@ paradigms['-ar']['e-ie'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/go-güe (revision: 38970712)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/go-güe (revision: 38970712, scraped 2020-09-25 08:35:26.110071)
 paradigms['-ar']['go-güe'] = {
 
 "description": "Rule: 'go' becomes a 'güe' in stressed syllables.",
@@ -428,7 +428,7 @@ paradigms['-ar']['go-güe'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/i-í (revision: 42935002)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/i-í (revision: 42935002, scraped 2020-09-25 08:35:26.868577)
 paradigms['-ar']['i-í'] = {
 
 "description": "Rule: stressed 'í' in certain conjugations; monosyllabic forms do not have a written accent in certain conjugations.",
@@ -446,7 +446,7 @@ paradigms['-ar']['i-í'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/i-í unstressed (revision: 41728191)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/i-í unstressed (revision: 41728191, scraped 2020-09-25 08:35:27.292584)
 paradigms['-ar']['i-í unstressed'] = {
 
 "description": "Rule: stressed 'í' in certain conjugations; monosyllabic infinitives receive no written accent in certain conjugations. This change was put into effect in the [http://www.rae.es/sites/default/files/Principales_novedades_de_la_Ortografia_de_la_lengua_espanola.pdf 2010 spelling reforms by the RAE], so some other forms are still commonly seen.",
@@ -465,7 +465,7 @@ paradigms['-ar']['i-í unstressed'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/iar-ar (revision: 38970812)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/iar-ar (revision: 38970812, scraped 2020-09-25 08:35:27.866047)
 paradigms['-ar']['iar-ar'] = {
 
 "replacement": {  1: "1i"},
@@ -483,7 +483,7 @@ paradigms['-ar']['iar-ar'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/o-hue (revision: 38969250)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/o-hue (revision: 38969250, scraped 2020-09-25 08:35:28.470136)
 paradigms['-ar']['o-hue'] = {
 
 "description": "Rule: 'o' becomes 'hue' in stressed syllables.",
@@ -501,7 +501,7 @@ paradigms['-ar']['o-hue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/o-ue (revision: 42200849)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/o-ue (revision: 42200849, scraped 2020-09-25 08:35:28.979576)
 paradigms['-ar']['o-ue'] = {
 
 "description": "Rule: 'o' becomes a 'ue' in stressed syllables.",
@@ -519,7 +519,7 @@ paradigms['-ar']['o-ue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/u-ú (revision: 42200842)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/u-ú (revision: 42200842, scraped 2020-09-25 08:35:29.491682)
 paradigms['-ar']['u-ú'] = {
 
 "description": "Rule: stressed 'ú' in certain conjugations",
@@ -537,7 +537,7 @@ paradigms['-ar']['u-ú'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/imp (revision: 50449505)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ar/imp (revision: 50449505, scraped 2020-09-25 08:35:30.008874)
 paradigms['-ar']['imp'] = {
 
 "description": "Defective verb, used only in the impersonal (third-person singular) form. Forms in <span style=\"color:#aaa\">'grey'</span> not normally used.",
@@ -561,7 +561,7 @@ paradigms['-ar']['imp'] = {
 }
 
 paradigms['-er'] = {}
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er (revision: 39055532)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er (revision: 39055532, scraped 2020-09-25 08:35:30.630102)
 paradigms['-er'][''] = {
 
 "patterns": {
@@ -595,7 +595,7 @@ paradigms['-er'][''] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/atardecer (revision: 38897255)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/atardecer (revision: 38897255, scraped 2020-09-25 08:35:31.250997)
 paradigms['-er']['atardecer'] = {
 
 "replacement": {  1: "1c"},
@@ -625,7 +625,7 @@ paradigms['-er']['atardecer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/atañer (revision: 38900874)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/atañer (revision: 38900874, scraped 2020-09-25 08:35:31.745632)
 paradigms['-er']['atañer'] = {
 
 "description": "Defective verb; forms in grey not used.",
@@ -652,7 +652,7 @@ paradigms['-er']['atañer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/caber (revision: 38955936)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/caber (revision: 38955936, scraped 2020-09-25 08:35:32.374531)
 paradigms['-er']['caber'] = {
 
 "replacement": {  1: "1cab"},
@@ -674,7 +674,7 @@ paradigms['-er']['caber'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/caer (revision: 38955947)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/caer (revision: 38955947, scraped 2020-09-25 08:35:32.931989)
 paradigms['-er']['caer'] = {
 
 "replacement": {  1: "1ca"},
@@ -696,7 +696,7 @@ paradigms['-er']['caer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/haber (revision: 51048421)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/haber (revision: 51048421, scraped 2020-09-25 08:35:33.388801)
 paradigms['-er']['haber'] = {
 
 "replacement": {  1: "1hab"},
@@ -722,7 +722,7 @@ paradigms['-er']['haber'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/hacer (revision: 38955984)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/hacer (revision: 38955984, scraped 2020-09-25 08:35:34.007060)
 paradigms['-er']['hacer'] = {
 
 "replacement": {  1: "1ac"},
@@ -749,7 +749,7 @@ paradigms['-er']['hacer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/hacer i-í (revision: 38955964)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/hacer i-í (revision: 38955964, scraped 2020-09-25 08:35:34.512678)
 paradigms['-er']['hacer i-í'] = {
 
 "replacement": {  1: "1ac"},
@@ -778,7 +778,7 @@ paradigms['-er']['hacer i-í'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/nacer (revision: 39060835)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/nacer (revision: 39060835, scraped 2020-09-25 08:35:35.023739)
 paradigms['-er']['nacer'] = {
 
 "replacement": {  1: "1nac"},
@@ -797,7 +797,7 @@ paradigms['-er']['nacer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/placer (revision: 38955971)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/placer (revision: 38955971, scraped 2020-09-25 08:35:35.763665)
 paradigms['-er']['placer'] = {
 
 "replacement": {  1: "1plac"},
@@ -818,7 +818,7 @@ paradigms['-er']['placer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/poder (revision: 38955987)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/poder (revision: 38955987, scraped 2020-09-25 08:35:36.356296)
 paradigms['-er']['poder'] = {
 
 "replacement": {  1: "pod"},
@@ -843,7 +843,7 @@ paradigms['-er']['poder'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-poner (revision: 41231660)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-poner (revision: 41231660, scraped 2020-09-25 08:35:36.868889)
 paradigms['-er']['-poner'] = {
 
 "replacement": {  1: "1pon"},
@@ -869,7 +869,7 @@ paradigms['-er']['-poner'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/poner (revision: 41231720)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/poner (revision: 41231720, scraped 2020-09-25 08:35:37.609998)
 paradigms['-er']['poner'] = {
 
 "replacement": {  1: "pon"},
@@ -895,7 +895,7 @@ paradigms['-er']['poner'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/poseer (revision: 39076751)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/poseer (revision: 39076751, scraped 2020-09-25 08:35:38.199428)
 paradigms['-er']['poseer'] = {
 
 "replacement": {  1: "1e"},
@@ -913,7 +913,7 @@ paradigms['-er']['poseer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/proveer (revision: 39076705)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/proveer (revision: 39076705, scraped 2020-09-25 08:35:38.714825)
 paradigms['-er']['proveer'] = {
 
 "replacement": {  1: "1e"},
@@ -931,7 +931,7 @@ paradigms['-er']['proveer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/querer (revision: 38955991)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/querer (revision: 38955991, scraped 2020-09-25 08:35:39.327500)
 paradigms['-er']['querer'] = {
 
 "replacement": {  1: "1quer"},
@@ -956,7 +956,7 @@ paradigms['-er']['querer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/raer (revision: 38955997)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/raer (revision: 38955997, scraped 2020-09-25 08:35:39.883198)
 paradigms['-er']['raer'] = {
 
 "replacement": {  1: "ra"},
@@ -982,7 +982,7 @@ paradigms['-er']['raer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/roer (revision: 59514070)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/roer (revision: 59514070, scraped 2020-09-25 08:35:40.460304)
 paradigms['-er']['roer'] = {
 
 "replacement": {  1: "1ro"},
@@ -1007,7 +1007,7 @@ paradigms['-er']['roer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/romper (revision: 45580174)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/romper (revision: 45580174, scraped 2020-09-25 08:35:40.950479)
 paradigms['-er']['romper'] = {
 
 "description": "Irregular in the past participle. ''[[rompido|Rompido]]'' is nonstandard.",
@@ -1020,7 +1020,7 @@ paradigms['-er']['romper'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/saber (revision: 38971290)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/saber (revision: 38971290, scraped 2020-09-25 08:35:41.888995)
 paradigms['-er']['saber'] = {
 
 "replacement": {  1: "1sab"},
@@ -1044,7 +1044,7 @@ paradigms['-er']['saber'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/ser (revision: 38971811)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/ser (revision: 38971811, scraped 2020-09-25 08:35:42.505577)
 paradigms['-er']['ser'] = {
 
 "replacement": {  1: "s"},
@@ -1068,7 +1068,7 @@ paradigms['-er']['ser'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/soler (revision: 39087286)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/soler (revision: 39087286, scraped 2020-09-25 08:35:43.120653)
 paradigms['-er']['soler'] = {
 
 "replacement": {  1: "sol"},
@@ -1086,7 +1086,7 @@ paradigms['-er']['soler'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/tener (revision: 47571814)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/tener (revision: 47571814, scraped 2020-09-25 08:35:43.733018)
 paradigms['-er']['tener'] = {
 
 "replacement": {  1: "1ten"},
@@ -1111,7 +1111,7 @@ paradigms['-er']['tener'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/traer (revision: 38984527)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/traer (revision: 38984527, scraped 2020-09-25 08:35:44.247229)
 paradigms['-er']['traer'] = {
 
 "patterns":     {  40: '-',
@@ -1132,7 +1132,7 @@ paradigms['-er']['traer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/valer (revision: 38984451)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/valer (revision: 38984451, scraped 2020-09-25 08:35:44.908388)
 paradigms['-er']['valer'] = {
 
 "replacement": {  1: "1val"},
@@ -1153,7 +1153,7 @@ paradigms['-er']['valer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/ver (revision: 46753902)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/ver (revision: 46753902, scraped 2020-09-25 08:35:45.802854)
 paradigms['-er']['ver'] = {
 
 "replacement": {  1: "v"},
@@ -1174,7 +1174,7 @@ paradigms['-er']['ver'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/ver e-é (revision: 41885575)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/ver e-é (revision: 41885575, scraped 2020-09-25 08:35:46.716148)
 paradigms['-er']['ver e-é'] = {
 
 "replacement": {  1: "1v"},
@@ -1195,7 +1195,7 @@ paradigms['-er']['ver e-é'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/yacer (revision: 38971096)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/yacer (revision: 38971096, scraped 2020-09-25 08:35:47.220319)
 paradigms['-er']['yacer'] = {
 
 "replacement": {  1: "1yac"},
@@ -1213,7 +1213,7 @@ paradigms['-er']['yacer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-cer (revision: 38971872)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-cer (revision: 38971872, scraped 2020-09-25 08:35:47.624177)
 paradigms['-er']['-cer'] = {
 
 "replacement": {  1: '1c'},
@@ -1231,7 +1231,7 @@ paradigms['-er']['-cer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-cer o-ue (revision: 38971335)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-cer o-ue (revision: 38971335, scraped 2020-09-25 08:35:48.110991)
 paradigms['-er']['-cer o-ue'] = {
 
 "replacement": {  1: '1o2c'},
@@ -1249,7 +1249,7 @@ paradigms['-er']['-cer o-ue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-eer (revision: 59244159)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-eer (revision: 59244159, scraped 2020-09-25 08:35:48.653226)
 paradigms['-er']['-eer'] = {
 
 "replacement": {  1: "1e"},
@@ -1269,7 +1269,7 @@ paradigms['-er']['-eer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-ger (revision: 38984030)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-ger (revision: 38984030, scraped 2020-09-25 08:35:49.286298)
 paradigms['-er']['-ger'] = {
 
 "replacement": {  1: "1g"},
@@ -1287,7 +1287,7 @@ paradigms['-er']['-ger'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-olver (revision: 38983914)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-olver (revision: 38983914, scraped 2020-09-25 08:35:49.866826)
 paradigms['-er']['-olver'] = {
 
 "replacement": {  1: "1olv"},
@@ -1307,7 +1307,7 @@ paradigms['-er']['-olver'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-ñer (revision: 38984106)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-ñer (revision: 38984106, scraped 2020-09-25 08:35:50.395034)
 paradigms['-er']['-ñer'] = {
 
 "description": "Rule: The 'i' in certain endings is absorbed by the 'll' or 'ñ'.",
@@ -1324,7 +1324,7 @@ paradigms['-er']['-ñer'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/c-zc (revision: 39060783)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/c-zc (revision: 39060783, scraped 2020-09-25 08:35:51.013893)
 paradigms['-er']['c-zc'] = {
 
 "replacement": {  1: "1c"},
@@ -1342,7 +1342,7 @@ paradigms['-er']['c-zc'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/e-ie (revision: 38984179)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/e-ie (revision: 38984179, scraped 2020-09-25 08:35:51.622443)
 paradigms['-er']['e-ie'] = {
 
 "replacement": {  1: "1e2"},
@@ -1360,7 +1360,7 @@ paradigms['-er']['e-ie'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/o-hue (revision: 38971649)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/o-hue (revision: 38971649, scraped 2020-09-25 08:35:52.238780)
 paradigms['-er']['o-hue'] = {
 
 "replacement": {  1: "1o2"},
@@ -1379,7 +1379,7 @@ paradigms['-er']['o-hue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/o-ue (revision: 38984317)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/o-ue (revision: 38984317, scraped 2020-09-25 08:35:52.851269)
 paradigms['-er']['o-ue'] = {
 
 "replacement": {  1: "1o2"},
@@ -1397,7 +1397,7 @@ paradigms['-er']['o-ue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-tener (revision: 47571877)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-er/-tener (revision: 47571877, scraped 2020-09-25 08:35:53.365773)
 paradigms['-er']['-tener'] = {
 
 "replacement": {  1: "1ten"},
@@ -1423,7 +1423,7 @@ paradigms['-er']['-tener'] = {
 }
 
 paradigms['-ir'] = {}
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir (revision: 38962701)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir (revision: 38962701, scraped 2020-09-25 08:35:53.985498)
 paradigms['-ir'][''] = {
 
 "patterns": {
@@ -1457,7 +1457,7 @@ paradigms['-ir'][''] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/asir (revision: 38962709)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/asir (revision: 38962709, scraped 2020-09-25 08:35:54.608843)
 paradigms['-ir']['asir'] = {
 
 "patterns": {  40: '-',
@@ -1471,7 +1471,7 @@ paradigms['-ir']['asir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/aterir (revision: 39567224)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/aterir (revision: 39567224, scraped 2020-09-25 08:35:55.225537)
 paradigms['-ir']['aterir'] = {
 
 "patterns": {  40: '-'},
@@ -1485,7 +1485,7 @@ paradigms['-ir']['aterir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/concernir (revision: 39081985)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/concernir (revision: 39081985, scraped 2020-09-25 08:35:55.839847)
 paradigms['-ir']['concernir'] = {
 
 "replacement": {  1: "1e2"},
@@ -1520,7 +1520,7 @@ paradigms['-ir']['concernir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/decir (revision: 39755455)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/decir (revision: 39755455, scraped 2020-09-25 08:35:56.442619)
 paradigms['-ir']['decir'] = {
 
 "replacement": {  1: "1dec"},
@@ -1547,7 +1547,7 @@ paradigms['-ir']['decir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/bendecir (revision: 39567126)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/bendecir (revision: 39567126, scraped 2020-09-25 08:35:56.949666)
 paradigms['-ir']['bendecir'] = {
 
 "replacement": {  1: "1dec"},
@@ -1572,7 +1572,7 @@ paradigms['-ir']['bendecir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/maldecir (revision: 39567011)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/maldecir (revision: 39567011, scraped 2020-09-25 08:35:57.563935)
 paradigms['-ir']['maldecir'] = {
 
 "replacement": {  1: "1dec"},
@@ -1597,7 +1597,7 @@ paradigms['-ir']['maldecir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/manumitir (revision: 46900735)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/manumitir (revision: 46900735, scraped 2020-09-25 08:35:58.090884)
 paradigms['-ir']['manumitir'] = {
 
 "description": "Irregular past participle",
@@ -1609,7 +1609,7 @@ paradigms['-ir']['manumitir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/predecir (revision: 39567079)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/predecir (revision: 39567079, scraped 2020-09-25 08:35:58.690949)
 paradigms['-ir']['predecir'] = {
 
 "replacement": {  1: "1dec"},
@@ -1637,7 +1637,7 @@ paradigms['-ir']['predecir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/redecir (revision: 39567180)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/redecir (revision: 39567180, scraped 2020-09-25 08:35:59.458087)
 paradigms['-ir']['redecir'] = {
 
 "replacement": {  1: "1dec"},
@@ -1665,7 +1665,7 @@ paradigms['-ir']['redecir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/elegir (revision: 39087194)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/elegir (revision: 39087194, scraped 2020-09-25 08:36:00.460290)
 paradigms['-ir']['elegir'] = {
 
 "description": "Rule: 'e' becomes 'i' in certain conjugations; 'g' becomes a 'j' before 'a' or 'o'.",
@@ -1690,7 +1690,7 @@ paradigms['-ir']['elegir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/erguir (revision: 38984962)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/erguir (revision: 38984962, scraped 2020-09-25 08:36:01.052223)
 paradigms['-ir']['erguir'] = {
 
 "replacement": {  1: "ergu"},
@@ -1720,7 +1720,7 @@ paradigms['-ir']['erguir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/imprimir (revision: 39063674)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/imprimir (revision: 39063674, scraped 2020-09-25 08:36:01.663897)
 paradigms['-ir']['imprimir'] = {
 
 "description": "Irregular in the past participle.",
@@ -1733,7 +1733,7 @@ paradigms['-ir']['imprimir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/morir (revision: 39081877)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/morir (revision: 39081877, scraped 2020-09-25 08:36:02.281301)
 paradigms['-ir']['morir'] = {
 
 "replacement": {  1: "1o2"},
@@ -1763,7 +1763,7 @@ paradigms['-ir']['morir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/pudrir (revision: 39063665)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/pudrir (revision: 39063665, scraped 2020-09-25 08:36:02.895072)
 paradigms['-ir']['pudrir'] = {
 
 "description": "Irregular in the past participle.",
@@ -1774,7 +1774,7 @@ paradigms['-ir']['pudrir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/ir (revision: 38962815)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/ir (revision: 38962815, scraped 2020-09-25 08:36:03.539900)
 paradigms['-ir']['ir'] = {
 
 "replacement": {  1: ""},
@@ -1806,7 +1806,7 @@ paradigms['-ir']['ir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/rehuir (revision: 47832800)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/rehuir (revision: 47832800, scraped 2020-09-25 08:36:04.431473)
 paradigms['-ir']['rehuir'] = {
 
 "replacement": {  1: "rehu"},
@@ -1836,7 +1836,7 @@ paradigms['-ir']['rehuir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/salir (revision: 38953715)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/salir (revision: 38953715, scraped 2020-09-25 08:36:05.065880)
 paradigms['-ir']['salir'] = {
 
 "replacement": {  1: "1sal"},
@@ -1856,7 +1856,7 @@ paradigms['-ir']['salir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/sustituir (revision: 39081924)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/sustituir (revision: 39081924, scraped 2020-09-25 08:36:05.661627)
 paradigms['-ir']['sustituir'] = {
 
 "description": "Rule: 'i' becomes 'y' before 'a', 'e', or 'o'.",
@@ -1880,7 +1880,7 @@ paradigms['-ir']['sustituir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-venir (revision: 41231598)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-venir (revision: 41231598, scraped 2020-09-25 08:36:06.277351)
 paradigms['-ir']['-venir'] = {
 
 "replacement": {  1: "1ven"},
@@ -1913,7 +1913,7 @@ paradigms['-ir']['-venir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/venir (revision: 41231651)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/venir (revision: 41231651, scraped 2020-09-25 08:36:06.892741)
 paradigms['-ir']['venir'] = {
 
 "replacement": {  1: "ven"},
@@ -1946,7 +1946,7 @@ paradigms['-ir']['venir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-brir (revision: 38962819)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-brir (revision: 38962819, scraped 2020-09-25 08:36:07.506122)
 paradigms['-ir']['-brir'] = {
 
 "replacement": {  1: "1br"},
@@ -1959,7 +1959,7 @@ paradigms['-ir']['-brir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-cir (revision: 38962885)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-cir (revision: 38962885, scraped 2020-09-25 08:36:07.981590)
 paradigms['-ir']['-cir'] = {
 
 "description": "Rule: 'c' becomes a 'z' before 'a' or 'o'.",
@@ -1977,7 +1977,7 @@ paradigms['-ir']['-cir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-ducir (revision: 38962802)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-ducir (revision: 38962802, scraped 2020-09-25 08:36:08.524418)
 paradigms['-ir']['-ducir'] = {
 
 "description": "Rule: 'c' becomes a 'zc' before 'a' or 'o'; the preterite is irregular.",
@@ -2000,7 +2000,7 @@ paradigms['-ir']['-ducir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-egir (revision: 49491570)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-egir (revision: 49491570, scraped 2020-09-25 08:36:09.086113)
 paradigms['-ir']['-egir'] = {
 
 "description": "Rule: 'e' becomes 'i' in certain conjugations; 'g' becomes a 'j' before 'a' or 'o'.",
@@ -2023,7 +2023,7 @@ paradigms['-ir']['-egir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-gir (revision: 38962925)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-gir (revision: 38962925, scraped 2020-09-25 08:36:09.792367)
 paradigms['-ir']['-gir'] = {
 
 "replacement": {  1: "1g"},
@@ -2039,7 +2039,7 @@ paradigms['-ir']['-gir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-guir (revision: 38962872)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-guir (revision: 38962872, scraped 2020-09-25 08:36:10.271073)
 paradigms['-ir']['-guir'] = {
 
 "replacement": {  1: "1gu"},
@@ -2056,7 +2056,7 @@ paradigms['-ir']['-guir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-guir (e-i) (revision: 41335513)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-guir (e-i) (revision: 41335513, scraped 2020-09-25 08:36:10.885464)
 paradigms['-ir']['-guir (e-i)'] = {
 
 "description": "Rule: e becomes i in certain conjugations; gu becomes a g before a or o.",
@@ -2088,7 +2088,7 @@ paradigms['-ir']['-guir (e-i)'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-güir (revision: 39055766)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-güir (revision: 39055766, scraped 2020-09-25 08:36:11.393672)
 paradigms['-ir']['-güir'] = {
 
 "description": "Rule: 'i' becomes 'y' before 'a', 'e', or 'o'; 'gü' becomes 'gu' before 'y'.",
@@ -2113,14 +2113,14 @@ paradigms['-ir']['-güir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-quir (revision: 38987698)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-quir (revision: 38987698, scraped 2020-09-25 08:36:12.026705)
 paradigms['-ir']['-quir'] = {
 
 "description": "Rule: 'qu' becomes a 'c' before 'a' or 'o'.",
 
 "replacement": {  1: "1qu"},
 
-"patterns": {  40:'-', 
+"patterns": {  40:'-',
            7: '1co',
           38: '1ca',   39:'1cas',   41:'1ca',   42:'1camos',   43:'1cáis',   44:'1can',
                                     65:'1ca',   66:'1camos',                 68:'1can',
@@ -2131,7 +2131,7 @@ paradigms['-ir']['-quir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-scribir (revision: 41823866)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-scribir (revision: 41823866, scraped 2020-09-25 08:36:12.620548)
 paradigms['-ir']['-scribir'] = {
 
 "description": "Irregular in the past participle.",
@@ -2145,7 +2145,7 @@ paradigms['-ir']['-scribir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-uir (revision: 48383985)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-uir (revision: 48383985, scraped 2020-09-25 08:36:13.344123)
 paradigms['-ir']['-uir'] = {
 
 "description": "Rule: Insert 'y' before 'a', 'e', or 'o'.",
@@ -2168,7 +2168,7 @@ paradigms['-ir']['-uir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-ñir (revision: 38962968)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-ñir (revision: 38962968, scraped 2020-09-25 08:36:13.967858)
 paradigms['-ir']['-ñir'] = {
 
 "description": "Rule: Any unstressed 'i' immediately after a root ending in 'll', 'ñ' or 'i' is always absorbed.",
@@ -2185,7 +2185,7 @@ paradigms['-ir']['-ñir'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-ñir e-i (revision: 38962937)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/-ñir e-i (revision: 38962937, scraped 2020-09-25 08:36:14.572978)
 paradigms['-ir']['-ñir e-i'] = {
 
 "description": "Rule: The 'i' in certain endings is absorbed; the 'e' becomes a 'i' in certain conjugations.",
@@ -2209,7 +2209,7 @@ paradigms['-ir']['-ñir e-i'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/c-zc (revision: 38962985)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/c-zc (revision: 38962985, scraped 2020-09-25 08:36:15.204533)
 paradigms['-ir']['c-zc'] = {
 
 "description": "Rule: 'c' becomes a 'zc' before 'a' or 'o'.",
@@ -2233,7 +2233,7 @@ paradigms['-ir']['c-zc'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/e-i (revision: 39082222)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/e-i (revision: 39082222, scraped 2020-09-25 08:36:15.706441)
 paradigms['-ir']['e-i'] = {
 
 "description": "Rule: 'e' weakens to 'i' in certain conjugations.",
@@ -2264,7 +2264,7 @@ paradigms['-ir']['e-i'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/e-ie (revision: 38987836)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/e-ie (revision: 38987836, scraped 2020-09-25 08:36:16.207022)
 paradigms['-ir']['e-ie'] = {
 
 "replacement": {  1: "1e2"},
@@ -2285,7 +2285,7 @@ paradigms['-ir']['e-ie'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/e-ie-i (revision: 38962947)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/e-ie-i (revision: 38962947, scraped 2020-09-25 08:36:16.833076)
 paradigms['-ir']['e-ie-i'] = {
 
 "description": "Rule: 'e' becomes a 'ie' in stressed syllables and 'i' in certain conjugations.",
@@ -2317,7 +2317,7 @@ paradigms['-ir']['e-ie-i'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/i-ie (revision: 38962889)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/i-ie (revision: 38962889, scraped 2020-09-25 08:36:17.231077)
 paradigms['-ir']['i-ie'] = {
 
 "replacement": {  1: "1i2"},
@@ -2335,7 +2335,7 @@ paradigms['-ir']['i-ie'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/i-í (revision: 38987782)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/i-í (revision: 38987782, scraped 2020-09-25 08:36:17.751156)
 paradigms['-ir']['i-í'] = {
 
 "description": "Rule: stressed í in certain conjugations",
@@ -2353,7 +2353,7 @@ paradigms['-ir']['i-í'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/o-ue (revision: 39081844)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/o-ue (revision: 39081844, scraped 2020-09-25 08:36:18.259558)
 paradigms['-ir']['o-ue'] = {
 
 "replacement": {  1: "1o2"},
@@ -2382,7 +2382,7 @@ paradigms['-ir']['o-ue'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/u-ú (revision: 38987903)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ir/u-ú (revision: 38987903, scraped 2020-09-25 08:36:18.892967)
 paradigms['-ir']['u-ú'] = {
 
 "description": "Rule: stressed 'ú' in certain conjugations",
@@ -2406,7 +2406,7 @@ paradigms['-ir']['u-ú'] = {
 }
 
 paradigms['-ír'] = {}
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír (revision: 39589531)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír (revision: 39589531, scraped 2020-09-25 08:36:19.489695)
 paradigms['-ír'][''] = {
 
 "patterns": {
@@ -2440,7 +2440,7 @@ paradigms['-ír'][''] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/embaír (revision: 52345205)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/embaír (revision: 52345205, scraped 2020-09-25 08:36:20.027720)
 paradigms['-ír']['embaír'] = {
 
 "replacement": {  1: "1a"},
@@ -2478,7 +2478,7 @@ paradigms['-ír']['embaír'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/oír (revision: 51141629)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/oír (revision: 51141629, scraped 2020-09-25 08:36:20.931805)
 paradigms['-ír']['oír'] = {
 
 "patterns": {  40: '-',
@@ -2500,7 +2500,7 @@ paradigms['-ír']['oír'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/reír (revision: 39589618)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/reír (revision: 39589618, scraped 2020-09-25 08:36:21.430586)
 paradigms['-ír']['reír'] = {
 
 "description": "Rule: 'e' becomes 'i' in certain conjugations and the 'i' in certain endings is removed. Monosyllabic forms do not receive written accent marks.",
@@ -2534,7 +2534,7 @@ paradigms['-ír']['reír'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/-eír (revision: 39589533)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/-eír (revision: 39589533, scraped 2020-09-25 08:36:22.185918)
 paradigms['-ír']['-eír'] = {
 
 "description": "Rule: 'e' becomes 'i' in certain conjugations and the 'i' in certain endings is removed. Monosyllabic forms do not receive written accent marks.",
@@ -2567,7 +2567,7 @@ paradigms['-ír']['-eír'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/freír (revision: 39589632)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/freír (revision: 39589632, scraped 2020-09-25 08:36:22.764573)
 paradigms['-ír']['freír'] = {
 
 "description": "Rule: 'e' becomes 'i' in certain conjugations and the 'i' in certain endings is removed. Monosyllabic forms do not receive written accent marks.",
@@ -2603,7 +2603,7 @@ paradigms['-ír']['freír'] = {
 
 }
 
-# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/refreír (revision: 39589643)
+# Data from: https://en.wiktionary.org/wiki/Module:es-conj/data/-ír/refreír (revision: 39589643, scraped 2020-09-25 08:36:23.177166)
 paradigms['-ír']['refreír'] = {
 
 "description": "Rule: 'e' becomes 'i' in certain conjugations and the 'i' in certain endings is removed. Monosyllabic forms do not receive written accent marks.",
