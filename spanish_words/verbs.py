@@ -261,24 +261,28 @@ class SpanishVerbs:
 
 
     def conjugate(self, verb, form=None, debug=False):
+        if " " in verb:
+            return { 1: [verb] }
+
         ending = verb[-4:-2] if verb.endswith("se") else verb[-2:]
         if ending not in all_verb_endings:
-            return
+            return { 1: [verb] }
 
         ending = "-"+ending
 
         res = {}
-        if verb in self.irregular_verbs or \
-            (verb.endswith("se") and verb[:-2] in self.irregular_verbs):
-            for paradigm in self.irregular_verbs[verb]:
+
+        paradigms = self.irregular_verbs.get(verb)
+        if not paradigms and verb.endswith("se"):
+            paradigms = self.irregular_verbs.get(verb[:-2])
+        if paradigms:
+            for paradigm in paradigms:
                 forms = self.do_conjugate( paradigm['stems'], ending, paradigm['pattern'], debug=debug )
                 for k,v in forms.items():
                     if k not in res:
                         res[k] = v
                     else:
                         res[k] += [i for i in v if i not in res[k]]
-
-
         else:
             stem = verb[:-4] if verb.endswith("se") else verb[:-2]
             res = self.do_conjugate( [ stem ], ending, "" )
