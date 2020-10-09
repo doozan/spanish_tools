@@ -2065,10 +2065,16 @@ enable_meta && $0 ~ metahead {
         case /noun/:
 
             data = ""
-            if (2 in tpar && tpar[2] != "") data = data "pl:'" tpar[2] "' "
-            if ("pl2" in tpar && tpar["pl2"] != "") data = data "pl:'" tpar["pl2"] "' "
             if ("m" in tpar) data = data "m:'" tpar["m"] "' "
             if ("f" in tpar) data = data "f:'" tpar["f"] "' "
+            if ("f2" in tpar && tpar["f"] != "") data = data "f:'" tpar["f2"] "' "
+            if (2 in tpar && tpar[2] != "") data = data "pl:'" tpar[2] "' "
+            if ("pl" in tpar && tpar["pl"] != "") data = data "pl:'" tpar[2] "' "
+            if ("pl2" in tpar && tpar["pl2"] != "") data = data "pl:'" tpar["pl2"] "' "
+            if ("mpl" in tpar && tpar["mpl"] != "") data = data "mpl:'" tpar["mpl"] "' "
+            if ("mpl2" in tpar && tpar["mpl2"] != "") data = data "mpl2:'" tpar["mpl2"] "' "
+            if ("fpl" in tpar && tpar["fpl"] != "") data = data "fpl:'" tpar["fpl"] "' "
+            if ("fpl2" in tpar && tpar["fpl2"] != "") data = data "fpl2:'" tpar["fpl2"] "' "
 
             if (data != "") {
                 meta = title " {meta-noun} :: " data
@@ -2088,19 +2094,14 @@ enable_meta && $0 ~ metahead {
 
         case /conj/:
 
-            stems = "stem:''"
+            stems = ""
             # k = number of stems+1
-            if (k>1) {
-                stems = ""
-                for (j=1; j<k; j=j+1)
-                    stems = stems " stem:'" tpar[j] "'"
-            }
+            for (j=1; j<k; j=j+1)
+                stems = stems " stem:'" tpar[j] "'"
 
             meta = title " {meta-verb} ::"
             if ("p" in tpar)
                 meta = meta " pattern:'" tpar["p"] "'"
-            else
-                meta = meta " pattern:''"
             meta = meta stems
 
             # some verbs have two conjugations, if we've just detected that we're in an irregular verb,

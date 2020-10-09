@@ -26,6 +26,17 @@ class SpanishWordlist:
         self.xnouns = {}
         self.lemmas = {}
         self.allwords = {}
+        # allwords = {
+        #     "word": {
+        #         "pos": {
+        #             "label": [
+        #                 "def1",
+        #                 "def2",
+        #             ]
+        #         }
+        #     }
+        #  }
+        self.wordforms = {}  # { "word": {(pos, form), (pos, form2)} }
         self.allsyns = {}
         self.meta_buffer = []
         self.parent=parent
@@ -175,10 +186,31 @@ class SpanishWordlist:
             for lemma in tags['lemma']:
                 self.add_lemma(word, lemma, pos)
 
+    def add_form(self, word, form, pos):
+        if word not in self.wordforms:
+            self.wordforms[word] = { (pos,form) }
+        else:
+            self.wordforms[word].add( (pos,form) )
+
     def add_lemma(self, word, lemma, pos):
-        if pos not in self.lemmas:
-            self.lemmas[pos] = {}
-        self.lemmas[pos][word] = lemma
+        #if pos not in self.lemmas:
+        #    self.lemmas[pos] = {}
+        #self.lemmas[pos][word] = lemma
+        if word not in self.lemmas:
+            self.lemmas[word] = {}
+
+        if pos not in self.lemmas[word]:
+            self.lemmas[word][pos] = [lemma]
+        elif lemma not in self.lemmas[word][pos]:
+            self.lemmas[word][pos].append(lemma)
+
+        self.add_form(lemma, word, pos)
+
+    def get_lemmas(self, word):
+        if word not in self.lemmas:
+            return None
+
+        return self.lemmas[word].get(pos)
 
     def get_lemma(self, word, pos):
         lemma = None
@@ -187,15 +219,15 @@ class SpanishWordlist:
         found = False
         depth = 0
 
-        while search in self.lemmas[pos]:
+        while search in self.lemmas and pos in self.lemmas[search]:
             found = True
-            if self.lemmas[pos][search] == "-" or self.lemmas[pos][search] == search: # "-" indicates that word is its own lemma
+            if self.lemmas[search][pos] in [ "-", "+", search ]: # -/+ indicate the word is its own lemma
                 break
-            search = self.lemmas[pos][search]
+            search = self.lemmas[search][pos][-1]
             depth = depth+1
             if depth > 10:
 #                raise ValueError(f"Lemma loop detected: '{search}' -> '{self.lemmas[pos][search]}'")
-                print(f"Lemma loop detected: '{search}' -> '{self.lemmas[pos][search]}'", file=sys.stderr)
+                print(f"Lemma loop detected: '{search}' -> '{self.lemmas[search][pos]}'", file=sys.stderr)
                 break
 
         if found:
@@ -235,7 +267,7 @@ class SpanishWordlist:
             if k == "pl":
                 for plural in v:
                     # some pl: tags have a - to indicate the noun is uncountable
-                    if plural == "-":
+                    if plural in ["-", "+"]:
                         continue
                     self.add_lemma(plural, word, "noun")
 
@@ -245,6 +277,7 @@ class SpanishWordlist:
                 for xnoun in v:
 
                     # some f: tags have a 1 to indicate they follow normal rules
+                    # TODO: Add support for f=1
                     if xnoun in ["1", "-"]:
                         continue
                     self.xnouns[tag] = xnoun
@@ -274,9 +307,10 @@ class SpanishWordlist:
         ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
 
         tags = self.parse_tags(item['def'])
-        if "pattern" not in tags or "stem" not in tags:
-            print(f"Bad vmeta data for {verb}: {item['def']}", file=sys.stderr)
-            return
+        if "pattern" not in tags:
+            tags["pattern"] = [""]
+        if "stem" not in tags:
+            tags["stem"] = [""]
 
         iverb = { "pattern": tags["pattern"][0],
                   "stems": tags["stem"] }

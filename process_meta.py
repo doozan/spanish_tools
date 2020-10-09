@@ -44,7 +44,7 @@ def dprint(*args, **kwargs):
             print(*args, file=sys.stderr, **kwargs)
 
 
-def get_useful_data(word, meta, data):
+def get_noun_meta(word, meta, data, only_irregular=True):
     if meta != "meta-noun":
         return data
     else:
@@ -88,6 +88,8 @@ def get_useful_data(word, meta, data):
             guess_plural = make_plural(word, gender)
             if guess_plural and (" ".join(sorted(guess_plural)) == " ".join(sorted(v))):
                 dprint(f"AUTOFIX: Useless plural declaration in {word}: {v}")
+                if not only_irregular:
+                    useful_data["pl"] = data["pl"]
             else:
                 useful_data["pl"] = data["pl"]
             #                print(" ".join(sorted(guess_plural))," == "," ".join(sorted(v)))
@@ -104,8 +106,14 @@ def get_useful_data(word, meta, data):
         return None
 
 
-def print_useful_meta(word, meta, data):
-    data = get_useful_data(word, meta, data)
+def print_full_meta(word, meta, data):
+    data = get_noun_meta(word, meta, data, only_irregular=False)
+    if data:
+        print_meta(word, meta, data)
+
+
+def print_irregular_meta(word, meta, data):
+    data = get_noun_meta(word, meta, data, only_irregular=True)
     if data:
         print_meta(word, meta, data)
 
@@ -301,9 +309,12 @@ def main():
     )
 
     seen = {}
+    seen_meta = set()
     prev_fem = ""
     prev_word = ""
     prev_pos = ""
+    prev_common_pos = ""
+
     with open(_args.infile) as infile:
         for line in infile:
             item = words.wordlist.parse_line(line)
@@ -383,10 +394,33 @@ def main():
             if ignore_notes & notes:
                 definition = ""
 
+            # Generate meta line for words that don't specify anything
+            # TODO: detect if there's a meta line
+            common_pos = words.common_pos(pos)
+            if _args.all_forms and not meta_data and (word,common_pos) not in seen_meta:
+                if common_pos == "adj":
+                    data = get_adjective_forms(word, "m")
+                    if data:
+                        meta_type = "meta-adj"
+                        meta_data = {"pl": [data["mp"]]}
+
+                if common_pos == "noun":
+                    gender = "m" if "m" in pos else "f"
+                    data = make_plural(word, gender)
+                    if data:
+                        meta_type = "meta-noun"
+                        meta_data = {"pl": data}
+#                        if gender=="f":
+#                            raise ValueError(word, gender, data, meta_data)
+
+            prev_common_pos = common_pos
             prev_pos = pos
             prev_word = word
 
             if not pos.startswith("meta-"):
+                if meta_type:
+                    print_meta(word, meta_type, meta_data)
+                    seen_meta.add((word,common_pos))
                 definition = definition.strip()
                 if definition != "":
                     linedata = [word, "{" + pos + "}"]
@@ -396,12 +430,16 @@ def main():
                         linedata.append(f"| {syn}")
                     linedata.append(f":: {definition}")
                     print_line(linedata)
-                if meta_type:
-                    print_meta(word, meta_type, meta_data)
                 continue
 
+            meta_pos = pos[5:] # strip meta- prefix
+            seen_meta.add((word,meta_pos))
+
             data = words.wordlist.parse_tags(definition)
-            print_useful_meta(word, pos, data)
+            if _args.all_forms:
+                print_full_meta(word, pos, data)
+            else:
+                print_irregular_meta(word, pos, data)
 
             if word not in seen:
                 seen[word] = {}
@@ -442,6 +480,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--custom-dir",
         help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",
+    )
+    parser.add_argument(
+        "--all-forms",
+        help="Generate default plural forms for nouns",
+        action="store_true"
     )
     args = parser.parse_args()
 
