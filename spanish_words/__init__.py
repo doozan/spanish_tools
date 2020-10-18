@@ -251,21 +251,6 @@ class SpanishWords:
                 if lemma:
                     return [lemma]
 
-                maybe_lemmas = self.noun.make_singular(word)
-                lemmas = self.get_valid_lemmas(word, pos, maybe_lemmas)
-
-                # check for masculine versions of any lemmas
-                # actrices -> actriz -> actor
-                macho_lemmas = []
-                for word in lemmas:
-                    masc = self.wordlist.get_masculine_noun(word)
-                    if not masc:
-                        masc = word
-                    macho_lemmas.append(masc)
-
-                if len(macho_lemmas):
-                    return macho_lemmas
-
             return [word]
 
         elif pos == "verb":
@@ -285,8 +270,6 @@ class SpanishWords:
                         v['verb'] += "se"
                         res.append(v)
 
-#            if debug: print(res)
-#            if select_best:
             res = self.verb.select_best(res, debug)
 
             res = [ v['verb'] for v in res ]

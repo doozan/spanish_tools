@@ -11,42 +11,6 @@ class SpanishNouns:
     def stress(self, word):
         return word.translate(self._stresstab)
 
-    def x_get_lemma(self, word):
-        word = word.lower()
-
-        lemma = word
-
-
-        # canciones, coleciones
-        if len(word) > 5 and word.endswith("iones"):
-            lemma = word[:-5] + "ión"
-
-        # profesores, doctores, actores
-        elif len(word) > 4 and word.endswith("ores"):
-            lemma = word[:-4] + "or"
-
-        # lapices, narices
-        elif len(word) > 3 and word.endswith("ces"):
-            lemma = word[:-3] + "z"
-
-        elif len(word) > 3 and word[-3:] in [ "des", "jes", "les", "mes", "nes", "oes", "res", "ses", "xes", "yes", "íes" ]:
-            lemma = word[:-2]
-            if not self.parent.has_word(lemma, "noun") and self.parent.has_word(self.unstress(lemma), "noun"):
-                lemma = self.unstress(lemma)
-
-        elif len(word) > 2 and word[-2:] in [ "as", "bs", "cs", "ds", "es", "fs", "gs", "ks", "ls", "ms", "ns", "os", "ps", "rs", "ts", "vs", "ás", "ís", "ós", "ús" ]:
-            lemma = word[:-1]
-
-        # Check definitions for "feminine of word-o" and use word-o as lemma (mentiroso/a)
-        masculine = self.parent.wordlist.get_masculine_noun(lemma)
-        if masculine:
-            lemma = masculine
-
-        return lemma
-
-
-
-
     def make_singular(self, plural):
         if not plural:
             return []

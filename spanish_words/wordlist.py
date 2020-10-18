@@ -4,14 +4,13 @@ import sys
 import os
 
 noun_tags = set([
-    "n",    # noun (very few cases, mainly just cruft in wiktionary)
+    "prop", # proper noun with no gender
+    "n",    # noun with no gender (very few cases, mainly just cruft in wiktionary)
     "f",    # feminine (casa)
     "fp",   # feminine always plural (uncommon) (las esposas - handcuffs)
-    "fs",   # feminine singular - not used (wiktionary crufy)
     "m",    # masculine (frijole)
     "mf",   # uses el/la to indicate gender of person (el/la dentista)
     "mp",   # masculine plural, nouns that are always plural (lentes)
-    "ms",   # masculine singular - not used (more cruft)
 
     # These don't appear in the dictionary, but are generated during word analysis
     "m-f",  # uses el/la to indicate different meanings of word (la cura, el cura)
@@ -23,31 +22,21 @@ noun_tags = set([
 class SpanishWordlist:
     def __init__(self, parent=None, dictionary="es-en.txt", data_dir=None, custom_dir=None):
         self.irregular_verbs = {}
-        self.xnouns = {}
-        self.lemmas = {}
-        self.allwords = {}
-        # allwords = {
-        #     "word": {
-        #         "pos": {
-        #             "label": [
-        #                 "def1",
-        #                 "def2",
-        #             ]
-        #         }
-        #     }
-        #  }
-        self.wordforms = {}  # { "word": {(pos, form), (pos, form2)} }
+        self.all_forms = {} # { word: { common_pos: { formtype: [form] } } }
+        self.xnouns = {} # { (opposite_gender, word): opposite_word }
+        self.allwords = {} # word: { pos: { label: [ def1, def2, .. ] } }
         self.allsyns = {}
         self.meta_buffer = []
         self.parent=parent
-        if dictionary:
-            self.load_dictionary(dictionary, data_dir, custom_dir)
         self._trantab = str.maketrans("áéíóú", "aeiou")
 
         self.el_f_nouns = [ 'abra', 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia',
                 'area', 'arma', 'arpa', 'asma', 'aula', 'ave', 'habla', 'hada', 'hacha', 'hambre', 'águila']
 
         self.prev_pos = "xx"
+
+        if dictionary:
+            self.load_dictionary(dictionary, data_dir, custom_dir)
 
     def remove_def(self, item):
         word = item['word']
@@ -148,7 +137,7 @@ class SpanishWordlist:
 
     def parse_tags(self, data):
         tags = {}
-        for match in re.finditer(r"([^: ]*):'([^']*)'", data):
+        for match in re.finditer(r"\s*(.+?)=(.*?)(; |$)", data):
             k = match.group(1)
             v = match.group(2)
             if k not in tags:
@@ -164,149 +153,78 @@ class SpanishWordlist:
 
     def apply_meta(self):
         for data in self.meta_buffer:
-            if data['pos'].startswith("meta-lemma-"):
-                pos = data['pos'].split("-", 2)[2]
-                if self.pos_is_noun(pos):
-                    self.add_meta_lemma(data, "noun")
-                elif self.pos_is_verb(pos):
-                    self.add_meta_lemma(data, "verb")
-                else:
-                    self.add_meta_lemma(data, pos)
-            elif data['pos'] == "meta-noun": # and self._has_word(data['word'], "noun"):
-                self.add_nmeta(data)
-            elif data['pos'] == "meta-verb": # and self._has_word(data['word'], "verb"):
+            if data['pos'] == "meta-verb":
                 self.add_vmeta(data)
-            elif data['pos'] == "meta-adj": # and self._has_word(data['word'], "verb"):
-                self.add_ameta(data)
-
-    def add_meta_lemma(self, item, pos):
-        word = item['word']
-        tags = self.parse_tags(item['def'])
-        if 'lemma' in tags:
-            for lemma in tags['lemma']:
-                self.add_lemma(word, lemma, pos)
-
-    def add_form(self, word, form, pos):
-        if word not in self.wordforms:
-            self.wordforms[word] = { (pos,form) }
-        else:
-            self.wordforms[word].add( (pos,form) )
-
-    def add_lemma(self, word, lemma, pos):
-        #if pos not in self.lemmas:
-        #    self.lemmas[pos] = {}
-        #self.lemmas[pos][word] = lemma
-        if word not in self.lemmas:
-            self.lemmas[word] = {}
-
-        if pos not in self.lemmas[word]:
-            self.lemmas[word][pos] = [lemma]
-        elif lemma not in self.lemmas[word][pos]:
-            self.lemmas[word][pos].append(lemma)
-
-        self.add_form(lemma, word, pos)
-
-    def get_lemmas(self, word):
-        if word not in self.lemmas:
-            return None
-
-        return self.lemmas[word].get(pos)
+            else:
+                self.add_forms(data)
 
     def get_lemma(self, word, pos):
-        lemma = None
 
-        search = word
-        found = False
-        depth = 0
+        # if the word appears in the wordlist, consider it a lemma
+        if self.allwords.get(word,{}).get(pos):
+            return word
 
-        while search in self.lemmas and pos in self.lemmas[search]:
-            found = True
-            if self.lemmas[search][pos] in [ "-", "+", search ]: # -/+ indicate the word is its own lemma
-                break
-            search = self.lemmas[search][pos][-1]
-            depth = depth+1
-            if depth > 10:
-#                raise ValueError(f"Lemma loop detected: '{search}' -> '{self.lemmas[pos][search]}'")
-                print(f"Lemma loop detected: '{search}' -> '{self.lemmas[search][pos]}'", file=sys.stderr)
-                break
+        # check if it's a form of a known lemma
+        lemmas = self.all_forms.get(word, {}).get(pos,[])
+        if lemmas:
+            return lemmas[-1]
 
-        if found:
-            lemma = search
+        return None
 
-        elif self._has_word(word, pos):
-            lemma = word
+    def add_xnoun(self, word, opposite_gender, opposite):
+        self.xnouns[(opposite_gender, word)] = opposite
 
-        return lemma
+    def add_form(self, form, formtype, lemma, pos):
+        if form == lemma:
+            return
 
+        if formtype in ["m","f"] and pos == "noun":
+            self.add_xnoun(lemma, formtype, form)
 
-    def add_ameta(self, item):
-        word = item['word']
+        if form not in self.all_forms:
+            self.all_forms[form] = {}
+
+        if pos not in self.all_forms[form]:
+            self.all_forms[form][pos] = [lemma]
+        elif lemma not in self.all_forms[form][pos]:
+            self.all_forms[form][pos].append(lemma)
+
+    def add_forms(self, item):
+        lemma = item['word']
+        pos = item['pos'][len("meta-"):]
         tags = self.parse_tags(item['def'])
 
         # used for gender neutral terms
         if 'm' in tags and 'f' in tags:
             return
 
-        for k,v in tags.items():
-
-            if k in ["m", "pl", "mpl", "fpl"]:
-                for altword in v:
-                    self.add_lemma(altword, word, "adj")
-
-
-    def add_nmeta(self, item):
-        word = item['word']
-        tags = self.parse_tags(item['def'])
-
-        # used for gender neutral terms
-        if 'm' in tags and 'f' in tags:
+        # If a feminine word specifies a masculine counterpart, the masculine is the lemma
+        # and the feminine should not have any forms added, but it should be added to
+        # xnouns
+        if "m" in tags:
+            self.add_xnoun(lemma, "m", tags["m"][0])
             return
 
-        for k,v in tags.items():
-
-            if k == "pl":
-                for plural in v:
-                    # some pl: tags have a - to indicate the noun is uncountable
-                    if plural in ["-", "+"]:
-                        continue
-                    self.add_lemma(plural, word, "noun")
+        for formtype, forms in tags.items():
+            for form in forms:
+                self.add_form(form, formtype, lemma, pos)
 
 
-            elif k in ["f", "m"]:
-                tag = k+":"+word
-                for xnoun in v:
-
-                    # some f: tags have a 1 to indicate they follow normal rules
-                    # TODO: Add support for f=1
-                    if xnoun in ["1", "-"]:
-                        continue
-                    self.xnouns[tag] = xnoun
-
-                    # Femine nouns that specify a masculine counterpart
-                    # should add a femnoun -> masculine lemma
-                    # Note: Do not do this the other ways (m nouns with f parts creating lemmas)
-                    # because it creates incorrect lemmas for words like pata and hambugrguesa which are feminine
-                    # nouns first and feminine pairs of masculine nouns second
-                    if k == "m":
-                        self.add_lemma(word, xnoun, "noun")
-
-            # explicitly tagged lemmas are generated when words are ignored as being obsolete versions of new words
-            elif k == "lemma":
-                for lemma in v:
-                    self.add_lemma(word, lemma, "noun")
-
-            else:
-                print(f"unknown nmeta value: {k} in {word}", file=sys.stderr)
-
-        return
-
-    # def = "pattern:'-gir' stems:['compun']"
     def add_vmeta(self, item):
 
-        verb = item['word']
-        ending = "-"+verb[-4:-2] if verb.endswith("se") else "-"+verb[-2:]
-
+        word = item['word']
         tags = self.parse_tags(item['def'])
+
+        # Process any word forms
+        for formtype, forms in tags.items():
+            if formtype in ["pattern","stem"]:
+                continue
+            for form in forms:
+                self.add_form(form, formtype, word, "verb")
+
+        if "pattern" not in tags and "stem" not in tags:
+            return
+
         if "pattern" not in tags:
             tags["pattern"] = [""]
         if "stem" not in tags:
@@ -315,25 +233,28 @@ class SpanishWordlist:
         iverb = { "pattern": tags["pattern"][0],
                   "stems": tags["stem"] }
 
+        # TODO: don't do this if there's a space in the word
+        ending = "-"+word[-4:-2] if word.endswith("se") else "-"+word[-2:]
+
         if ending == iverb["pattern"]:
-#            print(f"Useless pattern declaration {verb}: {item}", file=sys.stderr)
+#            print(f"Useless pattern declaration {word}: {item}", file=sys.stderr)
             return
 
         if iverb["pattern"] not in paradigms[ending]:
-            print(f"Bad pattern specified in vmeta for {verb}: {item['def']}", file=sys.stderr)
+            print(f"Bad pattern specified in vmeta for {word}: {item['def']}", file=sys.stderr)
             return
 
         # Ignore reflexives if the non-reflexive is in the database
-        if verb.endswith("se") and verb[:-2] in self.irregular_verbs:
+        if word.endswith("se") and word[:-2] in self.irregular_verbs:
             return
         # Replace existing reflexive with no-reflexive
-        elif verb+"se" in self.irregular_verbs:
-            self.irregular_verbs.pop(verb+"se")
+        elif word+"se" in self.irregular_verbs:
+            self.irregular_verbs.pop(word+"se")
 
-        if verb not in self.irregular_verbs:
-            self.irregular_verbs[verb] = [ iverb ]
+        if word not in self.irregular_verbs:
+            self.irregular_verbs[word] = [ iverb ]
         else:
-            self.irregular_verbs[verb].append(iverb)
+            self.irregular_verbs[word].append(iverb)
 
     def process_line(self, line):
 
@@ -450,8 +371,9 @@ class SpanishWordlist:
                 femdefs = []
                 if femnoun in self.allwords:
                     femdefs = self.allwords[femnoun]
-                    femdefs = self.filter_defs(femdefs, 'f', "feminine noun of "+word)
-                    femdefs = self.filter_defs(femdefs, 'f', "female equivalent of "+word)
+#                    femdefs = self.filter_defs(femdefs, 'f', "xxxxfeminine noun of "+word)
+#                    femdefs = self.filter_defs(femdefs, 'f', "feminine noun of "+word)
+#                    femdefs = self.filter_defs(femdefs, 'f', "female equivalent of "+word)
 
                 if len(femdefs):
                     alldefs['f'] = femdefs['f']
@@ -495,89 +417,14 @@ class SpanishWordlist:
             for syn in syns:
                 # Don't filter by pos because it's the specific pos and not the clean pos
                 # ie demora (f) is a syn of retraso (m) even though f!=m
-                if syn in self.allwords: # and pos in self.allwords[syn]:
+                # likewise some phrases are labelled phrase, some are prep, some are adv
+                if syn in self.allwords:
                     synonyms.append(syn)
 
         return dict.fromkeys(synonyms).keys()
 
-
-    def is_feminized_noun(self, word, masculine=""):
-        if 'm:'+word in self.xnouns:
-            return True
-
-
-        # Only search the first {f} note definitions (eliminates secondary uses like hamburguesa as a lady from Hamburg)
-#        if "feminine noun of "+masculine in list(alldefs['f'].values())[0][0] or \
-#           "(female" in list(alldefs['f'].values())[0][0] or \
-#           "female equivalent of " in list(alldefs['f'].values())[0][0]:
-#            return True
-
-        return False
-
-
-    def unstress(self, word):
-        return word.translate(self._trantab)
-
     def get_feminine_noun(self, word):
-        return self.xnouns.get(f'f:{word}')
-
-    def guess_feminine_noun(self, word):
-
-        femnoun = None
-
-        # hermano/a  jefe/a  tigre/tigresa
-        if word.endswith("o") or word.endswith("e"):
-            femnoun = word[:-1]+"a"
-            if self.is_feminized_noun(femnoun, word):
-                return femnoun
-
-            femnoun = self.unstress(word)+"sa"
-
-        # bailarín / bailarina
-        else:
-            femnoun = self.unstress(word)+"a"
-
-        if self.is_feminized_noun(femnoun, word):
-            return femnoun
-
-        return None
-
-
-    def get_masculine_noun(self, word):
-        return self.xnouns.get(f'm:{word}')
-
-    def guess_masculine_noun(self, word):
-        # if it doesn't end with a there are no good rules
-        if not word.endswith("a"):
-            return
-
-        # only check words that have a hint of being female in their primary definition
-        if not maindef.startswith("female ") and "(female" not in maindef:
-            return
-
-        # hermana -> hermano
-        masculine = word[:-1]+"o"
-        if self._has_word(masculine, "m"):
-            return masculine
-
-        # jefa -> jefe
-        masculine = word[:-1]+"e"
-        if self._has_word(masculine, "m"):
-            return masculine
-
-        # doctora / doctor
-        masculine = word[:-1]
-        if self._has_word(masculine, "m"):
-            return masculine
-
-        # tigresa -> tigre
-        if word.endswith("sa"):
-            masculine = word[:-2]
-            if self._has_word(masculine, "m"):
-                return masculine
-
-        if self.is_feminized_noun(word, masculine):
-            return masculine
+        return self.xnouns.get(('f', word))
 
     @staticmethod
     def parse_line(data):
