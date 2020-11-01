@@ -13,7 +13,6 @@ def test_general(tmp_path):
         outfile.write(
 """amigo {m} :: friend
 amiga {f} :: feminine noun of amigo, friend
-enemigo {m} :: foe, enemy
 casa {f} :: house
 chico {adj} :: small
 chico {m} :: boy; kid
@@ -22,6 +21,11 @@ chica {f} [colloquial] :: gal, chick
 cura {f} :: cure (something that restores good health)
 cura {m} :: priest
 cura {f} [Colombia, dated] :: avocado
+enemigo {m} :: foe, enemy
+mino {meta-noun} :: f=mina; fpl=minas; pl=minos
+mino {m} [Argentina, Chile, colloquial] :: boy (young man)
+mina {meta-noun} :: pl=minas
+mina {f} :: mine (excavation from which ore is taken)
 yuso {adv} [obsolete] :: down
 zelo {m} :: obsolete form of celo
 test {m} :: testing
@@ -39,6 +43,7 @@ test {m} :: obsoleto form of terst
 #    assert wordlist.get_lemma("zelo") == "celo"
 #    assert wordlist._has_word("test") == True
 #    assert wordlist.get_lemma("terst") == None
+    assert wordlist.get_lemma("minas", "noun") == "mina"
 
     test_def = wordlist.parse_line("myword {m} :: my def1, def2; def 3\n")
     assert test_def == {'word': 'myword', 'pos': 'm', 'note': '', 'syn': '', 'def': 'my def1, def2; def 3'}
