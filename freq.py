@@ -122,12 +122,13 @@ class FrequencyList():
         """
 
         all_pos = self.wordlist.all_forms.get(word, {}).keys()
+        all_pos = self.filter_pos(word, all_pos)
 
         if not all_pos:
             return []
 
-
-        all_pos = self.filter_pos(word, all_pos)
+        if len(all_pos) == 1:
+            return all_pos
 
         usage = []
         for pos in all_pos:
@@ -139,12 +140,41 @@ class FrequencyList():
 
         pos_rank = self.rank_usage(usage)
 
-        # No count, but multiple results, try again using lemma instead of word
-        # Note: this will blow out a lot of lesser used nouns that may also be verbs
-        if not use_lemma and len(pos_rank) > 1 and pos_rank[0][2] == 0:
-            return self.get_ranked_pos(word, True)
+        # If there's a tie, take non-verbs over verbs
+        # If there's still a tie, use the lemam forms
+        # Still tied? prefer adj > noun > non-verb > verb
+        if len(pos_rank) > 1 and pos_rank[0][2] == pos_rank[1][2]:
 
-        return [pos for word,pos,count in pos_rank]
+            top_count = pos_rank[0][2]
+
+            # prefer non-verbs over verbs
+            if top_count > 0 or use_lemma:
+                for i, (form, pos, count) in enumerate(pos_rank):
+                    if count != top_count:
+                        break
+                    if pos != "verb":
+                        count += 1
+                    pos_rank[i] = (form, pos, count)
+
+                pos_rank = sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)
+
+            # Try with lemma forms
+            if pos_rank[0][2] == pos_rank[1][2] and not use_lemma:
+                return self.get_ranked_pos(word, use_lemma=True)
+
+            for i, (form, pos, count) in enumerate(pos_rank):
+                if count != top_count:
+                    break
+                if pos == "adj":
+                    count += 3
+                elif pos == "noun":
+                    count += 2
+                elif pos != "verb":
+                    count += 1
+
+                pos_rank[i] = (form, pos, count)
+
+        return [pos for form,pos,count in sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)]
 
 
     def rank_usage(self, usage):

@@ -235,3 +235,29 @@ bienes 10
 count,spanish,pos,flags,usage
 10,bienes,noun,LITERAL; CLEAR,10:bienes\
 """
+
+def test_rasguno():
+
+    wordlist_data = """\
+rasguñar {verb-forms} :: 7=rasguño
+rasguñar {vt} | arañar; rascar :: to scratch
+rasguño {noun-forms} :: pl=rasguños
+rasguño {m} | arañazo :: scratch
+"""
+
+    sentences = None
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = spanish_sentences.sentences()
+
+    freq = FrequencyList(wordlist, sentences)
+
+    assert list(freq.wordlist.all_forms.get("rasguño", {}).keys()) == ["verb", "noun"]
+    assert freq.get_ranked_pos("rasguño") == ["verb", "noun"]
+
+    flist_data = """\
+rasguño 10
+"""
+    assert "\n".join(freq.process(flist_data.splitlines(), None)) == """\
+count,spanish,pos,flags,usage
+10,rasguñar,verb,CLEAR,10:rasguño\
+"""
