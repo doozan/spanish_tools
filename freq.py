@@ -89,7 +89,6 @@ class FrequencyList():
         if pos == "verb":
             lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
 
-
         # resolve lemmas that are "form of" other lemmas
         good_lemmas = set()
         for lemma in lemmas:
@@ -99,11 +98,12 @@ class FrequencyList():
         return sorted(good_lemmas)
 
     def include_word(self, word, pos):
+        """ Returns True if the word/pos has a useful sense """
         for lemma in self.get_lemmas(word, pos):
             for word_obj in self.wordlist.get_words(lemma, pos):
                 for sense in word_obj.senses:
-                    if not re.match("(obsolete|archaic)", sense.qualifier) and \
-                        not re.match("(obsolete|archaic) form of", sense.gloss):
+                    if not re.match("(obsolete|archaic|rare)", sense.qualifier) and \
+                        not re.match("(obsolete|archaic|rare) form of", sense.gloss):
                             return True
 
 
@@ -306,19 +306,8 @@ class FrequencyList():
 
             popular_pos = []
             for pos, count in all_pos.items():
-                if count < (best_count / 2):
-                    self.all_lemmas[(word, pos)]["flags"].append(
-                        "LESSUSED-" + "-".join(all_pos)
-                    )
-                else:
-                    popular_pos.append(pos)
-
-            # only flag dups if the adjective usage isn't flagged
-            if "adj" in popular_pos and len(self.all_lemmas[(word,"adj")]["flags"]) == 0:
-                if "adv" in popular_pos:
-                    self.all_lemmas[(word, "adv")]["flags"].append("DUPLICATE-ADJ-ADV")
-                if "noun" in popular_pos:
-                    self.all_lemmas[(word, "noun")]["flags"].append("DUPLICATE-ADJ-NOUN")
+                if count < best_count:
+                    self.all_lemmas[(word, pos)]["flags"].append("DUPLICATE")
 
 
 #    def word_is_only_form(self, word, lemma, pos):
@@ -365,9 +354,6 @@ class FrequencyList():
 
         best = "_NOLEMMA"
         best_count = -1
-
-#        if word in ["media"]: # , "dispuestas", "hincha", "zurra", "cierne"]:
-#            import pdb; pdb.set_trace()
 
         # discard any lemmas that don't declare this form in their first definition
         lemmas = [lemma for lemma in lemmas if self.form_in_lemma(word, lemma, pos)]
