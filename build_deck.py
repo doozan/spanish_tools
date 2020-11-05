@@ -17,7 +17,9 @@ import urllib.request
 
 import spanish_sentences
 import spanish_speech
-from spanish_words import SpanishWords
+from enwiktionary_wordlist.wordlist import Wordlist, Word
+
+MAX_SYNONYMS = 5
 
 # For the sentence arrays
 IDX_SPANISH = 0
@@ -43,14 +45,21 @@ media = []
 
 args = None
 
+el_f_nouns = [ 'abra', 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia',
+    'area', 'arma', 'arpa', 'asma', 'aula', 'ave', 'habla', 'hada', 'hacha', 'hambre',
+    'águila']
 
 def init_data(dictionary, sentences, data_dir, custom_dir):
     global _words
     global _sentences
 
-    _words = SpanishWords(
-        dictionary=dictionary, data_dir=data_dir, custom_dir=custom_dir
-    )
+    datafile = os.path.join(data_dir, dictionary)
+    with open(datafile) as infile:
+        _words = Wordlist(infile)
+
+#    _words = SpanishWords(
+#        dictionary=dictionary, data_dir=data_dir, custom_dir=custom_dir
+#    )
     _sentences = spanish_sentences.sentences(
         sentences=sentences, data_dir=data_dir, custom_dir=custom_dir
     )
@@ -328,8 +337,12 @@ def format_def(item, hide_word=None):
     multi_pos = len(item) > 1
 
     prev_display_pos = None
-    for pos in item:
-        common_pos = _words.common_pos(pos)
+    for pos, tags in item.items():
+        if not pos:
+            print(item)
+            raise ValueError("xx")
+
+        common_pos = Word.get_common_pos(pos)
         safe_pos = pos.replace("/", "_")
 
         # Don't prefix the def with the part of speech if there's only one pos
@@ -337,7 +350,7 @@ def format_def(item, hide_word=None):
         if not prev_display_pos and len(item) == 1:
             prev_display_pos = "{v}" if common_pos == "verb" else f"{{{pos}}}"
 
-        for tag in item[pos]:
+        for tag, usage in tags.items():
             if len(results):
                 results.append("\n")
 
@@ -360,19 +373,7 @@ def format_def(item, hide_word=None):
                 classes.append(tag_pos)
                 display_pos = f"{{{tag_pos}}}"
 
-            elif common_pos == "verb" and pos in [
-                "vir",
-                "vitr",
-                "vr",
-                "vri",
-                "vrp",
-                "vrt",
-                "vtir",
-                "vtr",
-                "vp",
-                "vip",
-                "vtp",
-            ]:
+            elif common_pos == "verb" and ("r" in pos or "p" in pos):
                 classes.append("reflexive")
 
             if prev_display_pos == display_pos:
@@ -383,12 +384,12 @@ def format_def(item, hide_word=None):
             classes += sorted(get_location_classes(tag))
             results.append(f'<span class="{" ".join(classes)}">{display_pos} ')
 
-            usage = item[pos][tag]
+            usage = "; ".join(item[pos][tag])
 
             if hide_word:
                 new_usage = re.sub(
-                    r"(apocopic form|diminutive|ellipsis|clipping|superlative) of [^,:;(]*",
-                    r"\1 of ... ",
+                    r'(apocopic form|diminutive|ellipsis|clipping|superlative) of ".*?"',
+                    r"\1 of ...",
                     usage,
                 ).strip()
 
@@ -423,7 +424,7 @@ guidseen = {}
 def validate_note(item):
 
     if item["guid"] in guidseen:
-        eprint(f"Duplicate {key} from {item}")
+        eprint(f"Duplicate guid from {item}")
     else:
         guidseen[item["guid"]] = 1
 
@@ -435,8 +436,286 @@ def validate_note(item):
     return True
 
 
+def get_feminine_noun(word):
+    for word_obj in _words.all_words.get(word,{}).get("noun", []):
+        if "f" in word_obj.forms:
+            return word_obj.forms["f"][0]
+
+        # Only look at the first word
+        return None
+
+    return None
+
+def get_pos_usage(word, common_pos):
+    defs = {}
+
+    for word_obj in _words.all_words.get(word,{}).get(common_pos, []):
+        pos = word_obj.pos
+        if not pos:
+            continue
+        if pos not in defs:
+            defs[pos] = {}
+
+        for sense in word_obj.senses:
+            tag = sense.qualifier
+            if tag not in defs[pos]:
+                defs[pos][tag] = [sense.gloss]
+            else:
+                defs[pos][tag].append(sense.gloss)
+
+    return defs
+
+def def_len(defs):
+    return sum(
+        len(pos) + len(tag) + len("; ".join(values))
+        for pos,tags in defs.items()
+        for tag,values in tags.items()
+        )
+
+# Get a shorter definition having less than max_len characters
+#
+# Definitions separated by commas are assumed to be synonyms, while semicolons
+# separate distinct usage.  Synonyms may be dropped to save space
+#
+# Return up to two distinct usages from the given definitions
+#
+# For nouns with male/female parts, try to include a definition for each gender
+#
+# For verbs with reflexive/non-reflexive, try to include a definition for each use
+#
+# If there are tagged/untagged uses, try to include the untagged and the first tagged usage
+#
+# Otherwise, try to include the first two distinct uses
+#
+def shorten_defs(defs, max_len=60, only_first_def=False):
+
+    first_pos = next(iter(defs))
+
+    shortdefs = {}
+
+    if first_pos in ["m-f", "mf", "m/f"]:
+        pos = first_pos
+        shortdefs[pos] = {}
+        for tag,values in defs[pos].items():
+            for gender in ['m', 'f']:
+                if tag.startswith(gender) and not any( x.startswith(gender) for x in shortdefs[pos] ):
+                    shortdefs[pos][tag] = values
+
+        if not len(shortdefs[pos]):
+            tag = next(iter(defs[pos]))
+            shortdefs[pos][tag] = defs[pos][tag]
+
+    elif first_pos.startswith("v"):
+        for pos,tags in defs.items():
+            if not pos.startswith("v"):
+                continue
+
+            if len(shortdefs) and only_first_def:
+                break
+
+            # Always take the first verb def, then check each pronomial or reflexive def
+            if len(shortdefs) and "p" not in pos and "r" not in pos:
+                continue
+
+            # Limit to two defs (first + pronom or reflexive)
+            if len(shortdefs)>=2:
+                break
+
+            # Use the first definition
+            for tag,values in tags.items():
+                shortdefs[pos] = { tag: values }
+                break
+
+            ## Take the untagged value, no matter the order
+            #for tag,value in tags.items():
+            #    if shortdefs[pos] == {} or tag == "":
+            #        shortdefs[pos] = { tag: value }
+
+    else:
+        pos = first_pos
+        tags = defs[pos]
+        shortdefs[pos] = {}
+
+        # Use the first definition
+        for tag,values in tags.items():
+            shortdefs[pos] = { tag: values }
+            break
+
+    # If there's only one usage, try to take two definitions from it
+    pos = next(iter(shortdefs))
+    if not only_first_def and len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
+        tag = next(iter(shortdefs[pos]))
+        shortdefs[pos][tag] = [shortdefs[pos][tag][0]]
+        if len(shortdefs[pos][tag])>1:
+            shortdefs[pos][";"] = shortdefs[pos][tag][1:]
+
+    # If there's one usage, and it doesn't contain mulitple defs
+    # take the second tag of the first pos
+    # or the first tag of the second pos
+    if not only_first_def and len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
+        if len(defs[pos]) > 1:
+            next_tag = list(defs[pos].keys())[1]
+            shortdefs[pos][next_tag] = defs[pos][next_tag]
+        elif len(defs) > 1:
+            next_pos = list(defs.keys())[1]
+            tag = next(iter(defs[next_pos]))
+            shortdefs[next_pos] = { tag: defs[next_pos][tag] }
+
+    # Always include interjection definitions
+    if "interj" in defs and pos != "interj":
+        pos = "interj"
+        tags = defs[pos]
+        shortdefs[pos] = {}
+
+        # Use the first definition
+        for tag,values in tags.items():
+            shortdefs[pos] = { tag: values }
+            break
+
+    # Split and shorten until short enough
+    for separator in [ ';', '(', '[' ]:
+        for pos,tags in shortdefs.items():
+            for tag,values in tags.items():
+                value = "; ".join(values)
+                value = value.partition(separator)[0].strip()
+                shortdefs[pos][tag] = [value]
+
+        if def_len(shortdefs) <= max_len:
+            break
+
+    # If it's still too long, strip the last , until less than max length or no more , to strip
+    can_strip=True
+    while can_strip and def_len(shortdefs) > max_len:
+        can_strip=False
+        for pos,tags in shortdefs.items():
+            for tag,values in tags.items():
+                value = "; ".join(values)
+                strip_pos = value.rfind(",")
+                if strip_pos > 0:
+                    can_strip=True
+                    shortdefs[pos][tag] = [value[:strip_pos].strip()]
+                    if def_len(shortdefs) <= max_len:
+                        break
+
+    if only_first_def:
+        return shortdefs
+
+    # Rejoin any defs that we split out, unless it's a dup or too long
+    pos = next(iter(shortdefs))
+    if ";" in shortdefs[pos]:
+        tag = next(iter(shortdefs[pos]))
+
+        # If the second def is the same as the first def, retry without splitting the def
+        if shortdefs[pos][tag] == shortdefs[pos][';']:
+            shortdefs = shorten_defs(defs, max_len=max_len, only_first_def=True)
+        else:
+            otherdefs = shortdefs[pos].pop(';')
+            shortdefs[pos][tag] += otherdefs
+
+    # If it's too long, try with just one definition
+    if def_len(shortdefs) > max_len:
+        shortdefs = shorten_defs(defs, max_len=max_len, only_first_def=True)
+
+    if def_len(shortdefs) > max_len:
+        print(f"Alert: Trouble shortening def: {shortdefs}", file=sys.stderr)
+
+    return shortdefs
+
+
+def get_shortdef(word, primary_pos, max_length=None):
+    return get_usage(word, primary_pos, False, max_length)
+
+
+def process_defs(word, alldefs):
+
+    # If there are independent defs for masculine and feminine use,
+    # tag it as m-f
+    if len( {"m","f","mf"} & alldefs.keys() ) > 1:
+        alldefs['m-f'] = {}
+        for oldpos in ['f', 'mf', 'm']:
+            if oldpos in alldefs:
+                for oldnote,use in alldefs[oldpos].items():
+                    newnote = oldpos + ", " + oldnote if oldnote != "" else oldpos
+                    alldefs['m-f'][newnote] = use
+                del alldefs[oldpos]
+
+    # Tag f-el nouns
+    elif "f" in alldefs and word in el_f_nouns:
+        alldefs["f-el"] = alldefs.pop("f")
+
+    # Check for feminine equivalent nouns and tag as m/f
+    elif "m" in alldefs:
+
+        # If this has a "-a" feminine counterpart, reclassify the "m" defs as "m/f"
+        # and add any feminine definitions (ignoring the "feminine noun of xxx" def)
+        femnoun = get_feminine_noun(word)
+        if femnoun:
+            femdefs = []
+            if femnoun in _words.all_words:
+                femdefs = get_pos_usage(femnoun, "noun")
+
+            if len(femdefs):
+                alldefs['f'] = femdefs['f']
+                alldefs['m/f'] = {}
+
+                for oldpos in ['f', 'm']:
+                    for oldnote,defs in alldefs[oldpos].items():
+                        newnote = oldpos + ", " + oldnote if oldnote != "" else oldpos
+                        alldefs['m/f'][newnote] = defs
+                    del alldefs[oldpos]
+
+            else:
+                alldefs['m/f'] = alldefs.pop('m')
+
+    return alldefs
+
+
+def get_usage(word, primary_pos, get_all_pos=True, max_length=None):
+
+    defs = get_pos_usage(word, primary_pos)
+    defs = process_defs(word, defs)
+
+    if get_all_pos:
+        for common_pos in _words.all_forms.get(word, {}).keys():
+            if common_pos not in [primary_pos, "verb"]:
+                lemmas = get_lemmas(word, common_pos)
+                defs.update(get_pos_usage(lemmas[0], common_pos))
+
+    if max_length:
+        defs = shorten_defs(defs, max_length)
+
+    return defs
+
+def get_lemmas(word, pos):
+
+    lemmas = []
+    formtypes = _words.all_forms.get(word, {}).get(pos, {})
+    for formtype, form_lemmas in formtypes.items():
+        lemmas += form_lemmas
+    if not lemmas:
+        return [word]
+
+    # remove verb-se if verb is already in lemmas
+    if pos == "verb":
+        lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
+
+    # resolve lemmas that are "form of" other lemmas
+    good_lemmas = set()
+    for lemma in lemmas:
+        for word_obj in _words.get_words(lemma, pos):
+            good_lemmas |= set(_words.get_lemmas(word_obj).keys())
+
+    return sorted(good_lemmas)
+
 def get_synonyms(word, pos, limit=5, only_in_deck=True):
-    items = _words.get_synonyms(word, pos)
+
+    # TODO: Get reverse synonyms?
+
+    items = []
+    for word_obj in _words.all_words[word][pos]:
+        for sense in word_obj.senses:
+            items += sense.synonyms
+
     if only_in_deck:
         return [k for k in items if make_tag(k, pos) in allwords_set][:limit]
     return list(items)[:limit]
@@ -454,15 +733,23 @@ def get_phrase(word, pos, noun_type, femnoun):
     display = None
 
     if noun_type:
-        if noun_type == "f":
+        if femnoun:
+            voice = _MALE1
+            if femnoun in el_f_nouns:
+                phrase = f"el {femnoun}. el {word}"
+                display = f"el {femnoun}/el {word}"
+            else:
+                phrase = f"la {femnoun}. el {word}"
+                display = f"la {femnoun}/el {word}"
+        elif noun_type == "f-el":
+            voice = _FEMALE2
+            phrase = f"el {word}"
+        elif noun_type == "f":
             voice = _FEMALE2
             phrase = f"la {word}"
         elif noun_type == "fp":
             voice = _FEMALE2
             phrase = f"las {word}"
-        elif noun_type == "f-el":
-            voice = _FEMALE2
-            phrase = f"el {word}"
         elif noun_type == "m-f":
             voice = _FEMALE1
             phrase = f"la {word}. el {word}"
@@ -477,14 +764,6 @@ def get_phrase(word, pos, noun_type, femnoun):
         elif noun_type == "mp":
             voice = _MALE1
             phrase = f"los {word}"
-        elif noun_type == "m/f":
-            voice = _MALE1
-            if femnoun in _words.wordlist.el_f_nouns:
-                phrase = f"el {femnoun}. el {word}"
-                display = f"el {femnoun}/el {word}"
-            else:
-                phrase = f"la {femnoun}. el {word}"
-                display = f"la {femnoun}/el {word}"
         else:
             raise ValueError(f"Word {word} has unknown noun type {noun_type}")
     else:
@@ -587,36 +866,41 @@ def build_item(word, pos, mediadir):
 
     english = ""
     noun_type = ""
-    usage = _words.lookup(spanish, pos, get_all_pos=True)
-    deck_syns = get_synonyms(spanish, pos, 5, only_in_deck=True)
+
+#    if word.startswith("protector"):
+#        import pdb; pdb.set_trace()
+
+    usage = get_usage(spanish, pos)
+    if not usage:
+        raise ValueError("No english", spanish, pos)
+    if pos == "noun":
+        noun_type = next(iter(usage))
+
+    deck_syns = get_synonyms(spanish, pos, MAX_SYNONYMS, only_in_deck=True)
     extra_syns = (
         [
             k
-            for k in get_synonyms(spanish, pos, 5, only_in_deck=False)
+            for k in get_synonyms(spanish, pos, MAX_SYNONYMS, only_in_deck=False)
             if k not in deck_syns
         ]
-        if len(deck_syns) < 5
+        if len(deck_syns) < MAX_SYNONYMS
         else []
     )
 
-    if usage and len(usage):
-        english = format_def(usage)
-        if pos == "noun":
-            noun_type = next(iter(usage))
-    else:
-        raise ValueError("No english", spanish, pos)
+    english = format_def(usage)
 
     shortdef = shortdefs.get(item_tag)
     if not shortdef:
-        shortdef = _words.lookup(word, pos, max_length=60)
+        shortdef = get_shortdef(word, pos, max_length=60)
     short_english = format_def(shortdef, hide_word=word) if shortdef else ""
 
     defs = [
         value.strip()
-        for pos, tags in shortdef.items()
-        for tag, def_str in tags.items()
-        for def1 in def_str.split(";")
-        for value in def1.split(",")
+        for tags in shortdef.values()
+        for defs in tags.values()
+        for d in defs
+        for split_def in d.split(";")
+        for value in split_def.split(",")
     ]
     seen_tag = "|".join(deck_syns + sorted(defs))
     if seen_tag in seen_clues:
@@ -628,11 +912,12 @@ def build_item(word, pos, mediadir):
     if short_english == english:
         short_english = ""
 
-    femnoun = _words.wordlist.get_feminine_noun(spanish) if pos == "noun" else None
+    femnoun = get_feminine_noun(spanish) if pos == "noun" else None
     tts_data = get_phrase(spanish, pos, noun_type, femnoun)
+
     sound = spanish_speech.get_speech(tts_data["voice"], tts_data["phrase"], mediadir)
 
-    all_usage_pos = {_words.common_pos(k): 1 for k in usage.keys()}.keys()
+    all_usage_pos = {Word.get_common_pos(k): 1 for k in usage.keys()}.keys()
     lookups = [[spanish, pos] for pos in all_usage_pos]
     sentences = get_sentences(lookups, 3)
     save_dump_sentences(lookups)
@@ -769,7 +1054,7 @@ def load_shortdefs(filename):
             if not row or row.get("shortdef", "") == "":
                 continue
 
-            common_pos = _words.common_pos(row["pos"])
+            common_pos = Word.get_common_pos(row["pos"])
             item_tag = make_tag(row["spanish"], common_pos)
             shortdefs[item_tag] = {row["pos"]: {"": row["shortdef"]}}
 
@@ -999,7 +1284,8 @@ def main():
         )
         # preserve the mod timestamp if the note matches with the database
         note.mod_ts = get_mod_timestamp(note)
-        if not note.mod_ts:
+        if not note.mod_ts and args.anki:
+            continue
             if item["guid"] not in db_notes:
                 print(f"added: {wordtag}")
             else:
@@ -1039,8 +1325,8 @@ def main():
 
             del _fields[7]  # audio
             del _fields[0]  # rank
-
             csvwriter.writerow(_fields)
+
             for row in rows:
                 del row[7]
                 del row[0]
@@ -1049,7 +1335,7 @@ def main():
     if args.dump_removed:
         with open(args.dump_removed, "w") as outfile:
             for guid in db_notes.keys() - deck_guids:
-                outfile.write(str(db_notes[guid]["nid"]))
+                outfile.write(str(db_notes[guid]["nid"])+"\n")
 
     if args.dump_credits:
         dump_credits(args.dump_credits)
@@ -1057,3 +1343,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
