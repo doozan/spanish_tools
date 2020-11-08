@@ -7,7 +7,7 @@ import json
 import os
 import re
 
-from spanish_words import SpanishWords
+from enwiktionary_wordlist.wordlist import Wordlist
 
 parser = argparse.ArgumentParser(description="Manage tagged sentences")
 parser.add_argument(
@@ -19,25 +19,8 @@ parser.add_argument(
     "--credits", action="store_true", help="Print sentence credits only"
 )
 parser.add_argument("--tags", nargs=1, help="Merged tagged data with original data")
-parser.add_argument("--dictionary", help="Dictionary file name (DEFAULT: es-en.txt)")
-parser.add_argument(
-    "--data-dir",
-    help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')",
-)
-parser.add_argument(
-    "--custom-dir",
-    help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",
-)
+parser.add_argument("--dictionary", help="Dictionary file", required=True)
 args = parser.parse_args()
-
-if not args.dictionary:
-    args.dictionary = "es-en.txt"
-
-if not args.data_dir:
-    args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
-
-if not args.custom_dir:
-    args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
 
 if not os.path.isfile(args.sentences):
     raise FileNotFoundError(f"Cannot open: {args.sentences}")
@@ -45,9 +28,8 @@ if not os.path.isfile(args.sentences):
 if args.tags and not os.path.isfile(args.tags[0]):
     raise FileNotFoundError(f"Cannot open: {args.tags}")
 
-words = SpanishWords(
-    dictionary=args.dictionary, data_dir=args.data_dir, custom_dir=args.custom_dir
-)
+with open(args.dictionary) as infile:
+    wordlist = Wordlist(infile)
 
 mismatch = {}
 
@@ -92,17 +74,17 @@ def tag_to_pos(tag):
     # Use our lemmas so they're the same when we lookup against other things we've lemmatized
     # Unless it's a phrase, then use their lemma
     if pos in ("noun", "adj", "part", "adv"):
-        lemma = words.get_lemma(word, pos)
+        lemma = get_lemma(word, pos)
 
     # fix for freeling not generating lemmas for verbs with a pronoun suffix
     elif pos == "verb":
         if not lemma.endswith("r"):
-            lemma = words.get_lemma(word, pos)
+            lemma = get_lemma(word, pos)
 
     elif "_" in lemma:
         lemma = word
 
-    #        newlemma = words.get_lemma(word, pos)
+    #        newlemma = get_lemma(word, pos)
     #        if lemma != newlemma:
     #            mismatch[f"{pos}:{lemma}"] = newlemma
     #            lemma = newlemma
@@ -141,6 +123,28 @@ def get_interjections(string):
     return re.findall(pattern, string, re.IGNORECASE)
 
 
+def get_lemma(word, pos):
+
+    lemmas = []
+    formtypes = wordlist.all_forms.get(word, {}).get(pos, {})
+    for formtype, form_lemmas in formtypes.items():
+        lemmas += form_lemmas
+    if not lemmas:
+        return word
+
+    # remove verb-se if verb is already in lemmas
+    if pos == "verb":
+        lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
+
+    # resolve lemmas that are "form of" other lemmas
+    good_lemmas = set()
+    for lemma in lemmas:
+        for word_obj in wordlist.get_words(lemma, pos):
+            good_lemmas |= set(wordlist.get_lemmas(word_obj).keys())
+
+    return "|".join(sorted(good_lemmas))
+
+
 def load_sentences():
     sentences = {}
 
@@ -150,7 +154,7 @@ def load_sentences():
 
             line = line.strip()
             sdata = line.split("\t")
-            english, spanish, credits, score = sdata
+            english, spanish, credits, english_score, spanish_score = sdata
 
             wordcount = spanish.count(" ") + 1
 
@@ -188,7 +192,7 @@ def print_credits():
 
     users = {}
 
-    for english, spanish, credits, score in sentences.values():
+    for english, spanish, credits, english_score, spanish_score in sentences.values():
         res = re.match(
             r"CC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)",
             credits,
@@ -230,7 +234,7 @@ def print_tagged_data():
                 continue
 
             sdata = sentences[idx2sent[index]]
-            english, spanish, credits, score = sdata
+            english, spanish, credits, english_score, spanish_score = sdata
             index = index + 1
 
             pos_tags = []
@@ -276,7 +280,7 @@ def print_tagged_data():
                 [f":{tag}," + ",".join(items) for tag, items in tags.items()]
             )
 
-            print(f"{english}\t{spanish}\t{credits}\t{str(score).zfill(2)}\t{tag_str}")
+            print(f"{english}\t{spanish}\t{credits}\t{english_score}\t{spanish_score}\t{tag_str}")
 
 
 if args.credits:
