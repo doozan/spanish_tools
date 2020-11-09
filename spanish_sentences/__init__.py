@@ -72,13 +72,13 @@ class sentences:
         index=0
         with open(datafile) as infile:
             for line in infile:
-                res = re.match(r"([^\t]*)\t([^\t]*)\tCC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)\t([^\t]*)\t([^\t]*)\n", line)
+                res = re.match(r"([^\t]*)\t([^\t]*)\tCC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)\t([0-6])\t([0-6])\t([^\t]*)\n", line)
                 if not res:
                     continue
-                english,spanish,eng_id,eng_user,spa_id,spa_user,score,tag_str = res.groups()
+                english,spanish,eng_id,eng_user,spa_id,spa_user,eng_score,spa_score,tag_str = res.groups()
                 eng_id = int(eng_id)
                 spa_id = int(spa_id)
-                score = int(score)
+                score = int(spa_score)*10 + int(eng_score)
 
                 tags = { }
                 for tag_items in tag_str[1:].split(":"):
