@@ -4,6 +4,8 @@ import argparse
 import os
 import re
 
+import sys
+
 from enwiktionary_wordlist.wordlist import Wordlist
 import spanish_sentences
 
@@ -79,9 +81,12 @@ class FrequencyList():
     def get_lemmas(self, word, pos):
 
         lemmas = []
-        formtypes = self.wordlist.all_forms.get(word, {}).get(pos, {})
-        for formtype, form_lemmas in formtypes.items():
-            lemmas += form_lemmas
+        forms = self.wordlist.all_forms.get(word, [])
+        for form_pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+            if form_pos != pos:
+                continue
+            if lemma not in lemmas:
+                lemmas.append(lemma)
         if not lemmas:
             return [word]
 
@@ -121,7 +126,12 @@ class FrequencyList():
         Returns a list of all possible parts of speech, sorted by frequency of use
         """
 
-        all_pos = self.wordlist.all_forms.get(word, {}).keys()
+        all_pos = []
+        forms = self.wordlist.all_forms.get(word, [])
+        for pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+            if pos not in all_pos:
+                all_pos.append(pos)
+
         all_pos = self.filter_pos(word, all_pos)
 
         if not all_pos:
@@ -257,7 +267,6 @@ class FrequencyList():
 
 
     def build_freqlist(self):
-
         wordusage = {}
         count = 1
         for tag, item in sorted(
@@ -273,10 +282,9 @@ class FrequencyList():
             # Check for repeat usage
             if word not in wordusage:
                 wordusage[word] = {}
-            #        else:
-            #            flags.append("DUPLICATE")
 
             wordusage[word][pos] = item["count"]
+            #wordusage[word].append(pos)
 
             self.all_lemmas[tag] = {
                 "count": item["count"],
@@ -336,6 +344,9 @@ class FrequencyList():
             return True
 
         words = self.wordlist.get_words(lemma, pos)
+        if not words:
+            return False
+
         for formtype, forms in words[0].forms.items():
             if form in forms:
                 return True
@@ -413,6 +424,7 @@ if __name__ == "__main__":
 
     if not args.custom_dir:
         args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
+
 
     with open(args.dictionary) as infile:
         wordlist = Wordlist(infile)

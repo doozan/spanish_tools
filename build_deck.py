@@ -733,7 +733,14 @@ class DeckBuilder():
         defs = self.process_defs(word, defs)
 
         if get_all_pos:
-            for common_pos in self._words.all_forms.get(word, {}).keys():
+
+            all_pos = []
+            forms = self._words.all_forms.get(word, [])
+            for pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+                if pos not in all_pos:
+                    all_pos.append(pos)
+
+            for common_pos in all_pos:
                 if common_pos not in [primary_pos, "verb"]:
                     lemmas = self.get_lemmas(word, common_pos)
                     defs.update(self.get_pos_usage(lemmas[0], common_pos))
@@ -746,9 +753,12 @@ class DeckBuilder():
     def get_lemmas(self, word, pos):
 
         lemmas = []
-        formtypes = self._words.all_forms.get(word, {}).get(pos, {})
-        for formtype, form_lemmas in formtypes.items():
-            lemmas += form_lemmas
+        forms = self._words.all_forms.get(word, [])
+        for form_pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+            if form_pos != pos:
+                continue
+            if lemma not in lemmas:
+                lemmas.append(lemma)
         if not lemmas:
             return [word]
 

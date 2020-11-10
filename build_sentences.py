@@ -126,9 +126,12 @@ def get_interjections(string):
 def get_lemma(word, pos):
 
     lemmas = []
-    formtypes = wordlist.all_forms.get(word, {}).get(pos, {})
-    for formtype, form_lemmas in formtypes.items():
-        lemmas += form_lemmas
+    forms = wordlist.all_forms.get(word, [])
+    for form_pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+        if form_pos != pos:
+            continue
+        if lemma not in lemmas:
+            lemmas.append(lemma)
     if not lemmas:
         return word
 
