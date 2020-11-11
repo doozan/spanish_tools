@@ -139,45 +139,43 @@ class sentences:
     def add_tags_to_db(self, tags, index, sid):
         for tagpos,words in tags.items():
 
-            # Past participles count as both adjectives and verbs
-            allpos = [ "part", "adj", "verb" ] if tagpos == "part" else [ tagpos ]
+            # Each past participle has both a part-verb and a part-adj tag
+            pos = tagpos[len("part-"):] if tagpos.startswith("part-") else tagpos
 
-            for ipos in allpos:
-                for iword in words:
-                    pos = ipos
+            for word in words:
 
-                    fixid = f"{iword}:{ipos}"
-                    newword,newpos = None,None
-                    if sid in self.tagfix_sentences:
-                        newword,newpos = self.tagfix_sentences[sid].get(fixid,[None,None])
-                    if newword:
-                        fixid = f"{iword}:{ipos}@{sid}"
+                fixid = f"{word}:{pos}"
+                newword,newpos = None,None
+                if sid in self.tagfix_sentences:
+                    newword,newpos = self.tagfix_sentences[sid].get(fixid,[None,None])
+                if newword:
+                    fixid = f"{word}:{pos}@{sid}"
+                else:
+                    newword,newpos = self.tagfixes.get(fixid,[None,None])
+
+                if newword:
+                    count = self.tagfix_count.get(fixid,0)
+                    self.tagfix_count[fixid] = count+1
+
+                    word = newword
+                    pos = newpos
+
+                xword,*xlemmas = word.split("|")
+                if not xlemmas:
+                    xlemmas = [xword]
+
+                for xword in [f'@{xword}'] + xlemmas:
+
+                    tags = self.tagdb.get(xword)
+                    if not tags:
+                        tags = { pos: [index] }
+                        self.tagdb[xword] = { pos: [index] }
                     else:
-                        newword,newpos = self.tagfixes.get(fixid,[None,None])
-
-                    if newword:
-                        count = self.tagfix_count.get(fixid,0)
-                        self.tagfix_count[fixid] = count+1
-
-                        iword = newword
-                        pos = newpos
-
-                    xword,*xlemmas = iword.split("|")
-                    if not xlemmas:
-                        xlemmas = [xword]
-
-                    for word in [f'@{xword}'] + xlemmas:
-
-                        tags = self.tagdb.get(word)
-                        if not tags:
-                            tags = { pos: [index] }
-                            self.tagdb[word] = { pos: [index] }
+                        items = tags.get(pos)
+                        if not items:
+                            tags[pos] = [index]
                         else:
-                            items = tags.get(pos)
-                            if not items:
-                                tags[pos] = [index]
-                            else:
-                                items.append(index)
+                            items.append(index)
 
 
 

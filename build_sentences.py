@@ -73,7 +73,7 @@ def tag_to_pos(tag):
 
     # Use our lemmas so they're the same when we lookup against other things we've lemmatized
     # Unless it's a phrase, then use their lemma
-    if pos in ("noun", "adj", "part", "adv"):
+    if pos in ("noun", "adj", "adv"):
         lemma = get_lemma(word, pos)
 
     # fix for freeling not generating lemmas for verbs with a pronoun suffix
@@ -89,10 +89,18 @@ def tag_to_pos(tag):
     #            mismatch[f"{pos}:{lemma}"] = newlemma
     #            lemma = newlemma
 
-    if word != lemma:
-        return [pos, f"{word}|{lemma}"]
+    # Special handling for participles, add adjective and verb lemmas
+    if pos == "part":
+        adj_lemma = get_lemma(word, "adj")
+        verb_lemma = get_lemma(word, "verb")
+        adj_res = f"{word}|{adj_lemma}" if adj_lemma != word else word
+        verb_res = f"{word}|{verb_lemma}" if verb_lemma != word else word
+        return [("part-adj", adj_res), ("part-verb", verb_res)]
 
-    return [pos, f"{word}"]
+    if word != lemma:
+        return [(pos, f"{word}|{lemma}")]
+
+    return [(pos, f"{word}")]
 
 
 def group_tags(pos_tags):
@@ -227,7 +235,7 @@ def print_tagged_data():
 
     with open(args.tags[0], "r", encoding="utf-8") as infile:
 
-        seen = {}
+        seen = set()
         index = 0
 
         items = ijson.kvitems(infile, "item")
@@ -240,47 +248,49 @@ def print_tagged_data():
             english, spanish, credits, english_score, spanish_score = sdata
             index = index + 1
 
-            pos_tags = []
+            all_tags = []
             for s in v:
                 for t in s["tokens"]:
-                    pos_tag = tag_to_pos(t)
-                    if not pos_tag:
+                    pos_tags = tag_to_pos(t)
+                    if not pos_tags:
                         continue
-                    pos_tags.append(pos_tag)
-                    pword, junk, plemma = pos_tag[1].partition("|")
-                    if not plemma:
-                        plemma = pword
-                    if "_" in plemma:
-                        for word, lemma in zip(pword.split("_"), plemma.split("_")):
-                            if word != lemma:
-                                pos_tags.append(["split", f"{word}|{lemma}"])
-                            else:
-                                pos_tags.append(["split", f"{word}"])
+                    all_tags += pos_tags
+                    for pos_tag in pos_tags:
+                        pword, junk, plemma = pos_tag[1].partition("|")
+                        if not plemma:
+                            plemma = pword
+                        if "_" in plemma:
+                            for word, lemma in zip(pword.split("_"), plemma.split("_")):
+                                if word != lemma:
+                                    all_tags.append(["split", f"{word}|{lemma}"])
+                                else:
+                                    all_tags.append(["split", f"{word}"])
 
-            tags = group_tags(pos_tags)
+            grouped_tags = group_tags(all_tags)
 
-            # ignore sentences with the same adj/adv/noun/verb/pastparticiple lemma combination
-            unique_tags = []
-            for pos in ["adj", "adv", "noun", "verb", "part"]:
-                if pos not in tags:
+            # ignore sentences with the same adj/adv/noun/verb lemma combination
+            unique_tags = set()
+            for pos, tags in grouped_tags.items():
+                if pos not in ["adj", "adv", "noun", "verb", "part-adj", "part-verb"]:
                     continue
-                for t in tags[pos]:
+                for t in tags:
                     word, junk, lemma = t.partition("|")
                     if not lemma:
                         lemma = word
-                    unique_tags.append(lemma)
+                    unique_tags.add(lemma)
 
-            uniqueid = "!".join(sorted(set(unique_tags)))
+            uniqueid = ":".join(sorted(unique_tags))
+
             if uniqueid in seen:
                 continue
-            seen[uniqueid] = 1
+            seen.add(uniqueid)
 
             interj = get_interjections(spanish)
             if interj:
-                tags["interj"] = list(map(str.lower, interj))
+                grouped_tags["interj"] = list(map(str.lower, interj))
 
             tag_str = " ".join(
-                [f":{tag}," + ",".join(items) for tag, items in tags.items()]
+                [f":{tag}," + ",".join(items) for tag, items in grouped_tags.items()]
             )
 
             print(f"{english}\t{spanish}\t{credits}\t{english_score}\t{spanish_score}\t{tag_str}")
