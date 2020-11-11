@@ -127,9 +127,8 @@ class sentences:
                                 print(f"preferred sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
                                 continue
                             else:
-                                for index in range(len(forced_itemtags)):
-                                    if self.forced_ids[wordtag][index] is None:
-                                        raise ValueError(f"{source} sentences {forced_itemtags[index]} for {word},{pos} not found in database")
+                                print(f"forced sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
+                                continue
                         else:
                             self.forced_ids[wordtag] = ids
                             self.forced_ids_source[wordtag] = source
