@@ -779,7 +779,7 @@ class DeckBuilder():
         # TODO: Get reverse synonyms?
 
         items = []
-        for word_obj in self._words.all_words[word][pos]:
+        for word_obj in self._words.all_words.get(word,{}).get(pos, []):
             for sense in word_obj.senses:
                 items += sense.synonyms
 
