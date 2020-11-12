@@ -444,10 +444,10 @@ class DeckBuilder():
                         and ":" not in usage
                     ):
                         eprint(
-                            f"Warning: obscured definition: ({usage}) may be completely obscured"
+                            f"Warning: obscured definition: ({usage}) may be completely obscured, reverting"
                         )
-
-                    usage = new_usage
+                    else:
+                        usage = new_usage
 
                 if display_tag != "":
                     results.append(f'<span class="tag">[{display_tag}]:</span>')
