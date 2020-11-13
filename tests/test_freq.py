@@ -1,4 +1,4 @@
-from enwiktionary_wordlist.wordlist import Wordlist
+from enwiktionary_wordlist import Wordlist
 import spanish_sentences
 
 from freq import FrequencyList
