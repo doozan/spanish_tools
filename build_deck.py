@@ -404,10 +404,9 @@ class DeckBuilder():
 
                 # Only m/f and m-f nouns will have special pos in the tags
                 if common_pos == "noun" and pos in ["m-f", "m/f"]:
-                    tag_pos, sep, other_tags = tag.partition(" ")
-                    tag_pos = tag_pos.replace(",", "")
+                    tag_pos, sep, other_tags = tag.partition(",")
                     if tag_pos in ["m", "f", "mf"]:
-                        display_tag = other_tags
+                        display_tag = other_tags.strip()
                     else:
                         tag_pos = "mf"
 
@@ -518,27 +517,20 @@ class DeckBuilder():
     @staticmethod
     def def_len(defs):
         return sum(
-            len(pos) + len(tag) + len("; ".join(values))
+            len(pos) + min(len(tag),20) + len("; ".join(values))
             for pos,tags in defs.items()
             for tag,values in tags.items()
             )
 
 
     @classmethod
-    def shorten_defs(cls, defs, max_len=60, only_first_def=False):
+    def get_primary_defs(cls, defs, only_first_def=False):
         """
-        Get a shorter definition having less than max_len characters
-
-        Definitions separated by commas are assumed to be synonyms, while semicolons
-        separate distinct usage.  Synonyms may be dropped to save space
-
-        Return up to two distinct usages from the given definitions
+        Returns the first pos and definitions
 
         For nouns with male/female parts, try to include a definition for each gender
 
         For verbs with reflexive/non-reflexive, try to include a definition for each use
-
-        If there are tagged/untagged uses, try to include the untagged and the first tagged usage
 
         Otherwise, try to include the first two distinct uses
         """
@@ -577,31 +569,30 @@ class DeckBuilder():
 
                 # Use the first definition
                 for tag,values in tags.items():
-                    shortdefs[pos] = { tag: values }
+                    shortdefs[pos] = { tag: defs[pos][tag] }
                     break
-
-                ## Take the untagged value, no matter the order
-                #for tag,value in tags.items():
-                #    if shortdefs[pos] == {} or tag == "":
-                #        shortdefs[pos] = { tag: value }
 
         else:
             pos = first_pos
-            tags = defs[pos]
-            shortdefs[pos] = {}
+            tags = list(defs[pos].keys())
 
-            # Use the first definition
-            for tag,values in tags.items():
-                shortdefs[pos] = { tag: values }
-                break
+            tag = tags[0]
+            shortdefs[pos] = { tag: defs[pos][tag] }
+
+            # take the first two tags
+            if len(tags) > 1:
+                tag = tags[1]
+                shortdefs[pos][tag] = defs[pos][tag]
 
         # If there's only one usage, try to take two definitions from it
         pos = next(iter(shortdefs))
         if not only_first_def and len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
             tag = next(iter(shortdefs[pos]))
-            shortdefs[pos][tag] = [shortdefs[pos][tag][0]]
+
             if len(shortdefs[pos][tag])>1:
                 shortdefs[pos][";"] = shortdefs[pos][tag][1:]
+
+            shortdefs[pos][tag] = [shortdefs[pos][tag][0]]
 
         # If there's one usage, and it doesn't contain mulitple defs
         # take the second tag of the first pos
@@ -615,27 +606,55 @@ class DeckBuilder():
                 tag = next(iter(defs[next_pos]))
                 shortdefs[next_pos] = { tag: defs[next_pos][tag] }
 
-        # Always include interjection definitions
-        if "interj" in defs and pos != "interj":
-            pos = "interj"
-            tags = defs[pos]
-            shortdefs[pos] = {}
+        return shortdefs
 
-            # Use the first definition
-            for tag,values in tags.items():
-                shortdefs[pos] = { tag: values }
-                break
+    @classmethod
+    def shorten_defs(cls, defs, max_len=60, only_first_def=False):
+        """
+        Get a shorter definition having less than max_len characters
+
+        Returns up to two possibly truncated glosses from the list provided
+
+        For nouns with male/female parts, try to include a definition for each gender
+
+        For verbs with reflexive/non-reflexive, try to include a definition for each use
+
+        Otherwise, try to include the first two distinct uses
+        """
+
+        shortdefs = cls.get_primary_defs(defs, only_first_def)
+
+        # count the entry with the most individual defs
+        maxdefs = 1
+        for pos in shortdefs.values():
+            for tag_defs in pos.values():
+                maxdefs = max(maxdefs, len(tag_defs))
+
+        # trim number defs until short enough
+        while maxdefs>1 and cls.def_len(shortdefs) > max_len:
+            maxdefs -= 1
+            for pos in shortdefs.values():
+                for tag, tag_defs in pos.items():
+                    pos[tag] = tag_defs[:maxdefs]
+                    if cls.def_len(shortdefs) <= max_len:
+                        break
+                if cls.def_len(shortdefs) <= max_len:
+                    break
 
         # Split and shorten until short enough
         for separator in [ ';', '(', '[' ]:
+            if cls.def_len(shortdefs) <= max_len:
+                break
+
             for pos,tags in shortdefs.items():
                 for tag,values in tags.items():
                     value = "; ".join(values)
+                    new,junk,old = value.partition(separator)
+                    if not new.strip():
+                        continue
+
                     value = value.partition(separator)[0].strip()
                     shortdefs[pos][tag] = [value]
-
-            if cls.def_len(shortdefs) <= max_len:
-                break
 
         # If it's still too long, strip the last , until less than max length or no more , to strip
         can_strip=True
@@ -774,20 +793,37 @@ class DeckBuilder():
 
         return sorted(good_lemmas)
 
+
+    def add_synonyms(self, word, pos, synonyms):
+        key = (word,pos)
+        if key not in self.synonyms:
+            self.synonyms[key] = synonyms
+        else:
+            self.synonyms[key] += synonyms
+
+    def build_synonyms(self):
+        self.synonyms = {}
+
+        # Build synonyms
+        for wordtag in self.allwords:
+            word, pos = split_tag(wordtag)
+
+            for word_obj in self._words.all_words.get(word,{}).get(pos, []):
+                for sense in word_obj.senses:
+                    self.add_synonyms(word, pos, sense.synonyms)
+                    for syn in sense.synonyms:
+                        self.add_synonyms(syn, pos, [word])
+
+
     def get_synonyms(self, word, pos, limit=5, only_in_deck=True):
 
-        # TODO: Get reverse synonyms?
+        key = (word,pos)
+        items = set(self.synonyms.get(key))
+        in_deck = [k for k in items if make_tag(k, pos) in self.allwords_set]
+        if only_in_deck or len(in_deck) > limit:
+            return sorted(in_deck)[:limit]
 
-        items = []
-        for word_obj in self._words.all_words.get(word,{}).get(pos, []):
-            for sense in word_obj.senses:
-                items += sense.synonyms
-
-        if only_in_deck:
-            return [k for k in items if make_tag(k, pos) in self.allwords_set][:limit]
-        return list(items)[:limit]
-
-
+        return sorted(items)[:limit]
 
     def get_phrase(self, word, pos, noun_type, femnoun):
         voice = ""
@@ -929,9 +965,6 @@ class DeckBuilder():
         english = ""
         noun_type = ""
 
-    #    if word.startswith("protector"):
-    #        import pdb; pdb.set_trace()
-
         usage = self.get_usage(spanish, pos)
         if not usage:
             raise ValueError("No english", spanish, pos)
@@ -965,8 +998,7 @@ class DeckBuilder():
         seen_tag = "|".join(deck_syns + sorted(defs))
         if seen_tag in self.seen_clues:
             eprint(f"Warning: {seen_tag} is used by {item_tag} and {self.seen_clues[seen_tag]}, adding syn")
-            deck_syns.insert(0, self.seen_clues[seen_tag])
-        #        exit()
+            deck_syns.insert(0, self.seen_clues[seen_tag].split(":")[1])
         else:
             self.seen_clues[seen_tag] = item_tag
 
@@ -981,6 +1013,7 @@ class DeckBuilder():
         all_usage_pos = {Word.get_common_pos(k): 1 for k in usage.keys()}.keys()
         lookups = [[spanish, pos] for pos in all_usage_pos]
         sentences = self.get_sentences(lookups, 3)
+
         self.store_sentences(lookups)
 
         if pos == "part":
@@ -1185,6 +1218,9 @@ class DeckBuilder():
         if limit and limit < len(self.allwords):
             self.allwords = self.allwords[:limit]
             self.allwords_set = set(self.allwords)
+
+
+        self.build_synonyms()
 
         self.rows = []
 

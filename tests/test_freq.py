@@ -6,14 +6,19 @@ from freq import FrequencyList
 def test_simple():
 
     wordlist_data = """\
+protector {noun-meta} :: x
 protector {noun-forms} :: f=protectora; fpl=protectoras; pl=protectores
 protector {m} :: protector (someone who protects or guards)
+protector {noun-meta} :: x
 protector {noun-forms} :: pl=protectores
 protector {m} :: protector (a device or mechanism which is designed to protect)
+protectora {noun-meta} :: x
 protectora {noun-forms} :: m=protector; mpl=protectores; pl=protectoras
 protectora {f} :: feminine noun of "protector"
+protectora {noun-meta} :: x
 protectora {noun-forms} :: pl=protectoras
 protectora {f} | protectora de animales :: animal shelter (an organization that provides temporary homes for stray pet animals)
+protectriz {noun-meta} :: x
 protectriz {noun-forms} :: m=protector; mpl=protectores; pl=protectrices
 protectriz {f} [uncommon] :: alternative form of "protectora"
 """
@@ -50,12 +55,15 @@ count,spanish,pos,flags,usage
 def test_simple2():
 
     wordlist_data = """\
+rojo {adj-meta} :: x
 rojo {adj-forms} :: f=roja; fpl=rojas; pl=rojos
 rojo {adj} :: red (colour)
+rojo {noun-meta} :: x
 rojo {noun-forms} :: pl=rojos
 rojo {m} :: red (colour)
 rojo {m} [Costa Rica] :: a 1000 colón bill
 rojo {m} [Spain, derogatory] :: a left-wing, especially communist
+roja {noun-meta} :: x
 roja {noun-forms} :: m=rojo; mpl=rojos; pl=rojas
 roja {f} :: Red (Communist)
 """
@@ -71,7 +79,9 @@ roja {f} :: Red (Communist)
 def test_filters():
 
     wordlist_data = """\
+test {noun-meta} :: x
 test {m} :: test
+test {adj-meta} :: x
 test {adj} :: obsolete form of "test"
 """
 
@@ -87,11 +97,13 @@ test {adj} :: obsolete form of "test"
 def test_lemma_filters():
 
     wordlist_data = """\
+ir {verb-meta} :: x
 ir {verb-forms} :: 1=irse; 1=ir; 10=va; 11=vamos
 ir {vi} :: to go (away from speaker and listener)
 ir {vi} :: to come (towards or with the listener)
 ir {v} [auxiliary] :: to be going to (near future), to go (+ a + infinitive)
 ir {vr} :: to go away, to leave, to be off (see irse)
+irse {verb-meta} :: x
 irse {verb-forms} :: 1=irse; 10=va; 11=vamos
 irse {v} | andarse; marcharse :: to go away, to leave, to depart, to go (when the destination is not essential; when something or someone is going somewhere else)
 irse {v} :: to leak out (with liquids and gasses), to boil away, to go flat (gas in drinks)
@@ -127,10 +139,13 @@ count,spanish,pos,flags,usage
 def test_diva():
 
     wordlist_data = """\
+diva {noun-meta} :: x
 diva {noun-forms} :: m=divo; mpl=divos; pl=divas
 diva {f} :: diva
+divo {adj-meta} :: x
 divo {adj-forms} :: f=diva; fpl=divas; pl=divos
 divo {adj} :: star (famous)
+divo {noun-meta} :: x
 divo {noun-forms} :: f=diva; fpl=divas; pl=divos
 divo {m} :: star, celeb\
 """
@@ -156,8 +171,10 @@ count,spanish,pos,flags,usage
 def test_hijo():
 
     wordlist_data = """\
+hija {noun-meta} :: x
 hija {noun-forms} :: m=hijo; mpl=hijos; pl=hijas
 hija {f} :: daughter; feminine noun of "hijo"
+hijo {noun-meta} :: x
 hijo {noun-forms} :: f=hija; fpl=hijas; pl=hijos
 hijo {m} :: son
 hijo {m} :: child (when the gender of the child is unknown)
@@ -183,11 +200,14 @@ count,spanish,pos,flags,usage
 def test_asco():
 
     wordlist_data = """\
+asca {noun-meta} :: x
 asca {noun-forms} :: pl=ascas
 asca {m} [mycology] | teca :: ascus
+asco {noun-meta} :: x
 asco {noun-forms} :: pl=ascos
 asco {m} :: disgust
 asco {m} :: nausea
+asco {noun-meta} :: x
 asco {noun-forms} :: pl=ascos
 asco {m} :: alternative form of "asca"
 """
@@ -213,8 +233,10 @@ count,spanish,pos,flags,usage
 def test_bienes():
 
     wordlist_data = """\
+bien {noun-meta} :: x
 bien {noun-forms} :: pl=bienes
 bien {m} :: good (as opposed to evil)
+bienes {noun-meta} :: x
 bienes {mp} :: goods (that which is produced, traded, bought or sold)
 """
 
@@ -239,8 +261,10 @@ count,spanish,pos,flags,usage
 def test_rasguno():
 
     wordlist_data = """\
+rasguñar {verb-meta} :: x
 rasguñar {verb-forms} :: 7=rasguño
 rasguñar {vt} | arañar; rascar :: to scratch
+rasguño {noun-meta} :: x
 rasguño {noun-forms} :: pl=rasguños
 rasguño {m} | arañazo :: scratch
 """

@@ -1,8 +1,7 @@
 from build_deck import DeckBuilder
 
-
 def test_get_location_classes():
-    get_location_classes = build_deck.get_location_classes
+    get_location_classes = DeckBuilder.get_location_classes
 
     tests = {
         "Louisiana": [ "only-latin-america", "only-united-states", "louisiana", "only-louisiana" ],
@@ -16,24 +15,17 @@ def test_get_location_classes():
     for tags, locations in tests.items():
         assert sorted(get_location_classes(tags)) == sorted(locations)
 
-def test_init_data():
-    init_data = build_deck.init_data
-
-    init_data("es-en.txt", "sentences.tsv", "../spanish_data", "../spanish_custom")
-
 def test_format_def():
-    format_def = build_deck.format_def
+    format_def = DeckBuilder.format_def
 
     item = { "m": { "tag": [ "def1", "def2" ] } }
-    assert format_def(item) == """<span class="pos noun m"> <span class="tag">[tag]:</span><span class="usage">['def1', 'def2']</span></span>"""
+    assert format_def(item) == """<span class="pos noun m"> <span class="tag">[tag]:</span><span class="usage">def1; def2</span></span>"""
 
     item = { "m": { "Peru": [ "def1", "def2" ] } }
-    assert format_def(item) == """<span class="pos noun m only-latin-america only-peru only-south-america peru"> <span class="tag">[Peru]:</span><span class="usage">['def1', 'def2']</span></span>"""
+    assert format_def(item) == """<span class="pos noun m only-latin-america only-peru only-south-america peru"> <span class="tag">[Peru]:</span><span class="usage">def1; def2</span></span>"""
 
     item = { "m": { "South America": [ "def1", "def2" ] } }
-    assert format_def(item) == """<span class="pos noun m only-latin-america only-south-america south-america"> <span class="tag">[South America]:</span><span class="usage">['def1', 'def2']</span></span>"""
-
-
+    assert format_def(item) == """<span class="pos noun m only-latin-america only-south-america south-america"> <span class="tag">[South America]:</span><span class="usage">def1; def2</span></span>"""
 
 def test_filters():
     ignore_data = """\
@@ -44,10 +36,12 @@ def test_filters():
 """
 
     dictionary_data = """\
+abuela {noun-meta} :: x
 abuela {noun-forms} :: m=abuelo; mpl=abuelos; pl=abuelas
 abuela {f} :: grandmother, female equivalent of "abuelo"
 abuela {f} [colloquial] :: old woman
 abuela {f} [Mexico] :: a kind of flying ant
+abuelo {noun-meta} :: x
 abuelo {noun-forms} :: f=abuela; fpl=abuelas; pl=abuelos
 abuelo {m} :: grandfather
 abuelo {m} [colloquial, endearing] :: an elderly person
@@ -101,8 +95,10 @@ def test_filters2():
 """
 
     dictionary_data = """\
+test {noun-meta} :: x
 test {noun-forms} :: pl=tests
 test {m} :: masculine
+test {noun-meta} :: x
 test {noun-forms} :: pl=tests
 test {f} :: feminine
 """
@@ -134,3 +130,56 @@ test {f} :: feminine
         {
          '': ['masculine'],
         }}
+
+
+def test_shorten_defs():
+
+    item = { "m": { "": [ "def1", "def2" ] } }
+    assert DeckBuilder.shorten_defs(item, 1000) == { "m": { "": [ "def1", "def2" ] } }
+
+    # No cutoff of number of items
+    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+    assert DeckBuilder.shorten_defs(item, 1000) == { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+
+    # Only first two tags
+    item = { "m": { "": [ "def1", "def2", "def3", "def4" ], "x": ["x1", "x2", "x3"], "y": ["y1", "y2", "y3"] } }
+    assert DeckBuilder.shorten_defs(item, 1000) == { "m": { "": [ "def1", "def2", "def3", "def4" ], "x": ["x1","x2","x3"] } }
+
+    # Only the first part of speech
+    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] }, "v": { "": ["v1", "v2", "v3"] } }
+    assert DeckBuilder.shorten_defs(item, 1000) == { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+
+    # m/f, mf, and m-f always include both m and f
+    item = { "m/f": { "m": [ "def1", "def2" ], "f": ["def4"] } }
+    assert DeckBuilder.shorten_defs(item, 1000) == { "m/f": { "f": [ "def4" ], "m": [ "def1", "def2" ] } }
+    item = { "mf": { "m": [ "def1", "def2" ], "f": ["def4"] } }
+    assert DeckBuilder.shorten_defs(item, 1000) == { "mf": { "f": [ "def4" ], "m": [ "def1", "def2" ] } }
+    item = { "m-f": { "m": [ "def1", "def2" ], "f": ["def4"] } }
+    assert DeckBuilder.shorten_defs(item, 1000) == { "m-f": { "f": [ "def4" ], "m": [ "def1", "def2" ] } }
+
+    # simple shortener
+    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+    assert DeckBuilder.shorten_defs(item, 23) == { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+
+    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+    assert DeckBuilder.shorten_defs(item, 22) == { "m": { "": [ "def1", "def2", "def3" ] } }
+
+    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+    assert DeckBuilder.shorten_defs(item, 16) == { "m": { "": [ "def1", "def2" ] } }
+
+    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+    assert DeckBuilder.shorten_defs(item, 10) == { "m": { "": [ "def1" ] } }
+
+
+    item = { "m": { "": [ "def1", "def2" ], "a really long tag":[ "def3", "def4" ] } }
+    assert DeckBuilder.shorten_defs(item, 60) == {'m': {'': ['def1', 'def2'], 'a really long tag': ['def3', 'def4']}}
+
+    item = { "m": { "": [ "(qualifier) a really long def1", "def2" ] } }
+    assert DeckBuilder.shorten_defs(item, 20) == {'m': {'': ['(qualifier) a really long def1']}}
+
+    item = { "m": { "": [ "a really long def1 (blah)", "def2" ] } }
+    assert DeckBuilder.shorten_defs(item, 20) == {'m': {'': ['a really long def1']}}
+
+    item = { "m": { "": [ "a really, really, long def1 (blah)", "def2" ] } }
+    assert DeckBuilder.shorten_defs(item, 20) == {'m': {'': ['a really', 'def2']}}
+
