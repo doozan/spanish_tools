@@ -329,6 +329,10 @@ class FrequencyList():
 #
 #        return True
 
+    def word_is_lemma(self, word, pos):
+        words = self.wordlist.get_words(word, pos)
+        return words[0].is_lemma
+
     def word_is_feminine(self, word, pos):
         words = self.wordlist.get_words(word, pos)
         return words[0].pos == "f"
@@ -365,6 +369,11 @@ class FrequencyList():
 
         best = "_NOLEMMA"
         best_count = -1
+
+        # discard any lemmas that aren't lemmas in their first declaration
+        lemmas = [lemma for lemma in lemmas if self.word_is_lemma(lemma, pos)]
+        if len(lemmas) == 1:
+            return lemmas[0]
 
         # discard any lemmas that don't declare this form in their first definition
         lemmas = [lemma for lemma in lemmas if self.form_in_lemma(word, lemma, pos)]

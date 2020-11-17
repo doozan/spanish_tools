@@ -85,12 +85,11 @@ class sentences:
                     tag,*items = tag_items.strip().split(",")
                     tags[tag] = items
 
-                stripped = "".join(re.sub('[^ a-záéíñóúü]+', '', spanish.lower()).split())
-
                 if eng_id in self.filter_ids or spa_id in self.filter_ids:
                     continue
 
                 self.sentencedb.append( [spanish, english, score, spa_id, eng_id, spa_user, eng_user] )
+                stripped = re.sub('[^ a-záéíñóúü]+', '', spanish.lower())
                 self.grepdb.append(stripped)
 
                 self.id_index[f"{spa_id}:{eng_id}"] = index
@@ -181,15 +180,7 @@ class sentences:
     def get_ids_from_phrase(self, phrase):
         pattern = r"\b" + phrase.strip().lower() + r"\b"
 
-        matches = []
-        index = 0
-        for item in self.grepdb:
-            if re.search(pattern, item):
-                matches.append(index)
-            index+=1
-
-        return matches
-
+        return [i for i, item in enumerate(self.grepdb) if re.search(pattern, item)]
 
     def get_ids_from_word(self, word):
         return self.get_ids_from_tag("@"+word, "")

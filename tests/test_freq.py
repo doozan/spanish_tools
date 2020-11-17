@@ -285,3 +285,86 @@ rasguño 10
 count,spanish,pos,flags,usage
 10,rasguñar,verb,CLEAR,10:rasguño\
 """
+
+def test_dios():
+
+    wordlist_data = """\
+dios {noun-meta} :: {{es-noun|m|dioses|f=diosa}}
+dios {noun-forms} :: f=diosa; fpl=diosas; pl=dioses
+dios {m} :: god
+diosa {noun-meta} :: {{es-noun|f|m=dios}}
+diosa {noun-forms} :: m=dios; mpl=dios; pl=diosas
+diosa {f} :: goddess
+diosa {noun-meta} :: {{es-noun|f}}
+diosa {noun-forms} :: pl=diosas
+diosa {f} [biochemistry] :: diose
+"""
+
+    sentences = None
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = spanish_sentences.sentences()
+
+    freq = FrequencyList(wordlist, sentences)
+
+    assert freq.get_lemmas("dioses", "noun") == ["dios"]
+    assert freq.get_lemmas("diosas", "noun") == ["dios", "diosa"]
+    assert freq.get_lemmas("diosa", "noun") == ["dios", "diosa"]
+
+    assert freq.get_best_lemma("diosa", ["dios", "diosa"], "noun") == "dios"
+
+#    assert list(freq.wordlist.all_forms.get("dios", {})) == ['noun:dios:m']
+#    assert list(freq.wordlist.all_forms.get("dioses", {})) == ['noun:dios:pl']
+#    assert list(freq.wordlist.all_forms.get("diosa", {})) == ["noun:dios:f"]
+#    assert list(freq.wordlist.all_forms.get("diosas", {})) == ["noun:diosa:pl"]
+
+    flist_data = """\
+dios 10
+dioses 10
+diosa 10
+diosas 10
+"""
+    assert "\n".join(freq.process(flist_data.splitlines(), None)) == """\
+count,spanish,pos,flags,usage
+40,dios,noun,CLEAR,10:dios|10:dioses|10:diosa|10:diosas\
+"""
+
+
+def test_aquellos():
+
+    wordlist_data = """\
+aquél {pron-meta} :: {{head|es|pronoun|demonstrative, feminine|aquélla|neuter|aquello|masculine plural|aquéllos|feminine plural|aquéllas|g=m}}
+aquél {pron-forms} :: demonstrative_feminine=aquélla; feminine_plural=aquéllas; masculine_plural=aquéllos; neuter=aquello
+aquél {pron} [demonstrative] :: that one (far from speaker and listener)
+aquéllos {pron-meta} :: {{head|es|pronoun|demonstrative|g=m-p}}
+aquéllos {pron} :: plural of "aquél"; those ones (far from speaker and listener)
+aquel {pron-meta} :: {{head|es|pronoun|g=m|feminine|aquella|neutrum|aquello|masculine plural|aquellos|neutrum plural|aquellos|feminine plural|aquellas}}
+aquel {pron-forms} :: feminine=aquella; feminine_plural=aquellas; masculine_plural=aquellos; neutrum=aquello; neutrum_plural=aquellos
+aquel {pron} [demonstrative] :: alternative spelling of "aquél"
+aquellos {pron-meta} :: {{head|es|pronoun|demonstrative|g=m-p}}
+aquellos {pron} :: alternative spelling of "aquéllos"; those ones (over there; implying some distance). The unaccented form can function as a pronoun if it can be unambiguously deduced as such from context.
+aquellos {pron-meta} :: {{head|es|pronoun|g=n-p}}
+aquellos {pron} :: Those ones. (over there; implying some distance)
+"""
+
+    sentences = None
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = spanish_sentences.sentences()
+
+    freq = FrequencyList(wordlist, sentences)
+
+    assert freq.get_lemmas("aquellos", "pron") == ['aquellos', 'aquél']
+
+    assert freq.get_best_lemma("aquellos", ['aquellos', 'aquél'], "pron") == "aquél"
+
+#    assert list(freq.wordlist.all_forms.get("dios", {})) == ['noun:dios:m']
+#    assert list(freq.wordlist.all_forms.get("dioses", {})) == ['noun:dios:pl']
+#    assert list(freq.wordlist.all_forms.get("diosa", {})) == ["noun:dios:f"]
+#    assert list(freq.wordlist.all_forms.get("diosas", {})) == ["noun:diosa:pl"]
+
+    flist_data = """\
+aquellos 10
+"""
+    assert "\n".join(freq.process(flist_data.splitlines(), None)) == """\
+count,spanish,pos,flags,usage
+10,aquél,pron,PRONOUN; LITERAL; COMMON,10:aquellos\
+"""
