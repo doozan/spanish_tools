@@ -74,12 +74,12 @@ def tag_to_pos(tag, word):
     # Use our lemmas so they're the same when we lookup against other things we've lemmatized
     # Unless it's a phrase, then use their lemma
     if pos in ("noun", "adj", "adv"):
-        lemma = get_lemma(word, pos)
+        lemma = get_best_lemmas(word, pos)
 
     # fix for freeling not generating lemmas for verbs with a pronoun suffix
     elif pos == "verb":
         if not lemma.endswith("r"):
-            lemma = get_lemma(word, pos)
+            lemma = get_best_lemmas(word, pos)
 
     elif "_" in lemma:
         lemma = word
@@ -91,8 +91,8 @@ def tag_to_pos(tag, word):
 
     # Special handling for participles, add adjective and verb lemmas
     if pos == "part":
-        adj_lemma = get_lemma(word, "adj")
-        verb_lemma = get_lemma(word, "verb")
+        adj_lemma = get_best_lemmas(word, "adj")
+        verb_lemma = get_best_lemmas(word, "verb")
         adj_res = f"{word}|{adj_lemma}" if adj_lemma != word else word
         verb_res = f"{word}|{verb_lemma}" if verb_lemma != word else word
         return [("part-adj", adj_res), ("part-verb", verb_res)]
@@ -131,7 +131,33 @@ def get_interjections(string):
     return re.findall(pattern, string, re.IGNORECASE)
 
 
-def get_lemma(word, pos):
+
+
+def word_is_lemma(word, pos):
+    words = wordlist.get_words(word, pos)
+    return words[0].is_lemma
+
+def word_is_feminine(word, pos):
+    words = wordlist.get_words(word, pos)
+    return words[0].pos == "f"
+
+def word_is_masculine(word, pos):
+    words = wordlist.get_words(word, pos)
+    return words[0].pos == "m"
+
+def form_in_lemma(form, lemma, pos):
+    if form == lemma:
+        return True
+
+    words = wordlist.get_words(lemma, pos)
+    if not words:
+        return False
+
+    for formtype, forms in words[0].forms.items():
+        if form in forms:
+            return True
+
+def get_best_lemmas(word, pos):
 
     lemmas = []
     forms = wordlist.all_forms.get(word, [])
@@ -140,6 +166,7 @@ def get_lemma(word, pos):
             continue
         if lemma not in lemmas:
             lemmas.append(lemma)
+
     if not lemmas:
         return word
 
@@ -153,7 +180,41 @@ def get_lemma(word, pos):
         for word_obj in wordlist.get_words(lemma, pos):
             good_lemmas |= set(wordlist.get_lemmas(word_obj).keys())
 
-    return "|".join(sorted(good_lemmas))
+    lemmas = sorted(list(good_lemmas))
+
+    # Hardcoded fixes for some verb pairs
+    if pos == "verb":
+        if "creer" in lemmas and "crear" in lemmas:
+            lemmas.remove("crear")
+        if "parar" in lemmas and "parir" in lemmas:
+            lemmas.remove("parir")
+        if "salir" in lemmas and "salgar" in lemmas:
+            lemmas.remove("salgar")
+
+    # discard any lemmas that aren't lemmas in their first declaration
+    lemmas = [lemma for lemma in lemmas if word_is_lemma(lemma, pos)]
+    if len(lemmas) == 1:
+        return lemmas[0]
+
+    # discard any lemmas that don't declare this form in their first definition
+    lemmas = [lemma for lemma in lemmas if form_in_lemma(word, lemma, pos)]
+    if len(lemmas) == 1:
+        return lemmas[0]
+
+    # If word is a feminine noun that could be a lemma or could
+    # be a form of a masculine noun (hamburguesa), remove the
+    # masculine lemma
+    if pos == "noun":
+        if any(word_is_feminine(lemma, pos) for lemma in lemmas):
+            lemmas = [lemma for lemma in lemmas if not word_is_masculine(lemma, pos)]
+            if len(lemmas) == 1:
+                return lemmas[0]
+
+    # if one lemma is the word, use that
+#    if word in lemmas:
+#        return word
+
+    return "|".join(lemmas)
 
 
 def load_sentences():
@@ -294,11 +355,11 @@ def print_tagged_data():
                         first = False
                     form = get_original_form(t, spanish, offset)
                     pos_tags = []
-                    for word in set([form, t["form"]]):
+                    for word in sorted(set([form, t["form"]])):
                         pos_tags += tag_to_pos(t, word)
                     if not pos_tags:
                         continue
-                    pos_tags = list(set(pos_tags))
+                    pos_tags = sorted(list(set(pos_tags)))
                     all_tags += pos_tags
                     for pos_tag in pos_tags:
                         pword, junk, plemma = pos_tag[1].partition("|")
