@@ -6,6 +6,7 @@ import ijson
 import json
 import os
 import re
+import string
 
 from enwiktionary_wordlist import Wordlist
 
@@ -34,9 +35,8 @@ with open(args.dictionary) as infile:
 mismatch = {}
 
 
-def tag_to_pos(tag):
+def tag_to_pos(tag, word):
 
-    word = tag["form"]
     lemma = tag["lemma"]
     ctag = tag["ctag"]
 
@@ -66,7 +66,7 @@ def tag_to_pos(tag):
         pos = "num"
         lemma = word
     if not pos:
-        return None
+        return []
 
     if pos != "propnoun":
         word = word.lower()
@@ -98,9 +98,9 @@ def tag_to_pos(tag):
         return [("part-adj", adj_res), ("part-verb", verb_res)]
 
     if word != lemma:
-        return [(pos, f"{word}|{lemma}")]
+        return[(pos, f"{word}|{lemma}")]
 
-    return [(pos, f"{word}")]
+    return[(pos, word)]
 
 
 def group_tags(pos_tags):
@@ -226,6 +226,43 @@ def print_credits():
             print(f"{user} #{', #'.join(sorted(sentences))}")
 
 
+
+word_chars = string.ascii_lowercase + "áéíóúüñ"
+word_chars += word_chars.upper()
+def is_boundary(c):
+    return c not in word_chars
+
+def get_original_form(tag, sentence, offset):
+    """
+    Verbs with pronoun suffixes are tokenized into to individual words by freeling
+    This function yields the original, untokenized word
+    Offset is used to adjust the begin/end tags because they're given aspositions
+    within the original source file, not within the sentence
+    """
+
+    if not "pos" in tag:
+        return tag["form"]
+
+    # Don't mess with multi-word stuff
+    if "_" in tag["form"]:
+        return tag["form"]
+
+    if not tag["ctag"].startswith("V"):
+        return tag["form"]
+
+    start = int(tag["begin"])-offset
+    end = int(tag["end"])-offset-1
+
+    while start > 0 and not is_boundary(sentence[start-1]):
+        start -= 1
+
+    while end < len(sentence)-1 and not is_boundary(sentence[end+1]):
+        end += 1
+
+    word = sentence[start:end+1]
+    return word
+
+
 def print_tagged_data():
 
     sentences = load_sentences()
@@ -249,11 +286,19 @@ def print_tagged_data():
             index = index + 1
 
             all_tags = []
+            first = True
             for s in v:
                 for t in s["tokens"]:
-                    pos_tags = tag_to_pos(t)
+                    if first:
+                        offset = int(t["begin"])
+                        first = False
+                    form = get_original_form(t, spanish, offset)
+                    pos_tags = []
+                    for word in set([form, t["form"]]):
+                        pos_tags += tag_to_pos(t, word)
                     if not pos_tags:
                         continue
+                    pos_tags = list(set(pos_tags))
                     all_tags += pos_tags
                     for pos_tag in pos_tags:
                         pword, junk, plemma = pos_tag[1].partition("|")
