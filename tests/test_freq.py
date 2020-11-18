@@ -368,3 +368,71 @@ aquellos 10
 count,spanish,pos,flags,usage
 10,aquél,pron,PRONOUN; LITERAL; COMMON,10:aquellos\
 """
+
+
+def test_vete():
+
+    wordlist_data = """\
+ir {verb-meta} :: x
+ir {verb-forms} :: imp_i2s_acc_2=vete; imp_i2s_dat_2=vete
+ir {v} :: x
+ver {verb-meta} :: x
+ver {verb-forms} :: imp_i2s_acc_2=vete; imp_i2s_dat_2=vete
+ver {v} :: x
+verse {verb-meta} :: x
+verse {verb-forms} ::  63=vete; imp_i2s_acc_2=vete; imp_i2s_dat_2=vete
+verse {v} :: x
+vetar {verb-meta} :: x
+vetar {verb-forms} ::  38=vete; 41=vete; 65=vete; 70=vete
+vetar {v} :: x
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = spanish_sentences.sentences()
+
+    freq = FrequencyList(wordlist, sentences)
+
+    assert freq.get_lemmas("vete", "verb") == ['ir', 'ver', 'vetar']
+
+    assert freq.get_best_lemma("vete", ['ir', 'ver', 'vetar'], "verb") == "ir"
+
+def test_veros():
+
+    wordlist_data = """\
+ver {verb-meta} :: x
+ver {verb-forms} :: inf_acc_5=veros; inf_dat_5=veros
+ver {v} :: x
+vero {noun-meta} :: {{es-noun|m}}
+vero {noun-forms} :: pl=veros
+vero {m} [heraldry] :: vair
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = spanish_sentences.sentences()
+
+    freq = FrequencyList(wordlist, sentences)
+
+    assert freq.get_ranked_pos("veros") == ["verb", "noun"]
+
+def test_veras():
+
+    wordlist_data = """\
+vera {noun-meta} :: {{es-noun|f}}
+vera {noun-forms} :: pl=veras
+vera {f} [poetic] | lado :: side, face
+vera {noun-meta} :: {{es-noun|f}}
+vera {noun-forms} :: pl=veras
+vera {f} :: verawood (Bulnesia arborea)
+veras {noun-meta} :: {{es-noun|f-p}}
+veras {fp} :: truth; reality
+veras {fp} :: serious things
+"""
+
+    sentences = None
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = spanish_sentences.sentences()
+
+    freq = FrequencyList(wordlist, sentences)
+
+    assert freq.get_lemmas("veras", "noun") == ["vera", "veras"]
+    assert freq.get_best_lemma("veras", ["vera", "veras"], "noun") == "veras"

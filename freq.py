@@ -395,8 +395,10 @@ class FrequencyList():
 
         # Pick the more common lemma
         for lemma in lemmas:
-            if self.get_count(lemma, pos) > best_count:
+            count = self.get_count(lemma, pos)
+            if count > best_count:
                 best = lemma
+                best_count = count
 
         # Still nothing, just take the first lemma
         if best == "_NOLEMMA" and len(lemmas):
