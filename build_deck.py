@@ -13,7 +13,8 @@ import sys
 
 import spanish_sentences
 import spanish_speech
-from enwiktionary_wordlist import Wordlist, Word
+from enwiktionary_wordlist.wordlist import Wordlist
+from enwiktionary_wordlist.word import Word
 
 def make_tag(word, pos):
     if not pos:

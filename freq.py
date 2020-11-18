@@ -6,7 +6,7 @@ import re
 
 import sys
 
-from enwiktionary_wordlist import Wordlist
+from enwiktionary_wordlist.wordlist import Wordlist
 import spanish_sentences
 
 class FrequencyList():

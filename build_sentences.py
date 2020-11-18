@@ -8,7 +8,7 @@ import os
 import re
 import string
 
-from enwiktionary_wordlist import Wordlist
+from enwiktionary_wordlist.wordlist import Wordlist
 
 parser = argparse.ArgumentParser(description="Manage tagged sentences")
 parser.add_argument(
