@@ -9,6 +9,8 @@ import sys
 from enwiktionary_wordlist.wordlist import Wordlist
 import spanish_sentences
 
+from get_best_lemmas import get_best_lemmas
+
 class FrequencyList():
 
     def __init__(self, wordlist, sentences):
@@ -102,15 +104,18 @@ class FrequencyList():
 
         return sorted(good_lemmas)
 
+    def include_lemma(self, lemma, pos):
+        for word_obj in self.wordlist.get_words(lemma, pos):
+            for sense in word_obj.senses:
+                if not re.match("(archaic|dated|obsolete|rare)", sense.qualifier) and \
+                    not re.match("(archaic|dated|obsolete|rare) form of", sense.gloss):
+                        return True
+
     def include_word(self, word, pos):
         """ Returns True if the word/pos has a useful sense """
         for lemma in self.get_lemmas(word, pos):
-            for word_obj in self.wordlist.get_words(lemma, pos):
-                for sense in word_obj.senses:
-                    if not re.match("(obsolete|archaic|rare)", sense.qualifier) and \
-                        not re.match("(obsolete|archaic|rare) form of", sense.gloss):
-                            return True
-
+            if self.include_lemma(lemma, pos):
+                return True
 
     def filter_pos(self, word, all_pos):
         """ Remove pos from list if all of its words are archaic/obsolete """
@@ -263,9 +268,6 @@ class FrequencyList():
 
         return flags
 
-
-
-
     def build_freqlist(self):
         wordusage = {}
         count = 1
@@ -317,81 +319,13 @@ class FrequencyList():
                 if count < best_count:
                     self.all_lemmas[(word, pos)]["flags"].append("DUPLICATE")
 
-
-#    def word_is_only_form(self, word, lemma, pos):
-#        if word == lemma:
-#            return True
-##
-#        words = self.wordlist.get_words(lemma, pos)
-#        for formtype, forms in words[0].forms.items():
-##            if word in forms:
-#                return False
-#
-#        return True
-
-    def word_is_lemma(self, word, pos):
-        words = self.wordlist.get_words(word, pos)
-        return words[0].is_lemma
-
-    def word_is_feminine(self, word, pos):
-        words = self.wordlist.get_words(word, pos)
-        return words[0].pos == "f"
-
-    def word_is_masculine(self, word, pos):
-        words = self.wordlist.get_words(word, pos)
-        return words[0].pos == "m"
-#        return "f" not in word.pos:
-#            return True
-
-    def form_in_lemma(self, form, lemma, pos):
-        if form == lemma:
-            return True
-
-        words = self.wordlist.get_words(lemma, pos)
-        if not words:
-            return False
-
-        for formtype, forms in words[0].forms.items():
-            if form in forms:
-                return True
-
     def get_best_lemma(self, word, lemmas, pos):
-        """
-        Return the most frequently used lemma from a list of lemmas
-        """
-
-        # Hardcoded fixes for some verb pairs
-        if pos == "verb":
-            if "creer" in lemmas and "crear" in lemmas:
-                lemmas.remove("crear")
-            if "salir" in lemmas and "salgar" in lemmas:
-                lemmas.remove("salgar")
+        lemmas = get_best_lemmas(self.wordlist, word, lemmas, pos)
+        if len(lemmas) == 1:
+            return lemmas[0]
 
         best = "_NOLEMMA"
         best_count = -1
-
-        # discard any lemmas that aren't lemmas in their first declaration
-        lemmas = [lemma for lemma in lemmas if self.word_is_lemma(lemma, pos)]
-        if len(lemmas) == 1:
-            return lemmas[0]
-
-        # discard any lemmas that don't declare this form in their first definition
-        lemmas = [lemma for lemma in lemmas if self.form_in_lemma(word, lemma, pos)]
-        if len(lemmas) == 1:
-            return lemmas[0]
-
-        # If word is a feminine noun that could be a lemma or could
-        # be a form of a masculine noun (hamburguesa), remove the
-        # masculine lemma
-        if pos == "noun":
-            if any(self.word_is_feminine(lemma, pos) for lemma in lemmas):
-                lemmas = [lemma for lemma in lemmas if not self.word_is_masculine(lemma, pos)]
-                if len(lemmas) == 1:
-                    return lemmas[0]
-
-        # if one lemma is the word, use that
-        if word in lemmas:
-            return word
 
         # Pick the more common lemma
         for lemma in lemmas:
