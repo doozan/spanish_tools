@@ -490,14 +490,16 @@ class DeckBuilder():
         defs = {}
 
         for word_obj in self._words.all_words.get(word,{}).get(common_pos, []):
-            pos = word_obj.pos
-
-            if not pos:
+            if not word_obj.pos:
                 continue
-            if pos not in defs:
-                defs[pos] = {}
 
             for sense in word_obj.senses:
+
+                pos = sense.pos
+
+                if pos not in defs:
+                    defs[pos] = {}
+
                 tag = sense.qualifier
 
                 gloss = self.filter_gloss(word, pos, tag, sense.gloss)

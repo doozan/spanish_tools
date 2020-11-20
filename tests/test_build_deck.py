@@ -183,3 +183,32 @@ def test_shorten_defs():
     item = { "m": { "": [ "a really, really, long def1 (blah)", "def2" ] } }
     assert DeckBuilder.shorten_defs(item, 20) == {'m': {'': ['a really', 'def2']}}
 
+def test_format_def():
+
+    dictionary_data = """\
+rendir {verb-meta} :: {{es-verb|rend|ir|pres=rindo}} {{es-conj-ir|r|nd|p=e-i|combined=1}}
+rendir {vt} :: to conquer
+rendir {vt} :: to tire, exhaust
+rendir {v} [ditransitive] :: to yield, pay, submit, pass down
+rendir {vi} :: to vomit
+rendir {vi} :: to make headway
+rendir {vr} :: to surrender, give in, give up
+rendir {vr} :: to be paid (homage or tribute)
+"""
+
+    dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines())
+    ignore = None
+    sentences = None
+    shortdefs = {}
+
+    # Full definition without ignore list
+    deck = DeckBuilder(dictionary, ignore, sentences, shortdefs)
+
+    usage = deck.get_usage("rendir", "verb")
+    print(usage)
+    assert usage == {
+          'v': {'ditransitive': ['to yield, pay, submit, pass down']},
+          'vi': {'': ['to vomit', 'to make headway']},
+          'vr': {'': ['to surrender, give in, give up',
+                      'to be paid (homage or tribute)']},
+          'vt': {'': ['to conquer', 'to tire, exhaust']}}
