@@ -819,12 +819,18 @@ class DeckBuilder():
     def get_synonyms(self, word, pos, limit=5, only_in_deck=True):
 
         key = (word,pos)
-        items = set(self.synonyms.get(key))
+        items = []
+        for syn in self.synonyms.get(key):
+            if syn.startswith("Thesaurus:"):
+                syn = syn[len("Thesaurus:"):]
+            if syn not in items:
+                items.append(syn)
+
         in_deck = [k for k in items if make_tag(k, pos) in self.allwords_set]
         if only_in_deck or len(in_deck) > limit:
-            return sorted(in_deck)[:limit]
+            return in_deck[:limit]
 
-        return sorted(items)[:limit]
+        return items[:limit]
 
     def get_phrase(self, word, pos, noun_type, femnoun):
         voice = ""
@@ -996,7 +1002,7 @@ class DeckBuilder():
             for split_def in d.split(";")
             for value in split_def.split(",")
         ]
-        seen_tag = "|".join(deck_syns + sorted(defs))
+        seen_tag = "|".join(sorted(deck_syns) + sorted(defs))
         if seen_tag in self.seen_clues:
             eprint(f"Warning: {seen_tag} is used by {item_tag} and {self.seen_clues[seen_tag]}, adding syn")
             deck_syns.insert(0, self.seen_clues[seen_tag].split(":")[1])
