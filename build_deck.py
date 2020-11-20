@@ -169,7 +169,7 @@ class DeckBuilder():
                         if gloss.startswith(ignore_gloss):
                             return None
 
-        gloss = re.sub(r'[;:,.]?\s*(feminine|female equivalent) of "[^\"]+"[ :,.]*', '', gloss)
+        gloss = re.sub(r'[;:,.]?\s*(alternative case form|feminine|female equivalent) of "[^\"]+"[ :,.]*', '', gloss)
         if not re.match("[^ :,.]", gloss):
             return None
 
