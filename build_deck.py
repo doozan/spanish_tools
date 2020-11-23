@@ -18,13 +18,13 @@ from enwiktionary_wordlist.word import Word
 
 def make_tag(word, pos):
     if not pos:
-        return word.lower()
+        return word
 
-    return pos.lower() + ":" + word.lower()
+    return pos + ":" + word
 
 def split_tag(wordtag):
     pos, junk, word = wordtag.partition(":")
-    return [word, pos.lower()]
+    return [word, pos]
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
