@@ -825,6 +825,8 @@ class DeckBuilder():
         for syn in self.synonyms.get(key):
             if syn.startswith("Thesaurus:"):
                 syn = syn[len("Thesaurus:"):]
+            if syn == word:
+                continue
             if syn not in items:
                 items.append(syn)
 
