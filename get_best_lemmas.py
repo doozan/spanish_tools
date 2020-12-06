@@ -1,27 +1,34 @@
 import re
 
-def include_lemma(wordlist, lemma, pos):
+def is_good_lemma(wordlist, lemma, pos):
     for word_obj in wordlist.get_words(lemma, pos):
         for sense in word_obj.senses:
-            if not re.match("(archaic|dated|obsolete|rare)", sense.qualifier) and \
-                not re.match("(archaic|dated|obsolete|rare) form of", sense.gloss):
+            if not (sense.qualifier and re.match(r"(archaic|dated|obsolete|rare)", sense.qualifier)) and \
+                not (sense.gloss and re.match(r"(archaic|dated|obsolete|rare) form of", sense.gloss)):
                     return True
 
 def word_is_lemma(wordlist, word, pos):
-    words = wordlist.get_words(word, pos)
-    return words[0].is_lemma
+    for word in wordlist.get_words(word, pos):
+        return word.is_lemma
 
 def word_is_feminine(wordlist, word, pos):
-    words = wordlist.get_words(word, pos)
-    return words[0].pos == "f"
+    for word in wordlist.get_words(word, pos):
+        return word.pos in ["f", "fp"]
+        #return word.form in ["f", "fp"] or "feminine" in word.form
 
-def word_is_feminine_form(wordlist, word, lemma, pos):
-    words = wordlist.get_words(lemma, pos)
-    if not words[0].pos in ["m", "mp"]:
+def word_is_feminine_form(wordlist, form, lemma, pos):
+    """ Check if a given form is a feminine form of lemma """
+    word_obj = wordlist.get_words(lemma, pos)[0]
+    if not word_obj:
         return False
 
-    for formtype, forms in words[0].forms.items():
-        if formtype in ["f", "fpl"] and word in forms:
+    #if word_obj.form not in ["m", "mp"] or "masculine" in word.form:
+    if word_obj.pos not in ["m", "mp"]:
+        return False
+
+    for formtype, forms in word_obj.forms.items():
+        #if (formtype in ["f", "fpl"] or "feminine" in formtype) and form in forms:
+        if formtype in ["f", "fpl"] and form in forms:
             return True
     return False
 
@@ -29,11 +36,11 @@ def form_in_lemma(wordlist, form, lemma, pos):
     if form == lemma:
         return True
 
-    words = wordlist.get_words(lemma, pos)
-    if not words:
+    word = wordlist.get_words(lemma, pos)[0]
+    if not word:
         return False
 
-    for formtype, forms in words[0].forms.items():
+    for formtype, forms in word.forms.items():
         if form in forms:
             return True
 
@@ -83,7 +90,7 @@ def get_best_lemmas(wordlist, word, lemmas, pos):
                 return lemmas
 
     # remove dated/obsolete
-    lemmas = [lemma for lemma in lemmas if include_lemma(wordlist, lemma, pos)]
+    lemmas = [lemma for lemma in lemmas if is_good_lemma(wordlist, lemma, pos)]
     if len(lemmas) == 1:
         return lemmas
 

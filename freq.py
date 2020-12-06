@@ -9,7 +9,7 @@ import sys
 from enwiktionary_wordlist.wordlist import Wordlist
 import spanish_sentences
 
-from get_best_lemmas import get_best_lemmas
+from get_best_lemmas import is_good_lemma, get_best_lemmas
 
 class FrequencyList():
 
@@ -104,17 +104,10 @@ class FrequencyList():
 
         return sorted(good_lemmas)
 
-    def include_lemma(self, lemma, pos):
-        for word_obj in self.wordlist.get_words(lemma, pos):
-            for sense in word_obj.senses:
-                if not re.match("(archaic|dated|obsolete|rare)", sense.qualifier) and \
-                    not re.match("(archaic|dated|obsolete|rare) form of", sense.gloss):
-                        return True
-
     def include_word(self, word, pos):
         """ Returns True if the word/pos has a useful sense """
         for lemma in self.get_lemmas(word, pos):
-            if self.include_lemma(lemma, pos):
+            if is_good_lemma(self.wordlist, lemma, pos):
                 return True
 
     def filter_pos(self, word, all_pos):
