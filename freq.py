@@ -3,39 +3,55 @@
 import argparse
 import os
 import re
-
 import sys
 
 from enwiktionary_wordlist.wordlist import Wordlist
+from enwiktionary_wordlist.all_forms import AllForms
 import spanish_sentences
 
 from get_best_lemmas import is_good_lemma, get_best_lemmas
 
+def mem_use():
+    with open('/proc/self/status') as f:
+        memusage = f.read().split('VmRSS:')[1].split('\n')[0][:-3]
+
+    return int(memusage.strip())
+
 class FrequencyList():
 
-    def __init__(self, wordlist, sentences):
-        self.wordlist = wordlist
+    def __init__(self, wordlist_data, allforms_data, sentences):
+        self.load_wordlist(wordlist_data)
+        print("wordlist", mem_use(), file=sys.stderr)
+
+        self.load_allforms(allforms_data)
+        print("all_forms", mem_use(), file=sys.stderr)
+
         self.sentences = sentences
         self.freq = {}
         self.all_lemmas = {}
 
+    def load_wordlist(self, wordlist_data):
+        self.wordlist = Wordlist(wordlist_data)
 
-    def process(self, freqlist, ignore_file):
+    def load_allforms(self, allforms_data):
+        if allforms_data is None:
+            self.all_forms = AllForms.from_wordlist(self.wordlist).all_forms
+        else:
+            self.all_forms = AllForms.from_csv(allforms_data).all_forms
+
+    def load_ignore(self, ignore_data):
+        self.ignore = {line.strip() for line in ignore_data if line.strip() and not line.strip().startswith("#")}
+
+    def process(self, freqlist, ignore_data=[]):
+        self.load_ignore(ignore_data)
         self.freq = {}
         self.all_lemmas = {}
-
-        ignore = set()
         lines = {}
-
-        # If there's an ignore list specified, load it
-        if ignore_file:
-            with open(ignore_file) as infile:
-                ignore = {line.strip() for line in infile if not line.startswith("#") and line.strip()}
 
         # Read all the lines and do an initial lookup of lemmas
         for line in freqlist:
             word, count = line.strip().split(" ")
-            if word in ignore:
+            if word in self.ignore:
                 continue
 
             posrank = self.get_ranked_pos(word)
@@ -83,8 +99,8 @@ class FrequencyList():
     def get_lemmas(self, word, pos):
 
         lemmas = []
-        forms = self.wordlist.all_forms.get(word, [])
-        for form_pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+        forms = self.all_forms.get(word, [])
+        for form_pos,lemma in [x.split("|") for x in sorted(forms)]:
             if form_pos != pos:
                 continue
             if lemma not in lemmas:
@@ -125,8 +141,8 @@ class FrequencyList():
         """
 
         all_pos = []
-        forms = self.wordlist.all_forms.get(word, [])
-        for pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+        forms = self.all_forms.get(word, [])
+        for pos,lemma in [x.split("|") for x in sorted(forms)]:
             if pos not in all_pos:
                 all_pos.append(pos)
 
@@ -343,6 +359,7 @@ if __name__ == "__main__":
     parser.add_argument("file", help="Frequency list")
     parser.add_argument("--ignore", help="List of words to ignore")
     parser.add_argument("--dictionary", help="Dictionary file name", required=True)
+    parser.add_argument("--allforms", help="All-forms file name")
     parser.add_argument("--sentences", help="Sentences file name (DEFAULT: sentences.tsv)")
     parser.add_argument(
         "--data-dir",
@@ -363,16 +380,21 @@ if __name__ == "__main__":
     if not args.custom_dir:
         args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
 
-
-    with open(args.dictionary) as infile:
-        wordlist = Wordlist(infile)
+    wordlist_data = open(args.dictionary)
+    allforms_data = open(args.allforms) if args.allforms else None
+    ignore_data = open(args.ignore) if args.ignore else []
 
     sentences = spanish_sentences.sentences(
         sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir
     )
 
-    flist = FrequencyList(wordlist, sentences)
+    flist = FrequencyList(wordlist_data, allforms_data, sentences)
 
     with open(args.file) as infile:
-        for line in flist.process(infile, args.ignore):
+        for line in flist.process(infile, ignore_data):
             print(line)
+
+    wordlist_data.close()
+    if allforms_data:
+        allforms_data.close()
+    ignore_data.close()
