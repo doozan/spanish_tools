@@ -35,7 +35,7 @@ def test_filters():
 - abuelo {m} :: loose tufts
 """
 
-    dictionary_data = """\
+    wordlist_data = """\
 abuela {noun-meta} :: x
 abuela {noun-forms} :: m=abuelo; mpl=abuelos; pl=abuelas
 abuela {f} :: grandmother, female equivalent of "abuelo"
@@ -49,13 +49,11 @@ abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed
 """
 
 
-    dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines())
-    ignore = None
+    #dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines(), mbformat=True)
     sentences = None
-    shortdefs = {}
 
     # Full definition without ignore list
-    deck = DeckBuilder(dictionary, ignore, sentences, shortdefs)
+    deck = DeckBuilder(wordlist_data.splitlines(), sentences)
     assert deck.filter_gloss("abuela", "", "", "grandmother") == "grandmother"
     assert deck.filter_gloss("abuela", "", "", 'grandmother, female equivalent of "abuelo"') == "grandmother"
 
@@ -72,7 +70,7 @@ abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed
 
     # With ignore list
     ignore = DeckBuilder.load_ignore_data(ignore_data.splitlines())
-    deck = DeckBuilder(dictionary, ignore, sentences, shortdefs)
+    deck = DeckBuilder(wordlist_data.splitlines(), sentences, ignore=ignore)
 
     assert deck.filter_gloss("abuela", "x", "", "grandmother") == "grandmother"
     assert deck.filter_gloss("abuela", "f", "", "grandmother") == None
@@ -94,7 +92,7 @@ def test_filters2():
 - test {f}
 """
 
-    dictionary_data = """\
+    wordlist_data = """\
 test {noun-meta} :: x
 test {noun-forms} :: pl=tests
 test {m} :: masculine
@@ -103,16 +101,32 @@ test {noun-forms} :: pl=tests
 test {f} :: feminine
 """
 
-    dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines())
+    xwordlist_data = """\
+_____
+test
+  forms: pl=tests
+  pos: noun
+  form: m
+  gloss: masculine
+____
+test
+  forms: pl=tests
+  pos: noun
+  form: f
+  gloss: feminine
+"""
+
+
+    #dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines(), mbformat=True)
     ignore = None
+    allforms_data = None
     sentences = None
     shortdefs = {}
 
     # Full definition without ignore list
-    deck = DeckBuilder(dictionary, ignore, sentences, shortdefs)
+    deck = DeckBuilder(wordlist_data.splitlines(), sentences)
 
     usage = deck.get_usage("test", "noun")
-    print(usage)
     assert usage == {
         'm-f':
         {'f': ['feminine'],
@@ -122,7 +136,7 @@ test {f} :: feminine
 
     # With ignore list
     ignore = DeckBuilder.load_ignore_data(ignore_data.splitlines())
-    deck = DeckBuilder(dictionary, ignore, sentences, shortdefs)
+    deck = DeckBuilder(wordlist_data.splitlines(), sentences, ignore=ignore)
 
     usage = deck.get_usage("test", "noun")
     assert usage == {
@@ -185,7 +199,7 @@ def test_shorten_defs():
 
 def test_format_def():
 
-    dictionary_data = """\
+    wordlist_data = """\
 rendir {verb-meta} :: {{es-verb|rend|ir|pres=rindo}} {{es-conj-ir|r|nd|p=e-i|combined=1}}
 rendir {vt} :: to conquer
 rendir {vt} :: to tire, exhaust
@@ -196,13 +210,14 @@ rendir {vr} :: to surrender, give in, give up
 rendir {vr} :: to be paid (homage or tribute)
 """
 
-    dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines())
+    #dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines(), mbformat=True)
     ignore = None
+    allforms_data = None
     sentences = None
     shortdefs = {}
 
     # Full definition without ignore list
-    deck = DeckBuilder(dictionary, ignore, sentences, shortdefs)
+    deck = DeckBuilder(wordlist_data.splitlines(), sentences)
 
     usage = deck.get_usage("rendir", "verb")
     print(usage)

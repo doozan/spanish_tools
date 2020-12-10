@@ -14,6 +14,7 @@ import sys
 import spanish_sentences
 import spanish_speech
 from enwiktionary_wordlist.wordlist import Wordlist
+from enwiktionary_wordlist.all_forms import AllForms
 from enwiktionary_wordlist.word import Word
 
 def make_tag(word, pos):
@@ -135,9 +136,9 @@ class DeckBuilder():
 
     rows = []
 
-    el_f_nouns = [ 'abra', 'acta', 'agua', 'ala', 'alba', 'alma', 'ama', 'ancla', 'ansia',
-        'area', 'arma', 'arpa', 'asma', 'aula', 'ave', 'habla', 'hada', 'hacha', 'hambre',
-        'águila']
+    el_f_nouns = [ 'abra', 'acta', 'agua', 'ala', 'alba', 'alga', 'alma', 'ama', 'ancla',
+        'ansia', 'area', 'arma', 'arpa', 'asma', 'aula', 'ave', 'habla', 'hada', 'hacha',
+        'hambre', 'águila']
 
     credits = {}
     dumpable_sentences = {}
@@ -145,14 +146,22 @@ class DeckBuilder():
     seen_guids = {}
     seen_clues = {}
 
-    def __init__(self, dictionary, ignore, sentences, shortdefs):
+    def __init__(self, wordlist_data, sentences, ignore=[], allforms_data=None, shortdefs=None):
 
-        self._words = dictionary
-        if ignore:
-            self._ignore = ignore
+        self.load_dictionary(wordlist_data)
+        self._ignore = ignore
         self._sentences = sentences
         self._shortdefs = shortdefs
+        self.load_allforms(allforms_data)
 
+    def load_dictionary(self, wordlist_data):
+        self._words = Wordlist(wordlist_data)
+
+    def load_allforms(self, allforms_data):
+        if allforms_data is None:
+            self.all_forms = AllForms.from_wordlist(self._words).all_forms
+        else:
+            self.all_forms = AllForms.from_data(allforms_data).all_forms
 
     def filter_gloss(self, word, pos, note, gloss):
         """ Returns True if the item matches an entry in the ignore list """
@@ -477,7 +486,7 @@ class DeckBuilder():
 
 
     def get_feminine_noun(self, word):
-        for word_obj in self._words.all_words.get(word,{}).get("noun", []):
+        for word_obj in self._words.get_words(word, "noun"):
             if "f" in word_obj.forms:
                 return word_obj.forms["f"][0]
 
@@ -488,19 +497,41 @@ class DeckBuilder():
 
     def get_pos_usage(self, word, common_pos):
         defs = {}
+        verb_types = {
+            "transitive": "t",
+            "reflexive": "r",
+            "intransitive": "i",
+            "pronominal": "p",
+            "ambitransitive": "x",
+        }
 
-        for word_obj in self._words.all_words.get(word,{}).get(common_pos, []):
-            if not word_obj.pos:
-                continue
+        for word_obj in self._words.get_words(word, common_pos):
+            print("word", word_obj.word, word_obj.common_pos, word_obj.pos)
 
             for sense in word_obj.senses:
+                pos = word_obj.common_pos
+                if pos == "noun":
+                    pos = word_obj.pos
 
-                pos = sense.pos
+                tag = sense.qualifier
+                if tag is None:
+                    tag = ""
+                elif pos == "verb":
+                    keep_tags = []
+                    tags = tag.split("; ")
+                    verb_type = []
+                    for tag in tags:
+                        if tag in verb_types:
+                            verb_type.append(verb_types[tag])
+                        else:
+                            keep_tags.append(tag)
+                    pos = "v" + "".join(verb_type)
+                    tag = "; ".join(keep_tags)
+
+                print("pos", pos, word_obj.common_pos, word_obj.pos)
 
                 if pos not in defs:
                     defs[pos] = {}
-
-                tag = sense.qualifier
 
                 gloss = self.filter_gloss(word, pos, tag, sense.gloss)
                 if not gloss:
@@ -714,7 +745,7 @@ class DeckBuilder():
             for oldpos in ['f', 'mf', 'm']:
                 if oldpos in alldefs:
                     for oldnote,use in alldefs[oldpos].items():
-                        newnote = oldpos + ", " + oldnote if oldnote != "" else oldpos
+                        newnote = oldpos + ", " + oldnote if oldnote else oldpos
                         alldefs['m-f'][newnote] = use
                     del alldefs[oldpos]
 
@@ -730,7 +761,7 @@ class DeckBuilder():
             femnoun = self.get_feminine_noun(word)
             if femnoun:
                 femdefs = []
-                if femnoun in self._words.all_words:
+                if self._words.has_word(femnoun, "noun"):
                     femdefs = self.get_pos_usage(femnoun, "noun")
 
                 if len(femdefs) and 'f' in femdefs:
@@ -757,8 +788,8 @@ class DeckBuilder():
         if get_all_pos:
 
             all_pos = []
-            forms = self._words.all_forms.get(word, [])
-            for pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+            poslemmas = self.all_forms.get(word, [])
+            for pos, lemma  in [x.split("|") for x in sorted(poslemmas)]:
                 if pos not in all_pos:
                     all_pos.append(pos)
 
@@ -775,8 +806,8 @@ class DeckBuilder():
     def get_lemmas(self, word, pos):
 
         lemmas = []
-        forms = self._words.all_forms.get(word, [])
-        for form_pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+        poslemmas = self.all_forms.get(word, [])
+        for form_pos, lemma  in [x.split("|") for x in sorted(poslemmas)]:
             if form_pos != pos:
                 continue
             if lemma not in lemmas:
@@ -811,7 +842,7 @@ class DeckBuilder():
         for wordtag in self.allwords:
             word, pos = split_tag(wordtag)
 
-            for word_obj in self._words.all_words.get(word,{}).get(pos, []):
+            for word_obj in self._words.get_words(word, pos):
                 for sense in word_obj.senses:
                     self.add_synonyms(word, pos, sense.synonyms)
                     for syn in sense.synonyms:
@@ -1310,16 +1341,6 @@ class DeckBuilder():
 
         return shortdefs
 
-
-    @classmethod
-    def load_dictionary(cls, filename):
-        with open(filename) as infile:
-            return cls.load_dictionary_data(infile)
-
-    @staticmethod
-    def load_dictionary_data(data):
-        return Wordlist(data)
-
     @classmethod
     def load_ignore(cls, filename):
         if not filename:
@@ -1442,6 +1463,8 @@ def main():
         print(f"Model JSON does not exist: {args.deckinfo}")
         exit(1)
 
+    allforms_data = open(args.allforms) if args.allforms else None
+
     dictionary = DeckBuilder.load_dictionary(args.dictionary)
     ignore = DeckBuilder.load_ignore(args.dictionary_custom)
 
@@ -1450,9 +1473,12 @@ def main():
     )
     shortdefs = DeckBuilder.load_shortdefs(args.short_defs)
 
-    deck = DeckBuilder(dictionary, ignore, sentences, shortdefs)
+    deck = DeckBuilder(dictionary, ignore, allforms_data, sentences, shortdefs)
     deck.load_wordlists(args.wordlist)
     deck.compile(args.deckinfo, args.deckname, args.mediadir, args.limit, args.anki)
+
+    if args.allforms:
+        allforms_data.close()
 
     if args.dump_sentence_ids:
         deck.dump_sentences(args.dump_sentence_ids)

@@ -18,31 +18,32 @@ def word_is_feminine(wordlist, word, pos):
 
 def word_is_feminine_form(wordlist, form, lemma, pos):
     """ Check if a given form is a feminine form of lemma """
-    word_obj = wordlist.get_words(lemma, pos)[0]
-    if not word_obj:
-        return False
+    for word_obj in wordlist.get_words(lemma, pos):
 
-    #if word_obj.form not in ["m", "mp"] or "masculine" in word.form:
-    if word_obj.pos not in ["m", "mp"]:
-        return False
+        #if word_obj.form not in ["m", "mp"] or "masculine" in word.form:
+        if word_obj.pos not in ["m", "mp"]:
+            return False
 
-    for formtype, forms in word_obj.forms.items():
-        #if (formtype in ["f", "fpl"] or "feminine" in formtype) and form in forms:
-        if formtype in ["f", "fpl"] and form in forms:
-            return True
+        for formtype, forms in word_obj.forms.items():
+            #if (formtype in ["f", "fpl"] or "feminine" in formtype) and form in forms:
+            if formtype in ["f", "fpl"] and form in forms:
+                return True
+
+        # Only check the first word
+        return False
     return False
 
 def form_in_lemma(wordlist, form, lemma, pos):
     if form == lemma:
         return True
 
-    word = wordlist.get_words(lemma, pos)[0]
-    if not word:
+    for word in wordlist.get_words(lemma, pos):
+        for formtype, forms in word.forms.items():
+            if form in forms:
+                return True
+        # Only check the first word
         return False
-
-    for formtype, forms in word.forms.items():
-        if form in forms:
-            return True
+    return False
 
 def get_best_lemmas(wordlist, word, lemmas, pos):
     """

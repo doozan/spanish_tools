@@ -37,7 +37,7 @@ class FrequencyList():
         if allforms_data is None:
             self.all_forms = AllForms.from_wordlist(self.wordlist).all_forms
         else:
-            self.all_forms = AllForms.from_csv(allforms_data).all_forms
+            self.all_forms = AllForms.from_data(allforms_data).all_forms
 
     def load_ignore(self, ignore_data):
         self.ignore = {line.strip() for line in ignore_data if line.strip() and not line.strip().startswith("#")}
