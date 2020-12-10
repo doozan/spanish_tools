@@ -26,7 +26,7 @@ def get_verb_forms(word):
     return set( k for forms in words.verb.conjugate(word).values() for k in forms if k is not None )
 
 def get_word_forms(word, pos):
-    pos = words.common_pos(pos)
+    pos = words.pos(pos)
     if pos == "verb":
         return get_verb_forms(word)
 

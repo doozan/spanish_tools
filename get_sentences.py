@@ -67,7 +67,7 @@ def get_sentences(spanish, pos, count, all_usage):
         )
         usage = words.lookup(spanish, pos)
         all_usage_pos = (
-            {words.common_pos(k): 1 for k in usage}.keys() if usage else [pos]
+            {words.pos(k): 1 for k in usage}.keys() if usage else [pos]
         )
         lookups = [[spanish, pos] for pos in all_usage_pos]
 

@@ -506,12 +506,12 @@ class DeckBuilder():
         }
 
         for word_obj in self._words.get_words(word, common_pos):
-            print("word", word_obj.word, word_obj.common_pos, word_obj.pos)
+            print("word", word_obj.word, word_obj.pos, word_obj.form)
 
             for sense in word_obj.senses:
-                pos = word_obj.common_pos
+                pos = word_obj.pos
                 if pos == "noun":
-                    pos = word_obj.pos
+                    pos = word_obj.form
 
                 tag = sense.qualifier
                 if tag is None:
@@ -528,7 +528,7 @@ class DeckBuilder():
                     pos = "v" + "".join(verb_type)
                     tag = "; ".join(keep_tags)
 
-                print("pos", pos, word_obj.common_pos, word_obj.pos)
+                print("pos", pos, word_obj.pos, word_obj.form)
 
                 if pos not in defs:
                     defs[pos] = {}
