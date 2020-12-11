@@ -109,7 +109,7 @@ class FrequencyList():
             return [word]
 
         # remove verb-se if verb is already in lemmas
-        if pos == "verb":
+        if pos == "v":
             lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
 
         # resolve lemmas that are "form of" other lemmas
@@ -176,7 +176,7 @@ class FrequencyList():
                 for i, (form, pos, count) in enumerate(pos_rank):
                     if count != top_count:
                         break
-                    if pos != "verb":
+                    if pos != "v":
                         count += 1
                     pos_rank[i] = (form, pos, count)
 
@@ -191,9 +191,9 @@ class FrequencyList():
                     break
                 if pos == "adj":
                     count += 3
-                elif pos == "noun":
+                elif pos == "n":
                     count += 2
-                elif pos != "verb":
+                elif pos != "v":
                     count += 1
 
                 pos_rank[i] = (form, pos, count)
@@ -272,7 +272,7 @@ class FrequencyList():
                 flags.append("FUZZY")
 
         # remove reflexive verbs if the non-reflexive verb is already on the list
-        if word.endswith("rse") and pos == "verb" and (word[:-2],"verb") in self.all_lemmas:
+        if word.endswith("rse") and pos == "v" and (word[:-2],"v") in self.all_lemmas:
             flags.append("DUPLICATE-REFLEXIVE")
 
         return flags
@@ -287,7 +287,7 @@ class FrequencyList():
 
             flags = self.get_word_flags(word, pos)
             # flag the most common "filler" words (pronouns, articles, etc)
-            if count < 200 and pos not in ["adj", "adv", "noun", "verb"]:
+            if count < 200 and pos not in ["adj", "adv", "n", "v"]:
                 flags.append("COMMON")
 
             # Check for repeat usage

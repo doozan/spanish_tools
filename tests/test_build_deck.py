@@ -19,13 +19,13 @@ def test_format_def():
     format_def = DeckBuilder.format_def
 
     item = { "m": { "tag": [ "def1", "def2" ] } }
-    assert format_def(item) == """<span class="pos noun m"> <span class="tag">[tag]:</span><span class="usage">def1; def2</span></span>"""
+    assert format_def(item) == """<span class="pos n m"> <span class="tag">[tag]:</span><span class="usage">def1; def2</span></span>"""
 
     item = { "m": { "Peru": [ "def1", "def2" ] } }
-    assert format_def(item) == """<span class="pos noun m only-latin-america only-peru only-south-america peru"> <span class="tag">[Peru]:</span><span class="usage">def1; def2</span></span>"""
+    assert format_def(item) == """<span class="pos n m only-latin-america only-peru only-south-america peru"> <span class="tag">[Peru]:</span><span class="usage">def1; def2</span></span>"""
 
     item = { "m": { "South America": [ "def1", "def2" ] } }
-    assert format_def(item) == """<span class="pos noun m only-latin-america only-south-america south-america"> <span class="tag">[South America]:</span><span class="usage">def1; def2</span></span>"""
+    assert format_def(item) == """<span class="pos n m only-latin-america only-south-america south-america"> <span class="tag">[South America]:</span><span class="usage">def1; def2</span></span>"""
 
 def test_filters():
     ignore_data = """\
@@ -36,13 +36,13 @@ def test_filters():
 """
 
     wordlist_data = """\
-abuela {noun-meta} :: x
-abuela {noun-forms} :: m=abuelo; mpl=abuelos; pl=abuelas
+abuela {n-meta} :: x
+abuela {n-forms} :: m=abuelo; mpl=abuelos; pl=abuelas
 abuela {f} :: grandmother, female equivalent of "abuelo"
 abuela {f} [colloquial] :: old woman
 abuela {f} [Mexico] :: a kind of flying ant
-abuelo {noun-meta} :: x
-abuelo {noun-forms} :: f=abuela; fpl=abuelas; pl=abuelos
+abuelo {n-meta} :: x
+abuelo {n-forms} :: f=abuela; fpl=abuelas; pl=abuelos
 abuelo {m} :: grandfather
 abuelo {m} [colloquial, endearing] :: an elderly person
 abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed up
@@ -57,7 +57,7 @@ abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed
     assert deck.filter_gloss("abuela", "", "", "grandmother") == "grandmother"
     assert deck.filter_gloss("abuela", "", "", 'grandmother, female equivalent of "abuelo"') == "grandmother"
 
-    usage = deck.get_usage("abuelo", "noun")
+    usage = deck.get_usage("abuelo", "n")
     assert usage == {
         'm/f':
         {'f': ['grandmother'],
@@ -78,7 +78,7 @@ abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed
     assert deck.filter_gloss("abuelo", "m", "", "loose tufts of hair") == None
     assert deck.filter_gloss("abuelo", "m", "", "grandfather") == "grandfather"
 
-    usage = deck.get_usage("abuelo", "noun")
+    usage = deck.get_usage("abuelo", "n")
     assert usage == {
         'm/f':
         {
@@ -93,11 +93,11 @@ def test_filters2():
 """
 
     wordlist_data = """\
-test {noun-meta} :: x
-test {noun-forms} :: pl=tests
+test {n-meta} :: x
+test {n-forms} :: pl=tests
 test {m} :: masculine
-test {noun-meta} :: x
-test {noun-forms} :: pl=tests
+test {n-meta} :: x
+test {n-forms} :: pl=tests
 test {f} :: feminine
 """
 
@@ -105,13 +105,13 @@ test {f} :: feminine
 _____
 test
   forms: pl=tests
-  pos: noun
+  pos: n
   form: m
   gloss: masculine
 ____
 test
   forms: pl=tests
-  pos: noun
+  pos: n
   form: f
   gloss: feminine
 """
@@ -126,7 +126,7 @@ test
     # Full definition without ignore list
     deck = DeckBuilder(wordlist_data.splitlines(), sentences)
 
-    usage = deck.get_usage("test", "noun")
+    usage = deck.get_usage("test", "n")
     assert usage == {
         'm-f':
         {'f': ['feminine'],
@@ -138,7 +138,7 @@ test
     ignore = DeckBuilder.load_ignore_data(ignore_data.splitlines())
     deck = DeckBuilder(wordlist_data.splitlines(), sentences, ignore=ignore)
 
-    usage = deck.get_usage("test", "noun")
+    usage = deck.get_usage("test", "n")
     assert usage == {
         'm':
         {
@@ -200,7 +200,7 @@ def test_shorten_defs():
 def test_format_def():
 
     wordlist_data = """\
-rendir {verb-meta} :: {{es-verb|rend|ir|pres=rindo}} {{es-conj-ir|r|nd|p=e-i|combined=1}}
+rendir {v-meta} :: {{es-verb|rend|ir|pres=rindo}} {{es-conj-ir|r|nd|p=e-i|combined=1}}
 rendir {vt} :: to conquer
 rendir {vt} :: to tire, exhaust
 rendir {v} [ditransitive] :: to yield, pay, submit, pass down
@@ -219,7 +219,7 @@ rendir {vr} :: to be paid (homage or tribute)
     # Full definition without ignore list
     deck = DeckBuilder(wordlist_data.splitlines(), sentences)
 
-    usage = deck.get_usage("rendir", "verb")
+    usage = deck.get_usage("rendir", "v")
     print(usage)
     assert usage == {
           'v': {'ditransitive': ['to yield, pay, submit, pass down']},

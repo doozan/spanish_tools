@@ -27,7 +27,7 @@ def get_verb_forms(word):
 
 def get_word_forms(word, pos):
     pos = words.pos(pos)
-    if pos == "verb":
+    if pos == "v":
         return get_verb_forms(word)
 
     if word in words.wordlist.wordforms:

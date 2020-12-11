@@ -50,7 +50,7 @@ def get_best_lemmas(wordlist, word, lemmas, pos):
 
 
     # remove verb-se if verb is already in lemmas
-    if pos == "verb":
+    if pos == "v":
         lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
 
     # resolve lemmas that are "form of" other lemmas
@@ -62,7 +62,7 @@ def get_best_lemmas(wordlist, word, lemmas, pos):
     lemmas = sorted(list(good_lemmas))
 
     # Hardcoded fixes for some verb pairs
-    if pos == "verb":
+    if pos == "v":
         if "creer" in lemmas and "crear" in lemmas:
             lemmas.remove("crear")
         if "salir" in lemmas and "salgar" in lemmas:
@@ -82,7 +82,7 @@ def get_best_lemmas(wordlist, word, lemmas, pos):
     # If word is a feminine noun that could be a lemma, remove
     # any lemmas where it's just the feminine form of the masculine
     # (hamburguesa)
-    if pos == "noun":
+    if pos == "n":
         if any(word_is_feminine(wordlist, lemma, pos) for lemma in lemmas):
             lemmas = [lemma for lemma in lemmas if not word_is_feminine_form(wordlist, word, lemma, pos)]
             if len(lemmas) == 1:

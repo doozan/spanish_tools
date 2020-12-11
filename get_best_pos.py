@@ -34,7 +34,7 @@ def get_all_pos(word, spanish):
     # cycle through all possible lemmas because words like "casas" won't
     # show up in the dictionary, but the lemma "casa" does
     all_pos = []
-    for pos in ["", "adj", "noun", "verb"]:
+    for pos in ["", "adj", "n", "v"]:
         lemma = spanish.get_lemma(word, pos).split("|")[0]
         all_pos += spanish.wordlist.get_all_pos(lemma)
 

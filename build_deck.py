@@ -399,7 +399,7 @@ class DeckBuilder():
             # Don't prefix the def with the part of speech if there's only one pos
             # for this entry (unless it's a verb with type of usage specified)
             if not prev_display_pos and len(item) == 1:
-                prev_display_pos = "{v}" if common_pos == "verb" else f"{{{pos}}}"
+                prev_display_pos = "{v}" if common_pos == "v" else f"{{{pos}}}"
 
             for tag, usage in tags.items():
                 if len(results):
@@ -413,7 +413,7 @@ class DeckBuilder():
                 display_tag = tag
 
                 # Only m/f and m-f nouns will have special pos in the tags
-                if common_pos == "noun" and pos in ["m-f", "m/f"]:
+                if common_pos == "n" and pos in ["m-f", "m/f"]:
                     tag_pos, sep, other_tags = tag.partition(",")
                     if tag_pos in ["m", "f", "mf"]:
                         display_tag = other_tags.strip()
@@ -423,7 +423,7 @@ class DeckBuilder():
                     classes.append(tag_pos)
                     display_pos = f"{{{tag_pos}}}"
 
-                elif common_pos == "verb" and ("r" in pos or "p" in pos):
+                elif common_pos == "v" and ("r" in pos or "p" in pos):
                     classes.append("reflexive")
 
                 if prev_display_pos == display_pos:
@@ -486,7 +486,7 @@ class DeckBuilder():
 
 
     def get_feminine_noun(self, word):
-        for word_obj in self._words.get_words(word, "noun"):
+        for word_obj in self._words.get_words(word, "n"):
             if "f" in word_obj.forms:
                 return word_obj.forms["f"][0]
 
@@ -510,13 +510,13 @@ class DeckBuilder():
 
             for sense in word_obj.senses:
                 pos = word_obj.pos
-                if pos == "noun":
+                if pos == "n":
                     pos = word_obj.form
 
                 tag = sense.qualifier
                 if tag is None:
                     tag = ""
-                elif pos == "verb":
+                elif pos == "v":
                     keep_tags = []
                     tags = tag.split("; ")
                     verb_type = []
@@ -761,8 +761,8 @@ class DeckBuilder():
             femnoun = self.get_feminine_noun(word)
             if femnoun:
                 femdefs = []
-                if self._words.has_word(femnoun, "noun"):
-                    femdefs = self.get_pos_usage(femnoun, "noun")
+                if self._words.has_word(femnoun, "n"):
+                    femdefs = self.get_pos_usage(femnoun, "n")
 
                 if len(femdefs) and 'f' in femdefs:
                     alldefs['f'] = femdefs['f']
@@ -794,7 +794,7 @@ class DeckBuilder():
                     all_pos.append(pos)
 
             for common_pos in all_pos:
-                if common_pos not in [primary_pos, "verb"]:
+                if common_pos not in [primary_pos, "v"]:
                     lemmas = self.get_lemmas(word, common_pos)
                     defs.update(self.get_pos_usage(lemmas[0], common_pos))
 
@@ -816,7 +816,7 @@ class DeckBuilder():
             return [word]
 
         # remove verb-se if verb is already in lemmas
-        if pos == "verb":
+        if pos == "v":
             lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
 
         # resolve lemmas that are "form of" other lemmas
@@ -1010,7 +1010,7 @@ class DeckBuilder():
         usage = self.get_usage(spanish, pos)
         if not usage:
             raise ValueError("No english", spanish, pos)
-        if pos == "noun":
+        if pos == "n":
             noun_type = next(iter(usage))
 
         deck_syns = self.get_synonyms(spanish, pos, self.MAX_SYNONYMS, only_in_deck=True)
@@ -1047,7 +1047,7 @@ class DeckBuilder():
         if short_english == english:
             short_english = ""
 
-        femnoun = self.get_feminine_noun(spanish) if pos == "noun" else None
+        femnoun = self.get_feminine_noun(spanish) if pos == "n" else None
         tts_data = self.get_phrase(spanish, pos, noun_type, femnoun)
 
         sound = spanish_speech.get_speech(tts_data["voice"], tts_data["phrase"], mediadir)
@@ -1063,7 +1063,7 @@ class DeckBuilder():
 
         item = {
             "Spanish": spanish,
-            "Part of Speech": noun_type if pos == "noun" else pos,
+            "Part of Speech": noun_type if pos == "n" else pos,
             "Synonyms": self.format_syns(deck_syns, extra_syns),
             "ShortDef": short_english,
             "Definition": english,
@@ -1073,7 +1073,7 @@ class DeckBuilder():
             "guid": genanki.guid_for(item_tag, "Jeff's Spanish Deck"),
         }
 
-        tags = [noun_type if pos == "noun" else pos]
+        tags = [noun_type if pos == "n" else pos]
         #    if "tags" in row and row['tags'] != "":
         #        for tag in row['tags'].split(" "):
         #            tags.append(tag)
