@@ -13,13 +13,18 @@ def word_is_lemma(wordlist, word, pos):
 
 def word_is_feminine(wordlist, word, pos):
     for word in wordlist.get_words(word, pos):
-        return word.form in ["f", "fp"] or "feminine" in word.form
+        if not word.genders:
+            return False
+        return word.genders in ["f", "fp"] or "feminine" in word.genders
 
 def word_is_feminine_form(wordlist, form, lemma, pos):
     """ Check if a given form is a feminine form of lemma """
     for word_obj in wordlist.get_words(lemma, pos):
 
-        if word_obj.form not in ["m", "mp"] or "masculine" in word_obj.form:
+        if not word_obj.genders:
+            return False
+
+        if word_obj.genders not in ["m", "mp"] or "masculine" in word_obj.genders:
             return False
 
         for formtype, forms in word_obj.forms.items():

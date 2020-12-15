@@ -36,13 +36,11 @@ def test_filters():
 """
 
     wordlist_data = """\
-abuela {n-meta} :: x
-abuela {n-forms} :: m=abuelo; mpl=abuelos; pl=abuelas
+abuela {n-meta} :: {{es-noun|m=abuelo}}
 abuela {f} :: grandmother, female equivalent of "abuelo"
 abuela {f} [colloquial] :: old woman
 abuela {f} [Mexico] :: a kind of flying ant
-abuelo {n-meta} :: x
-abuelo {n-forms} :: f=abuela; fpl=abuelas; pl=abuelos
+abuelo {n-meta} :: {{es-noun|f=abuela}}
 abuelo {m} :: grandfather
 abuelo {m} [colloquial, endearing] :: an elderly person
 abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed up
@@ -200,14 +198,24 @@ def test_shorten_defs():
 def test_format_def():
 
     wordlist_data = """\
-rendir {v-meta} :: {{es-verb|rend|ir|pres=rindo}} {{es-conj-ir|r|nd|p=e-i|combined=1}}
-rendir {vt} :: to conquer
-rendir {vt} :: to tire, exhaust
-rendir {v} [ditransitive] :: to yield, pay, submit, pass down
-rendir {vi} :: to vomit
-rendir {vi} :: to make headway
-rendir {vr} :: to surrender, give in, give up
-rendir {vr} :: to be paid (homage or tribute)
+_____
+rendir
+pos: v
+  meta: {{es-verb|rend|ir|pres=rindo}} {{es-conj-ir|r|nd|p=e-i|combined=1}}
+  gloss: to conquer
+    q: transitive
+  gloss: to tire, exhaust
+    q: transitive
+  gloss: to yield, pay, submit, pass down
+    q: ditransitive
+  gloss: to vomit
+    q: intransitive
+  gloss: to make headway
+    q: intransitive
+  gloss: to surrender, give in, give up
+    q: reflexive
+  gloss: to be paid (homage or tribute)
+    q: reflexive
 """
 
     #dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines(), mbformat=True)

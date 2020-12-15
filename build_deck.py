@@ -495,6 +495,23 @@ class DeckBuilder():
 
         return None
 
+    def get_noun_type(self, word_obj):
+        if not word_obj.genders:
+            return "n"
+
+        noun_type = re.sub("-p", "p", word_obj.genders)
+        if noun_type == "mfbysense":
+            noun_type = "mf"
+        elif noun_type == "m; f":
+            noun_type = "mf"
+        elif noun_type == "mfbysensep":
+            noun_type = "mfp"
+        elif noun_type not in ["m", "f", "mf", "mp", "fp", "mfp"]:
+            raise ValueError("Unexpected noun type", noun_type)
+
+        return noun_type
+
+
     def get_pos_usage(self, word, common_pos):
         defs = {}
         verb_types = {
@@ -502,23 +519,24 @@ class DeckBuilder():
             "reflexive": "r",
             "intransitive": "i",
             "pronominal": "p",
+            "takes a reflexive pronoun]": "p",
             "ambitransitive": "x",
         }
 
         for word_obj in self._words.get_words(word, common_pos):
-            print("word", word_obj.word, word_obj.pos, word_obj.form)
+#            print("word", word_obj.word, word_obj.pos, word_obj.genders)
 
             for sense in word_obj.senses:
                 pos = word_obj.pos
                 if pos == "n":
-                    pos = word_obj.form
+                    pos = self.get_noun_type(word_obj)
 
                 tag = sense.qualifier
                 if tag is None:
                     tag = ""
                 elif pos == "v":
                     keep_tags = []
-                    tags = tag.split("; ")
+                    tags = tag.split(", ")
                     verb_type = []
                     for tag in tags:
                         if tag in verb_types:
@@ -526,9 +544,9 @@ class DeckBuilder():
                         else:
                             keep_tags.append(tag)
                     pos = "v" + "".join(verb_type)
-                    tag = "; ".join(keep_tags)
+                    tag = ", ".join(keep_tags)
 
-                print("pos", pos, word_obj.pos, word_obj.form)
+                #print("pos", pos, word_obj.pos, word_obj.form)
 
                 if pos not in defs:
                     defs[pos] = {}
@@ -1403,6 +1421,7 @@ def main():
         help="Read model/deck info from JSON file (default: DECKNAME.json)",
     )
     parser.add_argument("--anki", help="Read/write data from specified anki profile")
+    parser.add_argument( "--allforms", help="Load word forms from file")
     parser.add_argument(
         "--dictionary", help="Dictionary file name (DEFAULT: es-en.txt)",
         default="es-en.txt"
@@ -1464,8 +1483,8 @@ def main():
         exit(1)
 
     allforms_data = open(args.allforms) if args.allforms else None
+    dictionary_data = open(args.dictionary)
 
-    dictionary = DeckBuilder.load_dictionary(args.dictionary)
     ignore = DeckBuilder.load_ignore(args.dictionary_custom)
 
     sentences = spanish_sentences.sentences(
@@ -1473,9 +1492,11 @@ def main():
     )
     shortdefs = DeckBuilder.load_shortdefs(args.short_defs)
 
-    deck = DeckBuilder(dictionary, ignore, allforms_data, sentences, shortdefs)
+    deck = DeckBuilder(dictionary_data, sentences, ignore, allforms_data, shortdefs)
     deck.load_wordlists(args.wordlist)
     deck.compile(args.deckinfo, args.deckname, args.mediadir, args.limit, args.anki)
+
+    dictionary_data.close()
 
     if args.allforms:
         allforms_data.close()

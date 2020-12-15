@@ -14,50 +14,50 @@ protector
 pos: n
   meta: {{es-noun|m|protectores|f=protectora|f2=protectriz}}
   forms: f=protectora; f=protectriz; fpl=protectoras; fpl=protectrices; pl=protectores
-  form: m
+  g: m
   gloss: protector (someone who protects or guards)
 pos: n
   meta: {{es-noun|m}}
   forms: pl=protectores
-  form: m
+  g: m
   gloss: protector (a device or mechanism which is designed to protect)
 _____
 protectora
 pos: n
   meta: {{es-noun|f|m=protector}}
   forms: m=protector; mpl=protectores; pl=protectoras
-  form: f
+  g: f
   gloss: female equivalent of "protector"
 pos: n
   meta: {{es-noun|f}}
   forms: pl=protectoras
-  form: f
+  g: f
   gloss: animal shelter (an organization that provides temporary homes for stray pet animals)
     syn: protectora de animales
 _____
 protectoras
 pos: n
   meta: {{head|es|noun plural form|g=f-p}}
-  form: f-p
+  g: f-p
   gloss: inflection of "protector"
 _____
 protectores
 pos: n
   meta: {{head|es|noun plural form|g=m-p}}
-  form: m-p
+  g: m-p
   gloss: inflection of "protector"
 _____
 protectrices
 pos: n
   meta: {{head|es|noun plural form|g=f-p}}
-  form: f-p
+  g: f-p
   gloss: inflection of "protector"
 _____
 protectriz
 pos: n
   meta: {{es-noun|f|m=protector}}
   forms: m=protector; mpl=protectores; pl=protectrices
-  form: f
+  g: f
   gloss: alternative form of "protectora"
     q: uncommon
 """
@@ -85,24 +85,21 @@ unknown 10
 
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-60,protector,n,CLEAR,10:protector|10:protectores|10:protectriz|10:protectrices|10:protectora|10:protectoras
+60,protector,n,LITERAL; CLEAR,10:protector|10:protectores|10:protectriz|10:protectrices|10:protectora|10:protectoras
 10,unknown,none,NOUSAGE; NODEF; NOSENT; COMMON,10:unknown\
 """
 
 
-def test_xsimple2():
+def test_simple2():
 
     wordlist_data = """\
-rojo {adj-meta} :: x
-rojo {adj-forms} :: f=roja; fpl=rojas; pl=rojos
+rojo {adj-meta} :: {{es-adj|f=roja}}
 rojo {adj} :: red (colour)
-rojo {n-meta} :: x
-rojo {n-forms} :: pl=rojos
+rojo {n-meta} :: {{es-noun|m}}
 rojo {m} :: red (colour)
 rojo {m} [Costa Rica] :: a 1000 colón bill
 rojo {m} [Spain, derogatory] :: a left-wing, especially communist
-roja {n-meta} :: x
-roja {n-forms} :: m=rojo; mpl=rojos; pl=rojas
+roja {n-meta} :: {{es-noun|f|m=rojo}}
 roja {f} :: Red (Communist)
 """
 
@@ -127,14 +124,12 @@ test {adj} :: obsolete form of "test"
 def test_lemma_filters():
 
     wordlist_data = """\
-ir {v-meta} :: x
-ir {v-forms} :: 1=irse; 1=ir; 10=va; 11=vamos
+ir {v-meta} :: {{es-verb|-|ir|pres=voy|pret=fui|part=ido}} {{es-conj-ir|p=ir|combined=1|aux=ser}} {{es-conj-ir|p=ir|ref=yes|combined=1}}
 ir {vi} :: to go (away from speaker and listener)
 ir {vi} :: to come (towards or with the listener)
 ir {v} [auxiliary] :: to be going to (near future), to go (+ a + infinitive)
 ir {vr} :: to go away, to leave, to be off (see irse)
-irse {v-meta} :: x
-irse {v-forms} :: 1=irse; 10=va; 11=vamos
+irse {v-meta} :: {{es-verb|-|ir|pres=voy|pret=fui|part=ido|ref=y}} {{es-conj-ir|p=ir|ref=1|combined=1}}
 irse {v} | andarse; marcharse :: to go away, to leave, to depart, to go (when the destination is not essential; when something or someone is going somewhere else)
 irse {v} :: to leak out (with liquids and gasses), to boil away, to go flat (gas in drinks)
 """
@@ -165,14 +160,11 @@ count,spanish,pos,flags,usage
 def test_diva():
 
     wordlist_data = """\
-diva {n-meta} :: x
-diva {n-forms} :: m=divo; mpl=divos; pl=divas
+diva {n-meta} :: {{es-noun|f|m=divo}}
 diva {f} :: diva
-divo {adj-meta} :: x
-divo {adj-forms} :: f=diva; fpl=divas; pl=divos
+divo {adj-meta} :: {{es-adj|f=diva}}
 divo {adj} :: star (famous)
-divo {n-meta} :: x
-divo {n-forms} :: f=diva; fpl=divas; pl=divos
+divo {n-meta} :: {{es-noun|m|f=diva}}
 divo {m} :: star, celeb\
 """
 
@@ -247,10 +239,9 @@ count,spanish,pos,flags,usage
 def test_bienes():
 
     wordlist_data = """\
-bien {n-meta} :: x
-bien {n-forms} :: pl=bienes
+bien {n-meta} :: {{es-noun|m|bienes}}
 bien {m} :: good (as opposed to evil)
-bienes {n-meta} :: x
+bienes {n-meta} :: {{es-noun|m-p}}
 bienes {mp} :: goods (that which is produced, traded, bought or sold)
 """
 
@@ -271,11 +262,9 @@ count,spanish,pos,flags,usage
 def test_rasguno():
 
     wordlist_data = """\
-rasguñar {v-meta} :: x
-rasguñar {v-forms} :: 7=rasguño
+rasguñar {v-meta} :: {{es-verb|rasguñ|ar}} {{es-conj-ar|rasguñ|combined=1}}
 rasguñar {vt} | arañar; rascar :: to scratch
-rasguño {n-meta} :: x
-rasguño {n-forms} :: pl=rasguños
+rasguño {n-meta} :: {{es-noun}}
 rasguño {m} | arañazo :: scratch
 """
 
@@ -371,17 +360,13 @@ count,spanish,pos,flags,usage
 def test_vete():
 
     wordlist_data = """\
-ir {v-meta} :: x
-ir {v-forms} :: imp_i2s_acc_2=vete; imp_i2s_dat_2=vete
+ir {v-meta} :: {{es-verb|-|ir|pres=voy|pret=fui|part=ido}} {{es-conj-ir|p=ir|combined=1|aux=ser}} {{es-conj-ir|p=ir|ref=yes|combined=1}}
 ir {v} :: x
-ver {v-meta} :: x
-ver {v-forms} :: imp_i2s_acc_2=vete; imp_i2s_dat_2=vete
+ver {v-meta} :: {{es-verb|v|er|pres=veo|pret=vi|part=visto}} {{es-conj-er|p=ver|combined=1}}
 ver {v} :: x
-verse {v-meta} :: x
-verse {v-forms} ::  63=vete; imp_i2s_acc_2=vete; imp_i2s_dat_2=vete
+verse {v-meta} :: {{es-verb|v|er|pres=veo|pret=vi|part=visto|ref=y}} {{es-conj-er|p=ver|ref=1|combined=1}}
 verse {v} :: x
-vetar {v-meta} :: x
-vetar {v-forms} ::  38=vete; 41=vete; 65=vete; 70=vete
+vetar {v-meta} :: {{es-verb|vet|ar}} {{es-conj-ar|vet|combined=1}}
 vetar {v} :: x
 """
 
@@ -394,11 +379,9 @@ vetar {v} :: x
 def test_veros():
 
     wordlist_data = """\
-ver {v-meta} :: x
-ver {v-forms} :: inf_acc_5=veros; inf_dat_5=veros
+ver {v-meta} :: {{es-verb|v|er|pres=veo|pret=vi|part=visto}} {{es-conj-er|p=ver|combined=1}}
 ver {v} :: x
 vero {n-meta} :: {{es-noun|m}}
-vero {n-forms} :: pl=veros
 vero {m} [heraldry] :: vair
 """
 
