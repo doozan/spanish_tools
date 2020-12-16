@@ -24,7 +24,7 @@ parser.add_argument(
 )
 parser.add_argument("--tags", nargs=1, help="Merged tagged data with original data")
 parser.add_argument("--dictionary", help="Dictionary file", required=True)
-parser.add_argument( "--allforms", help="Load word forms from file")
+parser.add_argument("--allforms", help="Load word forms from file")
 parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
 args = parser.parse_args()
 
@@ -43,8 +43,6 @@ if args.allforms:
         all_forms = AllForms.from_data(allforms_data).all_forms
 else:
     all_forms = AllForms.from_wordlist(wordlist).all_forms
-
-mismatch = {}
 
 def tag_to_pos(tag, word):
 
@@ -154,10 +152,9 @@ def get_lemmas(wordlist, word, pos):
     return "|".join(lemmas)
 
 
-def load_sentences():
-    sentences = {}
+def iter_sentences():
 
-    seen = {}
+    seen = set()
     with open(args.sentences) as infile:
         for line in infile:
 
@@ -176,32 +173,26 @@ def load_sentences():
             if spanish in seen:
                 continue
             else:
-                seen[english] = 1
-                seen[spanish] = 1
+                seen.add(spanish)
 
             sid = re.search("& #([0-9]+)", credits).group(1)
-            sentences[sid] = sdata
-
-    return sentences
+            yield [sid] + sdata
 
 
 def print_untagged_sentences():
-    sentences = load_sentences()
 
     first = True
-    for sid, sdata in sentences.items():
+    for sid, english, spanish, credits, english_score, spanish_score in iter_sentences():
         if not first:
             print("")
-        print(sdata[1])
+        print(spanish)
         first = False
 
-
 def print_credits():
-    sentences = load_sentences()
 
     users = {}
 
-    for english, spanish, credits, english_score, spanish_score in sentences.values():
+    for sid, english, spanish, credits, english_score, spanish_score in iter_sentences():
         res = re.match(
             r"CC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)",
             credits,
@@ -222,7 +213,6 @@ def print_credits():
             print(f"{user} ({len(sentences)}) #{', #'.join(sorted(sentences))}\n")
         else:
             print(f"{user} #{', #'.join(sorted(sentences))}")
-
 
 
 word_chars = string.ascii_lowercase + "áéíóúüñ"
@@ -263,15 +253,13 @@ def get_original_form(tag, sentence, offset):
 
 def print_tagged_data():
 
-    sentences = load_sentences()
-    idx2sent = list(sentences.keys())
+    isentences = iter_sentences()
 
     tagdata = {}
 
     with open(args.tags[0], "r", encoding="utf-8") as infile:
 
         seen = set()
-        index = 0
 
         items = ijson.kvitems(infile, "item")
 
@@ -279,9 +267,7 @@ def print_tagged_data():
             if k != "sentences":
                 continue
 
-            sdata = sentences[idx2sent[index]]
-            english, spanish, credits, english_score, spanish_score = sdata
-            index = index + 1
+            sid, english, spanish, credits, english_score, spanish_score = next(isentences)
 
             all_tags = []
             first = True
