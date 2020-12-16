@@ -35,9 +35,9 @@ class FrequencyList():
 
     def load_allforms(self, allforms_data):
         if allforms_data is None:
-            self.all_forms = AllForms.from_wordlist(self.wordlist).all_forms
+            self.all_forms = AllForms.from_wordlist(self.wordlist)
         else:
-            self.all_forms = AllForms.from_data(allforms_data).all_forms
+            self.all_forms = AllForms.from_data(allforms_data)
 
     def load_ignore(self, ignore_data):
         self.ignore = {line.strip() for line in ignore_data if line.strip() and not line.strip().startswith("#")}
@@ -99,7 +99,7 @@ class FrequencyList():
     def get_lemmas(self, word, pos):
 
         lemmas = []
-        forms = self.all_forms.get(word, [])
+        forms = self.all_forms.get_lemmas(word)
         for form_pos,lemma in [x.split("|") for x in sorted(forms)]:
             if form_pos != pos:
                 continue
@@ -141,7 +141,7 @@ class FrequencyList():
         """
 
         all_pos = []
-        forms = self.all_forms.get(word, [])
+        forms = self.all_forms.get_lemmas(word)
         for pos,lemma in [x.split("|") for x in sorted(forms)]:
             if pos not in all_pos:
                 all_pos.append(pos)

@@ -8,6 +8,8 @@ import os
 import re
 import string
 
+import sys
+
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 
@@ -39,10 +41,9 @@ with open(args.dictionary) as infile:
     wordlist = Wordlist(infile, cache_words=cache_words)
 
 if args.allforms:
-    with open(args.allforms) as allforms_data:
-        all_forms = AllForms.from_data(allforms_data).all_forms
+    all_forms = AllForms.from_file(args.allforms)
 else:
-    all_forms = AllForms.from_wordlist(wordlist).all_forms
+    all_forms = AllForms.from_wordlist(wordlist)
 
 def tag_to_pos(tag, word):
 
@@ -137,7 +138,7 @@ def get_interjections(string):
 
 def get_lemmas(wordlist, word, pos):
     lemmas = []
-    forms = all_forms.get(word, [])
+    forms = all_forms.get_lemmas(word)
     for form_pos,lemma in [x.split("|") for x in sorted(forms)]:
         if form_pos != pos:
             continue
@@ -170,11 +171,11 @@ def iter_sentences():
 
             # ignore duplicates
             # if english in seen or spanish in seen:
-            unique_id = hash(spanish)
-            if unique_id in seen:
+            uniqueid = hash(spanish)
+            if uniqueid in seen:
                 continue
             else:
-                seen.add(unique_id)
+                seen.add(uniqueid)
 
             sid = re.search("& #([0-9]+)", credits).group(1)
             yield [sid] + sdata
@@ -258,6 +259,7 @@ def print_tagged_data():
 
     tagdata = {}
 
+    count = 0
     with open(args.tags[0], "r", encoding="utf-8") as infile:
 
         seen = set()
@@ -269,6 +271,9 @@ def print_tagged_data():
                 continue
 
             sid, english, spanish, credits, english_score, spanish_score = next(isentences)
+            count += 1
+            if count % 1000 == 0:
+                print(count, end="\r", file=sys.stderr)
 
             all_tags = []
             first = True
@@ -324,7 +329,6 @@ def print_tagged_data():
             )
 
             print(f"{english}\t{spanish}\t{credits}\t{english_score}\t{spanish_score}\t{tag_str}")
-
 
 if args.credits:
     print_credits()

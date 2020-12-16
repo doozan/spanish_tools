@@ -159,9 +159,9 @@ class DeckBuilder():
 
     def load_allforms(self, allforms_data):
         if allforms_data is None:
-            self.all_forms = AllForms.from_wordlist(self._words).all_forms
+            self.all_forms = AllForms.from_wordlist(self._words)
         else:
-            self.all_forms = AllForms.from_data(allforms_data).all_forms
+            self.all_forms = AllForms.from_data(allforms_data)
 
     def filter_gloss(self, word, pos, note, gloss):
         """ Returns True if the item matches an entry in the ignore list """
@@ -806,7 +806,7 @@ class DeckBuilder():
         if get_all_pos:
 
             all_pos = []
-            poslemmas = self.all_forms.get(word, [])
+            poslemmas = self.all_forms.get_lemmas(word)
             for pos, lemma  in [x.split("|") for x in sorted(poslemmas)]:
                 if pos not in all_pos:
                     all_pos.append(pos)
@@ -824,7 +824,7 @@ class DeckBuilder():
     def get_lemmas(self, word, pos):
 
         lemmas = []
-        poslemmas = self.all_forms.get(word, [])
+        poslemmas = self.all_forms.get_lemmas(word)
         for form_pos, lemma  in [x.split("|") for x in sorted(poslemmas)]:
             if form_pos != pos:
                 continue
