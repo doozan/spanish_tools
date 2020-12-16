@@ -170,10 +170,11 @@ def iter_sentences():
 
             # ignore duplicates
             # if english in seen or spanish in seen:
-            if spanish in seen:
+            unique_id = hash(spanish)
+            if unique_id in seen:
                 continue
             else:
-                seen.add(spanish)
+                seen.add(unique_id)
 
             sid = re.search("& #([0-9]+)", credits).group(1)
             yield [sid] + sdata
@@ -224,7 +225,7 @@ def get_original_form(tag, sentence, offset):
     """
     Verbs with pronoun suffixes are tokenized into to individual words by freeling
     This function yields the original, untokenized word
-    Offset is used to adjust the begin/end tags because they're given aspositions
+    Offset is used to adjust the begin/end tags because they're given as positions
     within the original source file, not within the sentence
     """
 
@@ -308,7 +309,7 @@ def print_tagged_data():
                         lemma = word
                     unique_tags.add(lemma)
 
-            uniqueid = ":".join(sorted(unique_tags))
+            uniqueid = hash(":".join(sorted(unique_tags)))
 
             if uniqueid in seen:
                 continue
