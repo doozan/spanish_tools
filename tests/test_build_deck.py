@@ -1,4 +1,6 @@
-from build_deck import DeckBuilder
+from enwiktionary_wordlist.wordlist import Wordlist
+from enwiktionary_wordlist.all_forms import AllForms
+from ..build_deck import DeckBuilder
 
 def test_get_location_classes():
     get_location_classes = DeckBuilder.get_location_classes
@@ -47,11 +49,13 @@ abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed
 """
 
 
-    #dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines(), mbformat=True)
+    wordlist = Wordlist(wordlist_data.splitlines())
     sentences = None
+    ignore = []
+    allforms = AllForms.from_wordlist(wordlist)
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist_data.splitlines(), sentences)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
     assert deck.filter_gloss("abuela", "", "", "grandmother") == "grandmother"
     assert deck.filter_gloss("abuela", "", "", 'grandmother, female equivalent of "abuelo"') == "grandmother"
 
@@ -68,7 +72,7 @@ abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed
 
     # With ignore list
     ignore = DeckBuilder.load_ignore_data(ignore_data.splitlines())
-    deck = DeckBuilder(wordlist_data.splitlines(), sentences, ignore=ignore)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
     assert deck.filter_gloss("abuela", "x", "", "grandmother") == "grandmother"
     assert deck.filter_gloss("abuela", "f", "", "grandmother") == None
@@ -115,14 +119,13 @@ test
 """
 
 
-    #dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines(), mbformat=True)
-    ignore = None
-    allforms_data = None
+    wordlist = Wordlist(wordlist_data.splitlines())
     sentences = None
-    shortdefs = {}
+    ignore = []
+    allforms = AllForms.from_wordlist(wordlist)
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist_data.splitlines(), sentences)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
     usage = deck.get_usage("test", "n")
     assert usage == {
@@ -134,7 +137,7 @@ test
 
     # With ignore list
     ignore = DeckBuilder.load_ignore_data(ignore_data.splitlines())
-    deck = DeckBuilder(wordlist_data.splitlines(), sentences, ignore=ignore)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
     usage = deck.get_usage("test", "n")
     assert usage == {
@@ -218,14 +221,13 @@ pos: v
     q: reflexive
 """
 
-    #dictionary = DeckBuilder.load_dictionary_data(dictionary_data.splitlines(), mbformat=True)
-    ignore = None
-    allforms_data = None
+    wordlist = Wordlist(wordlist_data.splitlines())
     sentences = None
-    shortdefs = {}
+    ignore = []
+    allforms = AllForms.from_wordlist(wordlist)
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist_data.splitlines(), sentences)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
     usage = deck.get_usage("rendir", "v")
     print(usage)

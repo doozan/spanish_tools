@@ -1,5 +1,5 @@
 #import spanish_sentences
-import get_best_pos
+from ..get_best_pos import get_best_pos
 
 
 def xtest_get_best_pos():

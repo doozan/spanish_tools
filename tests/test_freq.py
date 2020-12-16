@@ -1,10 +1,11 @@
 from enwiktionary_wordlist.wordlist import Wordlist
+from enwiktionary_wordlist.all_forms import AllForms
 import pytest
-import spanish_sentences
+from ..spanish_sentences import sentences as spanish_sentences
 
-from freq import FrequencyList
+from ..freq import FrequencyList
 
-sentences = spanish_sentences.sentences()
+sentences = spanish_sentences()
 
 def test_simple():
 
@@ -72,8 +73,9 @@ protectrices 10
 unknown 10
 """
 
-
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     assert freq.wordlist.has_lemma("protectora", "n") == False
 
@@ -103,7 +105,9 @@ roja {n-meta} :: {{es-noun|f|m=rojo}}
 roja {f} :: Red (Communist)
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     assert freq.get_ranked_pos("roja") == ["adj", "n"]
 
@@ -116,7 +120,9 @@ test {adj-meta} :: x
 test {adj} :: obsolete form of "test"
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     assert freq.filter_pos("test", ["n", "adj"]) == ["n"]
     assert freq.get_ranked_pos("test") == ["n"]
@@ -134,9 +140,11 @@ irse {v} | andarse; marcharse :: to go away, to leave, to depart, to go (when th
 irse {v} :: to leak out (with liquids and gasses), to boil away, to go flat (gas in drinks)
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
-    assert freq.all_forms.get("vamos") == ['v|ir', 'v|irse']
+    assert freq.all_forms.get_lemmas("vamos") == ['v|ir', 'v|irse']
     assert freq.get_lemmas("vamos", "v") == ["ir"]
     assert freq.get_lemmas("ir", "v") == ["ir"]
 
@@ -168,9 +176,11 @@ divo {n-meta} :: {{es-noun|m|f=diva}}
 divo {m} :: star, celeb\
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
-    assert freq.all_forms.get("diva") == ['n|divo', 'adj|divo']
+    assert freq.all_forms.get_lemmas("diva") == ['n|divo', 'adj|divo']
     assert freq.get_lemmas("diva", "n") == ["divo"]
 
     flist_data = """\
@@ -194,9 +204,11 @@ hijo {m} :: son
 hijo {m} :: child (when the gender of the child is unknown)
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
-    assert freq.all_forms.get("hijo") == ['n|hijo']
+    assert freq.all_forms.get_lemmas("hijo") == ['n|hijo']
     assert freq.get_lemmas("hijo", "n") == ["hijo"]
 
     flist_data = """\
@@ -222,9 +234,11 @@ asco {n-forms} :: pl=ascos
 asco {m} :: alternative form of "asca"
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
-    assert freq.all_forms.get("asco") == ['n|asco', 'n|asca']
+    assert freq.all_forms.get_lemmas("asco") == ['n|asco', 'n|asca']
     assert freq.get_lemmas("asco", "n") == ["asca", "asco"]
     assert freq.get_best_lemma("asco", ["asca", "asco"], "n") == "asco"
 
@@ -245,9 +259,11 @@ bienes {n-meta} :: {{es-noun|m-p}}
 bienes {mp} :: goods (that which is produced, traded, bought or sold)
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
-    assert freq.all_forms.get("bienes") == ['n|bien', 'n|bienes']
+    assert freq.all_forms.get_lemmas("bienes") == ['n|bien', 'n|bienes']
     assert freq.get_lemmas("bienes", "n") == ["bien", "bienes"]
     assert freq.get_best_lemma("bienes", ["bien", "bienes"], "n") == "bienes"
 
@@ -268,9 +284,11 @@ rasguño {n-meta} :: {{es-noun}}
 rasguño {m} | arañazo :: scratch
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
-    assert freq.all_forms.get("rasguño") == ['v|rasguñar', 'n|rasguño']
+    assert freq.all_forms.get_lemmas("rasguño") == ['v|rasguñar', 'n|rasguño']
     assert freq.get_ranked_pos("rasguño") == ["v", "n"]
 
     flist_data = """\
@@ -295,7 +313,9 @@ diosa {n-forms} :: pl=diosas
 diosa {f} [biochemistry] :: diose
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     assert freq.get_lemmas("dioses", "n") == ["dios"]
     assert freq.get_lemmas("diosas", "n") == ["dios", "diosa"]
@@ -303,10 +323,10 @@ diosa {f} [biochemistry] :: diose
 
     assert freq.get_best_lemma("diosa", ["dios", "diosa"], "n") == "dios"
 
-#    assert list(freq.all_forms.get("dios", {})) == ['n:dios:m']
-#    assert list(freq.all_forms.get("dioses", {})) == ['n:dios:pl']
-#    assert list(freq.all_forms.get("diosa", {})) == ["n:dios:f"]
-#    assert list(freq.all_forms.get("diosas", {})) == ["n:diosa:pl"]
+#    assert list(freq.all_forms.get_lemmas("dios", {})) == ['n:dios:m']
+#    assert list(freq.all_forms.get_lemmas("dioses", {})) == ['n:dios:pl']
+#    assert list(freq.all_forms.get_lemmas("diosa", {})) == ["n:dios:f"]
+#    assert list(freq.all_forms.get_lemmas("diosas", {})) == ["n:diosa:pl"]
 
     flist_data = """\
 dios 10
@@ -337,16 +357,13 @@ aquellos {pron-meta} :: {{head|es|pronoun|g=n-p}}
 aquellos {pron} :: Those ones. (over there; implying some distance)
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     assert freq.get_lemmas("aquellos", "pron") == ['aquellos', 'aquél']
 
     assert freq.get_best_lemma("aquellos", ['aquellos', 'aquél'], "pron") == "aquél"
-
-#    assert list(freq.all_forms.get("dios", {})) == ['n:dios:m']
-#    assert list(freq.all_forms.get("dioses", {})) == ['n:dios:pl']
-#    assert list(freq.all_forms.get("diosa", {})) == ["n:dios:f"]
-#    assert list(freq.all_forms.get("diosas", {})) == ["n:diosa:pl"]
 
     flist_data = """\
 aquellos 10
@@ -370,7 +387,9 @@ vetar {v-meta} :: {{es-verb|vet|ar}} {{es-conj-ar|vet|combined=1}}
 vetar {v} :: x
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     assert freq.get_lemmas("vete", "v") == ['ir', 'ver', 'vetar']
 
@@ -385,7 +404,9 @@ vero {n-meta} :: {{es-noun|m}}
 vero {m} [heraldry] :: vair
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     assert freq.get_ranked_pos("veros") == ["v", "n"]
 
@@ -403,7 +424,9 @@ veras {fp} :: truth; reality
 veras {fp} :: serious things
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     assert freq.get_lemmas("veras", "n") == ["vera", "veras"]
     assert freq.get_best_lemma("veras", ["vera", "veras"], "n") == "veras"
@@ -420,7 +443,9 @@ microondas {m} | horno de microondas :: microwave oven, microwave
 microondas {m} :: necklacing (execution by burning tyre)
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     lemmas = ["microonda", "microondas"]
     assert freq.get_lemmas("microondas", "n") == lemmas
@@ -437,7 +462,9 @@ hamburguesa {f} :: hamburger
 hamburguesa {f} :: female equivalent of "hamburgués"; Hamburger
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     lemmas = ['hamburguesa', 'hamburgués']
     assert freq.get_lemmas("hamburguesa", "n") == lemmas
@@ -454,7 +481,9 @@ piernas {n-forms} :: pl=piernas
 piernas {m} [dated] :: twit; idiot
 """
 
-    freq = FrequencyList(wordlist_data.splitlines(), None, sentences)
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
 
     lemmas = ['pierna', 'piernas']
     assert freq.get_lemmas("piernas", "n") == lemmas

@@ -7,9 +7,9 @@ import sys
 
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
-import spanish_sentences
+from .spanish_sentences import sentences as spanish_sentences
 
-from get_best_lemmas import is_good_lemma, get_best_lemmas
+from .get_best_lemmas import is_good_lemma, get_best_lemmas
 
 def mem_use():
     with open('/proc/self/status') as f:
@@ -19,25 +19,12 @@ def mem_use():
 
 class FrequencyList():
 
-    def __init__(self, wordlist_data, allforms_data, sentences):
-        self.load_wordlist(wordlist_data)
-        print("wordlist", mem_use(), file=sys.stderr)
-
-        self.load_allforms(allforms_data)
-        print("all_forms", mem_use(), file=sys.stderr)
-
+    def __init__(self, wordlist, allforms, sentences):
+        self.wordlist = wordlist
+        self.all_forms = allforms
         self.sentences = sentences
         self.freq = {}
         self.all_lemmas = {}
-
-    def load_wordlist(self, wordlist_data):
-        self.wordlist = Wordlist(wordlist_data)
-
-    def load_allforms(self, allforms_data):
-        if allforms_data is None:
-            self.all_forms = AllForms.from_wordlist(self.wordlist)
-        else:
-            self.all_forms = AllForms.from_data(allforms_data)
 
     def load_ignore(self, ignore_data):
         self.ignore = {line.strip() for line in ignore_data if line.strip() and not line.strip().startswith("#")}
@@ -369,6 +356,7 @@ if __name__ == "__main__":
         "--custom-dir",
         help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",
     )
+    parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
     args = parser.parse_args()
 
     if not args.sentences:
@@ -380,21 +368,27 @@ if __name__ == "__main__":
     if not args.custom_dir:
         args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
 
-    wordlist_data = open(args.dictionary)
-    allforms_data = open(args.allforms) if args.allforms else None
+    with open(args.dictionary) as wordlist_data:
+        cache_words = not args.low_mem
+        wordlist = Wordlist(wordlist_data, cache_words=cache_words)
+
+    print("wordlist", mem_use(), file=sys.stderr)
     ignore_data = open(args.ignore) if args.ignore else []
 
-    sentences = spanish_sentences.sentences(
+    if args.allforms:
+        allforms = AllForms.from_file(args.allforms)
+    else:
+        allforms = AllForms.from_wordlist(wordlist)
+    print("all_forms", mem_use(), file=sys.stderr)
+
+    sentences = spanish_sentences(
         sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir
     )
 
-    flist = FrequencyList(wordlist_data, allforms_data, sentences)
+    flist = FrequencyList(wordlist, allforms, sentences)
 
     with open(args.file) as infile:
         for line in flist.process(infile, ignore_data):
             print(line)
 
-    wordlist_data.close()
-    if allforms_data:
-        allforms_data.close()
     ignore_data.close()

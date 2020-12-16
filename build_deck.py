@@ -11,8 +11,8 @@ import re
 import sqlite3
 import sys
 
-import spanish_sentences
-import spanish_speech
+from .spanish_sentences import sentences as spanish_sentences
+from .spanish_speech import get_speech
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 from enwiktionary_wordlist.word import Word
@@ -146,22 +146,13 @@ class DeckBuilder():
     seen_guids = {}
     seen_clues = {}
 
-    def __init__(self, wordlist_data, sentences, ignore=[], allforms_data=None, shortdefs=None):
+    def __init__(self, wordlist, sentences, ignore, allforms, shortdefs=None):
 
-        self.load_dictionary(wordlist_data)
+        self._words = wordlist
         self._ignore = ignore
         self._sentences = sentences
         self._shortdefs = shortdefs
-        self.load_allforms(allforms_data)
-
-    def load_dictionary(self, wordlist_data):
-        self._words = Wordlist(wordlist_data)
-
-    def load_allforms(self, allforms_data):
-        if allforms_data is None:
-            self.all_forms = AllForms.from_wordlist(self._words)
-        else:
-            self.all_forms = AllForms.from_data(allforms_data)
+        self.all_forms = allforms
 
     def filter_gloss(self, word, pos, note, gloss):
         """ Returns True if the item matches an entry in the ignore list """
@@ -1068,7 +1059,7 @@ class DeckBuilder():
         femnoun = self.get_feminine_noun(spanish) if pos == "n" else None
         tts_data = self.get_phrase(spanish, pos, noun_type, femnoun)
 
-        sound = spanish_speech.get_speech(tts_data["voice"], tts_data["phrase"], mediadir)
+        sound = get_speech(tts_data["voice"], tts_data["phrase"], mediadir)
 
         all_usage_pos = {Word.get_common_pos(k): 1 for k in usage.keys()}.keys()
         lookups = [[spanish, pos] for pos in all_usage_pos]
@@ -1441,6 +1432,7 @@ def main():
         "--custom-dir",
         help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",
     )
+    parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
     args = parser.parse_args()
 
     if not args.data_dir:
@@ -1482,24 +1474,25 @@ def main():
         print(f"Model JSON does not exist: {args.deckinfo}")
         exit(1)
 
-    allforms_data = open(args.allforms) if args.allforms else None
-    dictionary_data = open(args.dictionary)
+    with open(args.dictionary) as wordlist_data:
+        cache_words = not args.low_mem
+        dictionary = Wordlist(wordlist_data, cache_words=cache_words)
+
+    if args.allforms:
+        allforms = AllForms.from_file(args.allforms)
+    else:
+        allforms = AllForms.from_wordlist(wordlist)
 
     ignore = DeckBuilder.load_ignore(args.dictionary_custom)
 
-    sentences = spanish_sentences.sentences(
+    sentences = spanish_sentences(
         sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir
     )
     shortdefs = DeckBuilder.load_shortdefs(args.short_defs)
 
-    deck = DeckBuilder(dictionary_data, sentences, ignore, allforms_data, shortdefs)
+    deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs)
     deck.load_wordlists(args.wordlist)
     deck.compile(args.deckinfo, args.deckname, args.mediadir, args.limit, args.anki)
-
-    dictionary_data.close()
-
-    if args.allforms:
-        allforms_data.close()
 
     if args.dump_sentence_ids:
         deck.dump_sentences(args.dump_sentence_ids)
