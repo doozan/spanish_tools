@@ -9,8 +9,9 @@ import re
 import string
 
 from enwiktionary_wordlist.wordlist import Wordlist
+from enwiktionary_wordlist.all_forms import AllForms
 
-from get_best_lemmas import get_best_lemmas
+from .get_best_lemmas import get_best_lemmas
 
 parser = argparse.ArgumentParser(description="Manage tagged sentences")
 parser.add_argument(
@@ -23,6 +24,7 @@ parser.add_argument(
 )
 parser.add_argument("--tags", nargs=1, help="Merged tagged data with original data")
 parser.add_argument("--dictionary", help="Dictionary file", required=True)
+parser.add_argument( "--allforms", help="Load word forms from file")
 args = parser.parse_args()
 
 if not os.path.isfile(args.sentences):
@@ -34,8 +36,13 @@ if args.tags and not os.path.isfile(args.tags[0]):
 with open(args.dictionary) as infile:
     wordlist = Wordlist(infile)
 
-mismatch = {}
+if args.allforms:
+    with open(args.allforms) as allforms_data:
+        all_forms = AllForms.from_data(allforms_data).all_forms
+else:
+    all_forms = AllForms.from_wordlist(wordlist).all_forms
 
+mismatch = {}
 
 def tag_to_pos(tag, word):
 
@@ -53,7 +60,7 @@ def tag_to_pos(tag, word):
     elif ctag.startswith("I"):
         pos = "interj"
     elif ctag.startswith("N"):  # and lemma not in ["tom", "mary", "john", "maría"]:
-        pos = "propnoun" if ctag == "NP" else "noun"
+        pos = "prop" if ctag == "NP" else "n"
     elif ctag.startswith("P"):
         pos = "pron"
     elif ctag.startswith("R"):
@@ -63,23 +70,23 @@ def tag_to_pos(tag, word):
         # if lemma not in ["a", "con", "de", "en", "por", "para"]:
         pos = "prep"
     elif ctag.startswith("V"):
-        pos = "part" if ctag.endswith("P") else "verb"
+        pos = "part" if ctag.endswith("P") else "v"
     elif ctag.startswith("Z") and not word.isdigit():
         pos = "num"
         lemma = word
     if not pos:
         return []
 
-    if pos != "propnoun":
+    if pos != "prop":
         word = word.lower()
 
     # Use our lemmas so they're the same when we lookup against other things we've lemmatized
     # Unless it's a phrase, then use their lemma
-    if pos in ("noun", "adj", "adv"):
+    if pos in ("n", "adj", "adv"):
         lemma = get_lemmas(wordlist, word, pos)
 
     # fix for freeling not generating lemmas for verbs with a pronoun suffix
-    elif pos == "verb":
+    elif pos == "v":
         if not lemma.endswith("r"):
             lemma = get_lemmas(wordlist, word, pos)
 
@@ -89,7 +96,7 @@ def tag_to_pos(tag, word):
     # Special handling for participles, add adjective and verb lemmas
     if pos == "part":
         adj_lemma = get_lemmas(wordlist, word, "adj")
-        verb_lemma = get_lemmas(wordlist, word, "verb")
+        verb_lemma = get_lemmas(wordlist, word, "v")
         adj_res = f"{word}|{adj_lemma}" if adj_lemma != word else word
         verb_res = f"{word}|{verb_lemma}" if verb_lemma != word else word
         return [("part-adj", adj_res), ("part-verb", verb_res)]
@@ -130,8 +137,8 @@ def get_interjections(string):
 
 def get_lemmas(wordlist, word, pos):
     lemmas = []
-    forms = wordlist.all_forms.get(word, [])
-    for form_pos,lemma,formtype in [x.split(":") for x in sorted(forms)]:
+    forms = all_forms.get(word, [])
+    for form_pos,lemma in [x.split("|") for x in sorted(forms)]:
         if form_pos != pos:
             continue
         if lemma not in lemmas:
@@ -305,7 +312,7 @@ def print_tagged_data():
             # ignore sentences with the same adj/adv/noun/verb lemma combination
             unique_tags = set()
             for pos, tags in grouped_tags.items():
-                if pos not in ["adj", "adv", "noun", "verb", "part-adj", "part-verb"]:
+                if pos not in ["adj", "adv", "n", "v", "part-adj", "part-verb"]:
                     continue
                 for t in tags:
                     word, junk, lemma = t.partition("|")
