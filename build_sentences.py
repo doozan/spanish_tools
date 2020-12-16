@@ -25,6 +25,7 @@ parser.add_argument(
 parser.add_argument("--tags", nargs=1, help="Merged tagged data with original data")
 parser.add_argument("--dictionary", help="Dictionary file", required=True)
 parser.add_argument( "--allforms", help="Load word forms from file")
+parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
 args = parser.parse_args()
 
 if not os.path.isfile(args.sentences):
@@ -33,8 +34,9 @@ if not os.path.isfile(args.sentences):
 if args.tags and not os.path.isfile(args.tags[0]):
     raise FileNotFoundError(f"Cannot open: {args.tags}")
 
+cache_words = not args.low_mem
 with open(args.dictionary) as infile:
-    wordlist = Wordlist(infile)
+    wordlist = Wordlist(infile, cache_words=cache_words)
 
 if args.allforms:
     with open(args.allforms) as allforms_data:
