@@ -510,7 +510,7 @@ class DeckBuilder():
             "reflexive": "r",
             "intransitive": "i",
             "pronominal": "p",
-            "takes a reflexive pronoun]": "p",
+            "takes a reflexive pronoun": "p",
             "ambitransitive": "x",
         }
 
