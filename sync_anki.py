@@ -15,10 +15,6 @@ import sys
 import time
 import urllib.request
 
-import spanish_sentences
-import spanish_speech
-from spanish_words import SpanishWords
-
 parser = argparse.ArgumentParser(description="Import anki deck/sync")
 parser.add_argument("filename", help="apkg file to import")
 parser.add_argument("--anki", help="Use the specified anki profile")
