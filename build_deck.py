@@ -142,7 +142,7 @@ class DeckBuilder():
 
     credits = {}
     dumpable_sentences = {}
-    deck_guids = set()
+    notes = {}
     seen_guids = {}
     seen_clues = {}
 
@@ -429,7 +429,7 @@ class DeckBuilder():
 
                 if hide_word:
                     new_usage = re.sub(
-                        r'(apocopic form|diminutive|ellipsis|clipping|superlative) of ".*?"',
+                        r'(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"',
                         r"\1 of ...",
                         usage,
                     ).strip()
@@ -1067,9 +1067,6 @@ class DeckBuilder():
 
         self.store_sentences(lookups)
 
-        if pos == "part":
-            pos = "past participle"
-
         item = {
             "Spanish": spanish,
             "Part of Speech": noun_type if pos == "n" else pos,
@@ -1317,7 +1314,7 @@ class DeckBuilder():
                         print(f"  old tags: {old_data['tags']}")
                         print(f"  new tags: {note._format_tags()}")
 
-            self.deck_guids.add(item["guid"])
+            self.notes[item["guid"]] = item
 
             note._order = position
             my_deck.add_note(note)
@@ -1405,7 +1402,7 @@ def main():
     parser.add_argument("--dump-credits", help="Dump high scoring sentence ids to file")
     parser.add_argument("--dump-notes", help="Dump notes to file")
     parser.add_argument(
-        "--dump-removed", help="Dump list of removed note ids to file (requires --anki)"
+        "--dump-changes", help="Dump list of removed/added note ids to file (requires --anki)"
     )
     parser.add_argument(
         "--deckinfo",
@@ -1463,8 +1460,8 @@ def main():
         print(f"Shortdefs file does not exist: {args.short_defs}")
         exit(1)
 
-    if args.dump_removed and not args.anki:
-        print("Use of --dump-removed requires --anki profile to be specified")
+    if args.dump_changes and not args.anki:
+        print("Use of --dump-changes requires --anki profile to be specified")
         exit(1)
 
     if not args.deckinfo:
@@ -1511,11 +1508,16 @@ def main():
                 del row[0]
                 csvwriter.writerow(row)
 
-    if args.dump_removed:
-        with open(args.dump_removed, "w") as outfile:
-            for guid in deck.db_notes.keys() - deck.deck_guids:
-                outfile.write(f'{deck.db_notes[guid]["nid"]} {deck.db_notes[guid]["word"]}\n')
+    if args.dump_changes:
+        with open(args.dump_changes, "w") as outfile:
+            changes = []
+            for guid in deck.db_notes.keys() - deck.notes.keys():
+                changes.append((int(deck.db_notes[guid]["nid"]), deck.db_notes[guid]["word"], guid, "-"))
+            for guid in deck.notes.keys() - deck.db_notes.keys():
+                changes.append((int(deck.notes[guid]["Rank"]), f'{deck.notes[guid]["Part of Speech"]} {deck.notes[guid]["Spanish"]}', guid, "+"))
 
+            for rank, word, guid, change in sorted(changes):
+                outfile.write(f'{change}{rank} {word} {guid}\n')
     if args.dump_credits:
         deck.dump_credits(args.dump_credits)
 

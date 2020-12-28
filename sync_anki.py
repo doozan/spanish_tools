@@ -18,7 +18,7 @@ import urllib.request
 parser = argparse.ArgumentParser(description="Import anki deck/sync")
 parser.add_argument("filename", help="apkg file to import")
 parser.add_argument("--anki", help="Use the specified anki profile")
-parser.add_argument("--remove", help="Filename containing note ids to remove")
+parser.add_argument("--changelog", help="Filename containing changelog, to remove deleted notes")
 args = parser.parse_args()
 
 args.filename = os.path.abspath(args.filename)
@@ -26,8 +26,8 @@ if not os.path.isfile(args.filename):
     print(f"File does not exist: {args.filename}")
     exit(1)
 
-if args.remove and not os.path.isfile(args.remove):
-    print(f"File does not exist: {args.remove}")
+if args.changelog and not os.path.isfile(args.changelog):
+    print(f"File does not exist: {args.changelog}")
     exit(1)
 
 
@@ -53,7 +53,7 @@ def invoke(action, **params):
     return response["result"]
 
 
-def sync_anki(profile, deck_filename, removed_filename=None):
+def sync_anki(profile, deck_filename, changelog_filename=None):
 
     if any(
         "/usr/bin/anki" in p.info["cmdline"] for p in psutil.process_iter(["cmdline"])
@@ -87,9 +87,9 @@ def sync_anki(profile, deck_filename, removed_filename=None):
     result = invoke("importPackage", path=deck_filename)
 
     removed_notes = []
-    with open(args.remove) as infile:
+    with open(args.changelog) as infile:
         removed_notes = [
-            line.split(" ", 1)[0].split("#", 1)[0].strip() for line in infile
+            line[1:].split(" ", 1)[0].split("#", 1)[0].strip() for line in infile if line.startswith("-")
         ]
 
     if len(removed_notes):
@@ -112,4 +112,4 @@ def sync_anki(profile, deck_filename, removed_filename=None):
     proc.terminate()
 
 
-sync_anki(args.anki, args.filename, removed_filename=args.remove)
+sync_anki(args.anki, args.filename, changelog_filename=args.changelog)
