@@ -487,9 +487,10 @@ class DeckBuilder():
                         and "(" not in usage
                         and ":" not in usage
                     ):
-                        eprint(
-                            f"Warning: obscured definition: ({usage}) may be completely obscured, reverting"
-                        )
+                        pass
+#                        eprint(
+#                            f"Warning: obscured definition: ({usage}) may be completely obscured, reverting"
+#                        )
                     else:
                         usage = new_usage
 
@@ -1219,7 +1220,7 @@ class DeckBuilder():
         self.allwords_set.add(wordtag)
 
 
-    def load_wordlists(self, wordlists):
+    def load_wordlists(self, wordlists, allowed_flags):
 
         # read through all the files to populate the synonyms and excludes lists
         for wordlist in wordlists:
@@ -1235,8 +1236,10 @@ class DeckBuilder():
                     if not row:
                         continue
 
-                    if "flags" in row and "CLEAR" not in row["flags"]:
-                        continue
+                    if "flags" in row and row["flags"]:
+                        flags = set(row["flags"].split("; "))
+                        if flags.difference(allowed_flags):
+                            continue
 
                     if not self.get_usage(row["spanish"], row["pos"]):
                         continue
@@ -1434,7 +1437,12 @@ def main():
         "-w",
         "--wordlist",
         action="append",
-        help="List of words to include/exclude from the deck (default: DECKNAME.json",
+        help="List of words to include/exclude from the deck (default: DECKNAME.csv)",
+    )
+    parser.add_argument(
+        "--allow-flag",
+        action="append",
+        help="Include wordlist items even if they have specificed flag (can be declared multiple times)"
     )
     parser.add_argument(
         "--short-defs",
@@ -1492,6 +1500,9 @@ def main():
     if not args.short_defs:
         args.short_defs = args.deckname + ".shortdefs"
 
+    if not args.allow_flag:
+        args.allow_flag = set()
+
     if not os.path.isdir(args.mediadir):
         print(f"Deck directory does not exist: {args.mediadir}")
         exit(1)
@@ -1533,7 +1544,7 @@ def main():
     shortdefs = DeckBuilder.load_shortdefs(args.short_defs)
 
     deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs)
-    deck.load_wordlists(args.wordlist)
+    deck.load_wordlists(args.wordlist, args.allow_flag)
     deck.compile(args.deckinfo, args.deckname, args.mediadir, args.limit, args.anki)
 
     if args.dump_sentence_ids:
