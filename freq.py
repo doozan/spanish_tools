@@ -60,13 +60,8 @@ class FrequencyList():
 
         yield("count,spanish,pos,flags,usage")
         for k, item in sorted(
-            self.all_lemmas.items(), key=lambda item: (item[1]["count"], item[1]["word"]), reverse=True
+            self.all_lemmas.items(), key=lambda item: (item[1]["count"]*-1, item[1]["word"])
         ):
-            if len(item["flags"]) == 1 and "LITERAL" in item["flags"]:
-                item["flags"].append("CLEAR")
-
-            if not len(item["flags"]):
-                item["flags"].append("CLEAR")
             yield(
                 ",".join(
                     map(
