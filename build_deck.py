@@ -10,6 +10,7 @@ import os
 import re
 import sqlite3
 import sys
+from Levenshtein import distance as fuzzy_distance
 
 from .spanish_sentences import sentences as spanish_sentences
 from .spanish_speech import get_speech
@@ -359,18 +360,59 @@ class DeckBuilder():
 
 
     @staticmethod
-    def format_syns(deck, extra):
+    def obscured(items, hide_word, distance=None):
+        if distance is None:
+            distance = int(len(hide_word)/4)
+
+        for item in items:
+            orig = []
+            splits = iter(re.split(r'(\W+)', item))
+            for word in splits:
+                sep = next(splits, None)
+                if not word and sep:
+                    orig.append(sep)
+                    continue
+
+                if fuzzy_distance(word, hide_word)<=distance:
+                    orig.append("...")
+                else:
+                    orig.append(word)
+
+                if sep:
+                    orig.append(sep)
+
+            yield "".join(orig)
+
+    @staticmethod
+    def format_syns_html(deck, extra, css_class=''):
+
+        if css_class and not css_class.endswith(' '):
+            css_class += ' '
+
         deck_str = (
-            f"""<span class="syn deck">{", ".join(deck)}</span>""" if len(deck) else ""
+            f"""<span class="{css_class}syn deck">{", ".join(deck)}</span>""" if len(deck) else ""
         )
         separator = ", " if len(deck_str) else ""
         extra_str = (
-            f"""<span class="syn extra">{separator}{", ".join(extra)}</span>"""
+            f"""<span class="{css_class}syn extra">{separator}{", ".join(extra)}</span>"""
             if len(extra)
             else ""
         )
+
         return deck_str + extra_str
 
+    @classmethod
+    def format_syns(cls, deck, extra, hide_word=None):
+        obscured_deck = list(cls.obscured(deck, hide_word))
+        obscured_extra = list(cls.obscured(extra, hide_word))
+
+        has_obscured = obscured_deck != deck or obscured_extra != extra
+
+        if has_obscured:
+            return cls.format_syns_html(deck,extra, 'unobscured') \
+                    + cls.format_syns_html(obscured_deck, obscured_extra, 'obscured')
+
+        return cls.format_syns_html(deck,extra)
 
     @classmethod
     def format_def(cls, item, hide_word=None):
@@ -380,9 +422,6 @@ class DeckBuilder():
 
         prev_display_pos = None
         for pos, tags in item.items():
-            if not pos:
-                print(item)
-                raise ValueError("xx")
 
             common_pos = Word.get_common_pos(pos)
             safe_pos = pos.replace("/", "_")
@@ -424,14 +463,19 @@ class DeckBuilder():
 
                 classes += sorted(cls.get_location_classes(tag))
                 results.append(f'<span class="{" ".join(classes)}">{display_pos} ')
-
                 usage = "; ".join(item[pos][tag])
 
                 if hide_word:
+                    items = list(cls.obscured(item[pos][tag], hide_word))
+                    if items[0].startswith("...") or items[0].startswith("to ..."):
+                        items[0] = item[pos][tag][0]
+
+                    new_usage = usage if all(i == "..." for i in items) else "; ".join(items)
+
                     new_usage = re.sub(
                         r'(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"',
                         r"\1 of ...",
-                        usage,
+                        new_usage,
                     ).strip()
 
                     if (
@@ -1036,6 +1080,7 @@ class DeckBuilder():
         english = self.format_def(usage)
 
         shortdef = self.get_shortdef(word, pos, max_length=60)
+
         short_english = self.format_def(shortdef, hide_word=word) if shortdef else ""
 
         defs = [
@@ -1070,7 +1115,7 @@ class DeckBuilder():
         item = {
             "Spanish": spanish,
             "Part of Speech": noun_type if pos == "n" else pos,
-            "Synonyms": self.format_syns(deck_syns, extra_syns),
+            "Synonyms": self.format_syns(deck_syns, extra_syns, hide_word=spanish),
             "ShortDef": short_english,
             "Definition": english,
             "Sentences": sentences,

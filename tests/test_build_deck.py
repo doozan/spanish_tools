@@ -198,6 +198,7 @@ def test_shorten_defs():
     item = { "m": { "": [ "a really, really, long def1 (blah)", "def2" ] } }
     assert DeckBuilder.shorten_defs(item, 20) == {'m': {'': ['a really', 'def2']}}
 
+
 def test_format_def():
 
     wordlist_data = """\
@@ -237,3 +238,28 @@ pos: v
           'vr': {'': ['to surrender, give in, give up',
                       'to be paid (homage or tribute)']},
           'vt': {'': ['to conquer', 'to tire, exhaust']}}
+
+
+    item = {'m/f': {'': ['retiree, pensioner (retired person)']}}
+    assert DeckBuilder.format_def(item, hide_word="jubilado") == '<span class="pos n m_f mf">{mf} <span class="usage">retiree, pensioner (retired person)</span></span>'
+
+
+def test_obscured():
+    obscured = DeckBuilder.obscured
+
+    # < 4 characters should require an exact match
+    assert list(obscured(["abc", "abz"], "abc")) == ['...', 'abz']
+    assert list(obscured(["to be (essentially or identified as)"], "ser")) == ['to be (essentially or identified as)']
+
+    # 4 characters allows distance 1
+    assert list(obscured(["test, pest, test1, test12, test123"], "test")) == ['..., ..., ..., test12, test123']
+    assert list(obscured(["test", "pest", "test1", "test12", "test123"], "test")) == ['...', '...', '...', 'test12', 'test123']
+
+    # 8+ allows distance 2
+    assert list(obscured(["testtest, testpest, testtest1, testtest12, testtest123"], "testtest")) == ['..., ..., ..., ..., testtest123']
+    assert list(obscured(["testtest", "testpest", "testtest1", "testtest12", "testtest123"], "testtest")) == ['...', '...', '...', '...', 'testtest123']
+
+    # split words with spaces
+    assert list(obscured(["test 123", "123 test"], "test")) == ['... 123', '123 ...']
+    assert list(obscured(["avarice"], "avaricia")) == ['...']
+
