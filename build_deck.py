@@ -1497,7 +1497,7 @@ def main():
     if not args.wordlist:
         args.wordlist = [args.deckname + ".csv"]
 
-    if not args.short_defs:
+    if not args.short_defs and os.path.isfile(args.deckname + ".shortdefs"):
         args.short_defs = args.deckname + ".shortdefs"
 
     if not args.allow_flag:
@@ -1511,10 +1511,6 @@ def main():
         if not os.path.isfile(wordlist):
             print(f"Wordlist file does not exist: {wordlist}")
             exit(1)
-
-    if not os.path.isfile(args.short_defs):
-        print(f"Shortdefs file does not exist: {args.short_defs}")
-        exit(1)
 
     if args.dump_changes and not args.anki:
         print("Use of --dump-changes requires --anki profile to be specified")
