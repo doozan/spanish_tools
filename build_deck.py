@@ -560,7 +560,7 @@ class DeckBuilder():
         }
 
         for word_obj in self._words.get_words(word, common_pos):
-#            print("word", word_obj.word, word_obj.pos, word_obj.genders)
+            #print("word", word_obj.word, word_obj.pos, word_obj.genders)
 
             for sense in word_obj.senses:
                 pos = word_obj.pos
@@ -837,6 +837,9 @@ class DeckBuilder():
     def get_usage(self, word, primary_pos, get_all_pos=True, max_length=None):
 
         defs = self.get_pos_usage(word, primary_pos)
+        if not defs:
+            return None
+
         defs = self.process_defs(word, defs)
 
         if get_all_pos:
@@ -907,7 +910,7 @@ class DeckBuilder():
 
         key = (word,pos)
         items = []
-        for syn in self.synonyms.get(key):
+        for syn in self.synonyms.get(key, []):
             if syn.startswith("Thesaurus:"):
                 syn = syn[len("Thesaurus:"):]
             if syn == word:
