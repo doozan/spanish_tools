@@ -214,7 +214,6 @@ class FrequencyList():
         "UNKNOWN": "Word does not appear in lemma database or dictionary",
         "NOUSAGE": "Multiple POS, but no sentences for any usage",
         "PRONOUN": "Ignoring pronouns",
-        "COMMON": "Common filler word",
         "LETTER": "Letter",
         "NODEF": "No definition",
         "NOSENT": "No sentences",
@@ -268,9 +267,6 @@ class FrequencyList():
             word, pos = tag
 
             flags = self.get_word_flags(word, pos)
-            # flag the most common "filler" words (pronouns, articles, etc)
-            if count < 200 and pos not in ["adj", "adv", "n", "v"]:
-                flags.append("COMMON")
 
             # Check for repeat usage
             if word not in wordusage:
