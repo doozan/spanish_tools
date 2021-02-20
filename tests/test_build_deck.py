@@ -17,18 +17,6 @@ def test_get_location_classes():
     for tags, locations in tests.items():
         assert sorted(get_location_classes(tags)) == sorted(locations)
 
-def test_format_def():
-    format_def = DeckBuilder.format_def
-
-    item = { "m": { "tag": [ "def1", "def2" ] } }
-    assert format_def(item) == """<span class="pos n m"> <span class="tag">[tag]:</span><span class="usage">def1; def2</span></span>"""
-
-    item = { "m": { "Peru": [ "def1", "def2" ] } }
-    assert format_def(item) == """<span class="pos n m only-latin-america only-peru only-south-america peru"> <span class="tag">[Peru]:</span><span class="usage">def1; def2</span></span>"""
-
-    item = { "m": { "South America": [ "def1", "def2" ] } }
-    assert format_def(item) == """<span class="pos n m only-latin-america only-south-america south-america"> <span class="tag">[South America]:</span><span class="usage">def1; def2</span></span>"""
-
 def test_filters():
     ignore_data = """\
 # comment
@@ -242,6 +230,21 @@ pos: v
 
     item = {'m/f': {'': ['retiree, pensioner (retired person)']}}
     assert DeckBuilder.format_def(item, hide_word="jubilado") == '<span class="pos n m_f mf">{mf} <span class="usage">retiree, pensioner (retired person)</span></span>'
+
+
+    format_def = DeckBuilder.format_def
+
+    item = { "m": { "tag": [ "def1", "def2" ] } }
+    assert format_def(item) == """<span class="pos n m"> <span class="tag">[tag]:</span><span class="usage">def1; def2</span></span>"""
+
+    item = { "m": { "Peru": [ "def1", "def2" ] } }
+    assert format_def(item) == """<span class="pos n m only-latin-america only-peru only-south-america peru"> <span class="tag">[Peru]:</span><span class="usage">def1; def2</span></span>"""
+
+    item = { "m": { "South America": [ "def1", "def2" ] } }
+    assert format_def(item) == """<span class="pos n m only-latin-america only-south-america south-america"> <span class="tag">[South America]:</span><span class="usage">def1; def2</span></span>"""
+
+    item = {'f': {'': ['sewer, storm drain'], 'zoology': ['cloaca']}}
+    assert format_def(item, hide_word='cloaca') == """<span class="pos n f"> <span class="usage">sewer, storm drain</span></span>"""
 
 
 def test_obscured():

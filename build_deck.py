@@ -361,6 +361,7 @@ class DeckBuilder():
 
     @staticmethod
     def obscured(items, hide_word, distance=None):
+
         if distance is None:
             distance = int(len(hide_word)/4)
 
@@ -414,6 +415,7 @@ class DeckBuilder():
 
         return cls.format_syns_html(deck,extra)
 
+
     @classmethod
     def format_def(cls, item, hide_word=None):
 
@@ -432,9 +434,6 @@ class DeckBuilder():
                 prev_display_pos = "{v}" if common_pos == "v" else f"{{{pos}}}"
 
             for tag, usage in tags.items():
-                if len(results):
-                    results.append("\n")
-
                 classes = ["pos", common_pos]
                 if common_pos != safe_pos:
                     classes.append(safe_pos)
@@ -461,17 +460,24 @@ class DeckBuilder():
                 else:
                     prev_display_pos = display_pos
 
-                classes += sorted(cls.get_location_classes(tag))
-                results.append(f'<span class="{" ".join(classes)}">{display_pos} ')
                 usage = "; ".join(item[pos][tag])
 
                 if hide_word:
                     items = list(cls.obscured(item[pos][tag], hide_word))
-                    if items[0].startswith("...") or items[0].startswith("to ..."):
-                        items[0] = item[pos][tag][0]
 
-                    new_usage = usage if all(i == "..." for i in items) else "; ".join(items)
+                    # Don't obscure the first word of the first definition
+                    if not results:
+                        words = items[0].lower().strip().split()
 
+                        if words[0].startswith("...") or (len(words)>1 and words[1].startswith("...") and words[0] in ["a", "an", "to"]):
+                            items[0] = item[pos][tag][0]
+
+                    # Skip anything that's completely excluded
+                    else:
+                        if all(i.lower() in ["...", "a ...", "an ...", "to ..."] for i in items):
+                            continue
+
+                    new_usage = "; ".join(items)
                     new_usage = re.sub(
                         r'(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"',
                         r"\1 of ...",
@@ -493,6 +499,12 @@ class DeckBuilder():
 #                        )
                     else:
                         usage = new_usage
+
+                if results:
+                    results.append("\n")
+
+                classes += sorted(cls.get_location_classes(tag))
+                results.append(f'<span class="{" ".join(classes)}">{display_pos} ')
 
                 if display_tag != "":
                     results.append(f'<span class="tag">[{display_tag}]:</span>')
@@ -1160,9 +1172,7 @@ class DeckBuilder():
     def wordlist_insert_after(self, target, wordtag):
         index = self.wordlist_indexof(target)
         if not index:
-            eprint(
-                f"ERROR: {target} not found in wordlist, unable to insert {wordtag} after it"
-            )
+            #eprint(f"ERROR: {target} not found in wordlist, unable to insert {wordtag} after it")
             return
 
         self.allwords.insert(index + 1, wordtag)
@@ -1173,9 +1183,7 @@ class DeckBuilder():
 
         index = self.wordlist_indexof(old_tag)
         if not index:
-            eprint(
-                f"ERROR: {old_tag} not found in wordlist, unable to replace with {new_tag}"
-            )
+            eprint(f"ERROR: {old_tag} not found in wordlist, unable to replace with {new_tag}")
             return
 
         old_tag = self.allwords[index]
