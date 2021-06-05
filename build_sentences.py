@@ -9,6 +9,7 @@ import re
 import string
 
 import sys
+_INTERACTIVE = hasattr(sys, 'ps1')
 
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
@@ -272,7 +273,7 @@ def print_tagged_data():
 
             sid, english, spanish, credits, english_score, spanish_score = next(isentences)
             count += 1
-            if count % 1000 == 0:
+            if not count % 1000 and _INTERACTIVE:
                 print(count, end="\r", file=sys.stderr)
 
             all_tags = []
