@@ -137,9 +137,10 @@ class DeckBuilder():
 
     rows = []
 
-    el_f_nouns = [ 'abra', 'acta', 'agua', 'ala', 'alba', 'alga', 'alma', 'ama', 'ancla',
-        'ansia', 'area', 'arma', 'arpa', 'asma', 'aula', 'ave', 'habla', 'hada', 'hacha',
-        'hambre', 'águila']
+    el_f_nouns = [ 'abra', 'acta', 'afta', 'ágora', 'agua', 'águila', 'ala', 'alba', 'alca',
+            'álgebra', 'alma', 'alta', 'alza', 'ama', 'ancla', 'áncora', 'ánima', 'ansia',
+            'app', 'arca', 'área', 'arma', 'arpa', 'asa', 'asma', 'aspa', 'asta', 'aula',
+            'ave', 'haba', 'habla', 'hacha', 'hada', 'hambre', 'haya' ]
 
     credits = {}
     dumpable_sentences = {}
