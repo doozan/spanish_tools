@@ -4,6 +4,7 @@
 import argparse
 import csv
 import genanki
+import html
 import json
 import math
 import os
@@ -35,61 +36,16 @@ def fail(*args, **kwargs):
     eprint(*args, **kwargs)
     exit(1)
 
-
 class MyNote(genanki.Note):
-    def write_card_to_db(self, cursor, now_ts, deck_id, note_id, order, due):
-        queue = 0
-        cursor.execute(
-            "INSERT INTO cards VALUES(null,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);",
-            (
-                note_id,  # nid
-                deck_id,  # did
-                order,  # ord
-                now_ts,  # mod
-                -1,  # usn
-                0,  # type (=0 for non-Cloze)
-                queue,  # queue
-                due,  # due
-                0,  # ivl
-                0,  # factor
-                0,  # reps
-                0,  # lapses
-                0,  # left
-                0,  # odue
-                0,  # odid
-                0,  # flags
-                "",  # data
-            ),
-        )
 
-    def write_to_db(self, cursor, now_ts, deck_id):
+    def write_to_db(self, cursor, timestamp: float, deck_id, id_gen):
 
-        # Preserve the timestamp if it has been specified
+        # Preserve the timestamp if there's an override
         if self.mod_ts:
-            now_ts = self.mod_ts
+            timestamp = self.mod_ts
 
-        cursor.execute(
-            "INSERT INTO notes VALUES(null,?,?,?,?,?,?,?,?,?,?);",
-            (
-                self.guid,  # guid
-                self.model.model_id,  # mid
-                now_ts,  # mod
-                -1,  # usn
-                self._format_tags(),  # TODO tags
-                self._format_fields(),  # flds
-                self.sort_field,  # sfld
-                0,  # csum, can be ignored
-                0,  # flags
-                "",  # data
-            ),
-        )
+        genanki.Note.write_to_db(self, cursor, timestamp, deck_id, id_gen)
 
-        note_id = cursor.lastrowid
-
-        count = 0
-        for card in self.cards:
-            self.write_card_to_db(cursor, now_ts, deck_id, note_id, count, self._order)
-            count += 1
 
 class DeckBuilder():
 
@@ -252,7 +208,7 @@ class DeckBuilder():
     @staticmethod
     def format_sentences(sentences):
         return "<br>\n".join(
-            f'<span class="spa">{item[0]}</span><br>\n<span class="eng">{item[1]}</span>'
+            f'<span class="spa">{item[0]}</span><br>\n<span class="eng">{html.escape(item[1])}</span>'
             for item in sentences
         )
 
@@ -510,7 +466,7 @@ class DeckBuilder():
                 if display_tag != "":
                     results.append(f'<span class="tag">[{display_tag}]:</span>')
 
-                results.append(f'<span class="usage">{usage}</span>')
+                results.append(f'<span class="usage">{html.escape(usage)}</span>')
 
                 results.append("</span>")
 
@@ -1338,6 +1294,7 @@ class DeckBuilder():
 
             position += 1
             item = self.build_item(word, pos, mediadir)
+            self.notes[item["guid"]] = item
             item["Rank"] = str(position)
             item["tags"].append(str(math.ceil(position / 500) * 500))
 
@@ -1351,10 +1308,11 @@ class DeckBuilder():
                 fields=row,
                 guid=item["guid"],
                 tags=item["tags"],
+                due=position
             )
             # preserve the mod timestamp if the note matches with the database
             note.mod_ts = self.get_mod_timestamp(note)
-            if not note.mod_ts and self.ankideck and False:
+            if not note.mod_ts and self.ankideck:
                 if item["guid"] not in self.db_notes:
                     print(f"added: {wordtag}")
                 else:
@@ -1374,9 +1332,6 @@ class DeckBuilder():
                         print(f"  old tags: {old_data['tags']}")
                         print(f"  new tags: {note._format_tags()}")
 
-            self.notes[item["guid"]] = item
-
-            note._order = position
             my_deck.add_note(note)
             self.rows.append(row)
 

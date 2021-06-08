@@ -13,13 +13,11 @@ def test_simple():
 _____
 protector
 pos: n
-  meta: {{es-noun|m|protectores|f=protectora|f2=protectriz}}
-  forms: f=protectora; f=protectriz; fpl=protectoras; fpl=protectrices; pl=protectores
+  meta: {{es-noun|m|f=+|f2=protectriz}}
   g: m
   gloss: protector (someone who protects or guards)
 pos: n
   meta: {{es-noun|m}}
-  forms: pl=protectores
   g: m
   gloss: protector (a device or mechanism which is designed to protect)
 _____
@@ -87,8 +85,8 @@ unknown 10
 
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-60,protector,n,LITERAL; CLEAR,10:protector|10:protectores|10:protectriz|10:protectrices|10:protectora|10:protectoras
-10,unknown,none,NOUSAGE; NODEF; NOSENT; COMMON,10:unknown\
+60,protector,n,LITERAL,10:protector|10:protectores|10:protectriz|10:protectrices|10:protectora|10:protectoras
+10,unknown,none,NOUSAGE; NODEF; NOSENT,10:unknown\
 """
 
 
@@ -130,24 +128,47 @@ test {adj} :: obsolete form of "test"
 def test_lemma_filters():
 
     wordlist_data = """\
-ir {v-meta} :: {{es-verb|-|ir|pres=voy|pret=fui|part=ido}} {{es-conj-ir|p=ir|combined=1|aux=ser}} {{es-conj-ir|p=ir|ref=yes|combined=1}}
-ir {vi} :: to go (away from speaker and listener)
-ir {vi} :: to come (towards or with the listener)
-ir {v} [auxiliary] :: to be going to (near future), to go (+ a + infinitive)
-ir {vr} :: to go away, to leave, to be off (see irse)
-irse {v-meta} :: {{es-verb|-|ir|pres=voy|pret=fui|part=ido|ref=y}} {{es-conj-ir|p=ir|ref=1|combined=1}}
-irse {v} | andarse; marcharse :: to go away, to leave, to depart, to go (when the destination is not essential; when something or someone is going somewhere else)
-irse {v} :: to leak out (with liquids and gasses), to boil away, to go flat (gas in drinks)
+_____
+ir
+pos: v
+  meta: {{es-verb}} {{es-conj}} {{es-conj|irse}}
+  gloss: to go (away from speaker and listener)
+    q: intransitive
+  gloss: to come (towards or with the listener)
+    q: intransitive
+  gloss: to be going to (near future), to go (+ a + infinitive)
+    q: auxiliary
+  gloss: to go away, to leave, to be off (see irse)
+    q: reflexive
+_____
+irse
+pos: v
+  meta: {{es-verb}} {{es-conj}}
+  gloss: to go away, to leave, to depart, to go (when the destination is not essential; when something or someone is going somewhere else)
+    syn: andarse; marcharse
+  gloss: to leak out (with liquids and gasses), to boil away, to go flat (gas in drinks)
+  gloss: to overflow
+  gloss: to go out (lights)
+  gloss: to finish, to wear out, to disappear (e.g. money, paint, pains, mechanical parts)
+  gloss: to die
+  gloss: to break wind, to fart
+    q: informal
+  gloss: to wet/soil oneself (i.e., urinate or defecate in one's pants)
+    q: informal
+  gloss: to come, to cum, to ejaculate, to orgasm
+    q: vulgar
 """
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences)
 
-    assert freq.all_forms.get_lemmas("vamos") == ['v|ir', 'v|irse']
+    print(allforms.all_forms["nos vamos"])
+
+    assert freq.all_forms.get_lemmas("vamos") == ['v|ir']
+    assert freq.all_forms.get_lemmas("nos vamos") == ['v|ir', 'v|irse']
     assert freq.get_lemmas("vamos", "v") == ["ir"]
     assert freq.get_lemmas("ir", "v") == ["ir"]
-
 
     assert freq.include_word("vamos", "v") == True
     assert freq.filter_pos("vamos", ["v"]) == ["v"]
@@ -161,26 +182,38 @@ va 10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-20,ir,v,CLEAR,10:vamos|10:va\
+20,ir,v,,10:vamos|10:va\
 """
 
 
 def test_diva():
 
     wordlist_data = """\
-diva {n-meta} :: {{es-noun|f|m=divo}}
-diva {f} :: diva
-divo {adj-meta} :: {{es-adj|f=diva}}
-divo {adj} :: star (famous)
-divo {n-meta} :: {{es-noun|m|f=diva}}
-divo {m} :: star, celeb\
+_____
+diva
+pos: adj
+  meta: {{head|es|adjective form}}
+  gloss: adjective form of "divo"
+pos: n
+  meta: {{es-noun|f|m=divo}}
+  g: f
+  gloss: diva
+_____
+divo
+pos: adj
+  meta: {{es-adj}}
+  gloss: star (famous)
+pos: n
+  meta: {{es-noun|m|f=diva}}
+  g: m
+  gloss: star, celeb
 """
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences)
 
-    assert freq.all_forms.get_lemmas("diva") == ['n|divo', 'adj|divo']
+    assert freq.all_forms.get_lemmas("diva") ==  ['adj|divo', 'n|divo']
     assert freq.get_lemmas("diva", "n") == ["divo"]
 
     flist_data = """\
@@ -216,7 +249,7 @@ hijo 10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-10,hijo,n,CLEAR,10:hijo\
+10,hijo,n,,10:hijo\
 """
 
 def test_asco():
@@ -247,7 +280,7 @@ asco 10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-10,asco,n,CLEAR,10:asco\
+10,asco,n,,10:asco\
 """
 
 def test_bienes():
@@ -272,13 +305,13 @@ bienes 10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-10,bienes,n,CLEAR,10:bienes\
+10,bienes,n,,10:bienes\
 """
 
 def test_rasguno():
 
     wordlist_data = """\
-rasguñar {v-meta} :: {{es-verb|rasguñ|ar}} {{es-conj-ar|rasguñ|combined=1}}
+rasguñar {v-meta} :: {{es-verb}} {{es-conj}}
 rasguñar {vt} | arañar; rascar :: to scratch
 rasguño {n-meta} :: {{es-noun}}
 rasguño {m} | arañazo :: scratch
@@ -289,14 +322,14 @@ rasguño {m} | arañazo :: scratch
     freq = FrequencyList(wordlist, allforms, sentences)
 
     assert freq.all_forms.get_lemmas("rasguño") == ['v|rasguñar', 'n|rasguño']
-    assert freq.get_ranked_pos("rasguño") == ["v", "n"]
+    assert freq.get_ranked_pos("rasguño") == ["n", "v"]
 
     flist_data = """\
 rasguño 10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-10,rasguñar,v,CLEAR,10:rasguño\
+10,rasguño,n,,10:rasguño\
 """
 
 def test_dios():
@@ -336,7 +369,7 @@ diosas 10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-40,dios,n,CLEAR,10:dios|10:dioses|10:diosa|10:diosas\
+40,dios,n,,10:dios|10:dioses|10:diosa|10:diosas\
 """
 
 
@@ -370,20 +403,20 @@ aquellos 10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-10,aquél,pron,PRONOUN; LITERAL; COMMON,10:aquellos\
+10,aquél,pron,PRONOUN; LITERAL,10:aquellos\
 """
 
 
 def test_vete():
 
     wordlist_data = """\
-ir {v-meta} :: {{es-verb|-|ir|pres=voy|pret=fui|part=ido}} {{es-conj-ir|p=ir|combined=1|aux=ser}} {{es-conj-ir|p=ir|ref=yes|combined=1}}
+ir {v-meta} :: {{es-verb}} {{es-conj}} {{es-conj|irse}}
 ir {v} :: x
-ver {v-meta} :: {{es-verb|v|er|pres=veo|pret=vi|part=visto}} {{es-conj-er|p=ver|combined=1}}
+ver {v-meta} :: {{es-verb}} {{es-conj}}
 ver {v} :: x
-verse {v-meta} :: {{es-verb|v|er|pres=veo|pret=vi|part=visto|ref=y}} {{es-conj-er|p=ver|ref=1|combined=1}}
+verse {v-meta} :: {{es-verb}} {{es-conj}}
 verse {v} :: x
-vetar {v-meta} :: {{es-verb|vet|ar}} {{es-conj-ar|vet|combined=1}}
+vetar {v-meta} :: {{es-verb}} {{es-conj}}
 vetar {v} :: x
 """
 
@@ -398,7 +431,7 @@ vetar {v} :: x
 def test_veros():
 
     wordlist_data = """\
-ver {v-meta} :: {{es-verb|v|er|pres=veo|pret=vi|part=visto}} {{es-conj-er|p=ver|combined=1}}
+ver {v-meta} :: {{es-verb}} {{es-conj}}
 ver {v} :: x
 vero {n-meta} :: {{es-noun|m}}
 vero {m} [heraldry] :: vair
@@ -490,3 +523,67 @@ piernas {m} [dated] :: twit; idiot
     assert freq.get_best_lemma("piernas", lemmas, "n") == "pierna"
 
 
+
+def test_izquierdas():
+    wordlist_data = """\
+_____
+izquierda
+pos: adj
+  meta: {{head|es|adjective form|g=f-s}}
+  g: f-s
+  gloss: adjective form of "izquierdo"
+pos: n
+  meta: {{es-noun|f|-}}
+  g: f
+  gloss: left (side, direction)
+  gloss: left
+    q: politics
+_____
+izquierdas
+pos: adj
+  meta: {{head|es|adjective form}}
+  gloss: adjective form of "izquierdo"
+pos: n
+  meta: {{head|es|noun form|g=f-p}}
+  g: f-p
+  gloss: plural of "izquierda"
+_____
+izquierdo
+pos: adj
+  meta: {{es-adj}}
+  gloss: left; on the left side or toward the left; the opposite of right
+    syn: siniestro
+  gloss: left-handed
+  gloss: crooked
+_____
+izquierdos
+pos: adj
+  meta: {{head|es|adjective form|g=m-p}}
+  g: m-p
+  gloss: plural of "izquierdo"
+_____
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences)
+
+    print(allforms.all_forms)
+
+    assert freq.get_lemmas("izquierdas", "n") == ["izquierda"]
+    assert freq.get_lemmas("izquierdo", "adj") == ["izquierdo"]
+    assert freq.get_lemmas("izquierdos", "adj") == ["izquierdo"]
+    assert freq.get_lemmas("izquierdas", "adj") == ["izquierdo"]
+    assert freq.get_ranked_pos("izquierda") == ['n', 'adj']
+    assert freq.get_ranked_pos("izquierdas") == ['n', 'adj']
+
+    flist_data = """\
+izquierda 34629
+izquierdo 8150
+izquierdas 436
+izquierdos 234
+"""
+    assert "\n".join(freq.process(flist_data.splitlines())) == """\
+count,spanish,pos,flags,usage
+35065,izquierda,n,,34629:izquierda|436:izquierdas
+"""
