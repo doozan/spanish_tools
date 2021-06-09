@@ -1153,7 +1153,7 @@ class DeckBuilder():
     def wordlist_remove(self, wordtag):
 
         index = self.wordlist_indexof(wordtag)
-        if not index:
+        if index is None:
             eprint(f"ERROR: {wordtag} not found in wordlist, unable to remove")
             return
 
@@ -1254,7 +1254,7 @@ class DeckBuilder():
                 file=sys.stderr,
             )
 
-    def compile(self, infofile, deckname, mediadir, limit, ankideck=None):
+    def compile(self, infofile, deckname, mediadir, limit, ankideck=None, tags=[]):
 
         with open(infofile) as jsonfile:
             self.deck_info = json.load(jsonfile)
@@ -1296,6 +1296,7 @@ class DeckBuilder():
             item = self.build_item(word, pos, mediadir)
             self.notes[item["guid"]] = item
             item["Rank"] = str(position)
+            item["tags"] += tags
             item["tags"].append(str(math.ceil(position / 500) * 500))
 
             row = []
@@ -1326,7 +1327,7 @@ class DeckBuilder():
                             if old != new:
                                 if idx == 6:
                                     print(f"{wordtag} sentences changed")
-                                else:
+                                elif idx != 0:
                                     print(f"{wordtag}  field {idx}: {old} => {new}")
                     else:
                         print(f"  old tags: {old_data['tags']}")
@@ -1407,6 +1408,12 @@ def main():
         help="List of words to include/exclude from the deck (default: DECKNAME.csv)",
     )
     parser.add_argument(
+        "-t",
+        "--tag",
+        action="append",
+        help="Add specified to to all notes (can be declared multiple times)",
+    )
+    parser.add_argument(
         "--allow-flag",
         action="append",
         help="Include wordlist items even if they have specificed flag (can be declared multiple times)"
@@ -1451,6 +1458,14 @@ def main():
     )
     parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
     args = parser.parse_args()
+
+    if args.tag:
+        for tag in args.tag:
+            if not re.match("^[0-9a-zA-Z_]+$", tag):
+                print(f"Invalid tag: '{tag}'. May only contain alphanumerics + _")
+                exit(1)
+    else:
+        args.tag = []
 
     if not args.data_dir:
         args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
@@ -1508,7 +1523,7 @@ def main():
 
     deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs)
     deck.load_wordlists(args.wordlist, args.allow_flag)
-    deck.compile(args.deckinfo, args.deckname, args.mediadir, args.limit, args.anki)
+    deck.compile(args.deckinfo, args.deckname, args.mediadir, args.limit, args.anki, args.tag)
 
     if args.dump_sentence_ids:
         deck.dump_sentences(args.dump_sentence_ids)
