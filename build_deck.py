@@ -56,6 +56,8 @@ class DeckBuilder():
         "Synonyms",
         "ShortDef",
         "Definition",
+        "Etymology",
+        "UsageNotes",
         "Sentences",
         "Display",
         "Audio",
@@ -207,8 +209,8 @@ class DeckBuilder():
 
     @staticmethod
     def format_sentences(sentences):
-        return "<br>\n".join(
-            f'<span class="spa">{item[0]}</span><br>\n<span class="eng">{html.escape(item[1])}</span>'
+        return "\n".join(
+            f'<div class="sentence"><span class="spa">{item[0]}</span><br>\n<span class="eng">{html.escape(item[1])}</span></div>'
             for item in sentences
         )
 
@@ -372,6 +374,18 @@ class DeckBuilder():
 
         return cls.format_syns_html(deck,extra)
 
+    @classmethod
+    def format_etymology(cls, etymology):
+        if etymology is None:
+            return ""
+
+        return html.escape(etymology).replace(r"\n", "<br>")
+
+    @classmethod
+    def format_usage_notes(cls, usage):
+        if usage is None:
+            return ""
+        return html.escape(usage).replace(r"\n", "<br>")
 
     @classmethod
     def format_def(cls, item, hide_word=None):
@@ -1056,6 +1070,12 @@ class DeckBuilder():
 
         short_english = self.format_def(shortdef, hide_word=word) if shortdef else ""
 
+        # TODO: rework how format_def works so it doesn't mush all word_objs
+        # and make it work in parallel with etymology and usage_notes
+        word_obj = next(self._words.get_words(spanish, pos))
+        etymology = self.format_etymology(word_obj.etymology)
+        usage_notes = self.format_usage_notes(word_obj.use_notes)
+
         defs = [
             value.strip()
             for tags in shortdef.values()
@@ -1091,6 +1111,8 @@ class DeckBuilder():
             "Synonyms": self.format_syns(deck_syns, extra_syns, hide_word=spanish),
             "ShortDef": short_english,
             "Definition": english,
+            "Etymology": etymology,
+            "UsageNotes": usage_notes,
             "Sentences": sentences,
             "Display": tts_data["display"],
             "Audio": self.format_sound(sound),
@@ -1316,7 +1338,7 @@ class DeckBuilder():
             if not note.mod_ts and self.ankideck:
                 if item["guid"] not in self.db_notes:
                     print(f"added: {wordtag}")
-                else:
+                elif False:
                     old_data = self.db_notes[item["guid"]]
                     if old_data["flds"] != note._format_fields():
                         old_fields = old_data["flds"].split(chr(31))
