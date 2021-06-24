@@ -9,7 +9,6 @@ import re
 import string
 
 import sys
-_INTERACTIVE = hasattr(sys, 'ps1')
 
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
@@ -29,6 +28,7 @@ parser.add_argument("--tags", nargs=1, help="Merged tagged data with original da
 parser.add_argument("--dictionary", help="Dictionary file", required=True)
 parser.add_argument("--allforms", help="Load word forms from file")
 parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
+parser.add_argument('--verbose', action='store_true')
 args = parser.parse_args()
 
 if not os.path.isfile(args.sentences):
@@ -254,7 +254,7 @@ def get_original_form(tag, sentence, offset):
     return word
 
 
-def print_tagged_data():
+def print_tagged_data(verbose=False):
 
     isentences = iter_sentences()
 
@@ -273,7 +273,7 @@ def print_tagged_data():
 
             sid, english, spanish, credits, english_score, spanish_score = next(isentences)
             count += 1
-            if not count % 1000 and _INTERACTIVE:
+            if not count % 1000 and verbose:
                 print(count, end="\r", file=sys.stderr)
 
             all_tags = []
@@ -334,6 +334,6 @@ def print_tagged_data():
 if args.credits:
     print_credits()
 elif args.tags:
-    print_tagged_data()
+    print_tagged_data(args.verbose)
 else:
     print_untagged_sentences()
