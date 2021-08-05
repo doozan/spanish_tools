@@ -1574,6 +1574,11 @@ def main():
 
             for rank, word, guid, change in sorted(changes):
                 outfile.write(f'{change}{rank} {word} {guid}\n')
+
+            if len(changes):
+                print(f'{len(changes)} words added/subtracted, {len(deck.db_notes)} items in db, {len(deck.notes)} items in deck')
+
+
     if args.dump_credits:
         deck.dump_credits(args.dump_credits)
 
