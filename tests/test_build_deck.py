@@ -180,6 +180,9 @@ def test_shorten_defs():
     item = { "m": { "": [ "(qualifier) a really long def1", "def2" ] } }
     assert DeckBuilder.shorten_defs(item, 20) == {'m': {'': ['(qualifier) a really long def1']}}
 
+    item = { "m": { "": [ "(intransitive, or transitive with con(of) or en(about)) to dream", "def2" ] } }
+    assert DeckBuilder.shorten_defs(item, 20) == {'m': {'': ['(intransitive, or transitive with con(of) or en(about)) to dream']}}
+
     item = { "m": { "": [ "a really long def1 (blah)", "def2" ] } }
     assert DeckBuilder.shorten_defs(item, 20) == {'m': {'': ['a really long def1']}}
 

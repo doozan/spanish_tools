@@ -736,6 +736,10 @@ class DeckBuilder():
                     value = "; ".join(values)
                     strip_pos = value.rfind(",")
                     if strip_pos > 0:
+                        # don't break inside parethesis
+                        if value.rfind("(", 0, strip_pos) > value.rfind(")", 0, strip_pos):
+                            continue
+
                         can_strip=True
                         shortdefs[pos][tag] = [value[:strip_pos].strip()]
                         if cls.def_len(shortdefs) <= max_len:
