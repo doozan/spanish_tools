@@ -294,14 +294,29 @@ class DeckBuilder():
 
     # (spanish, english, score, spa_id, eng_id)
     def dump_sentences(self, filename):
-        with open(filename, "w") as outfile:
-            print(f"dumping {filename}")
+
+        try:
+            with open(filename, "r") as dumpfile:
+                dumpfile.seek(0)
+                for line in dumpfile:
+                    line = line.strip()
+                    word,pos,*forced_itemtags = line.split(",")
+                    wordtag = make_tag(word, pos)
+                    if wordtag not in self.dumpable_sentences:
+                        self.dumpable_sentences[wordtag] = forced_itemtags
+        except IOError:
+            pass
+
+        print(f"dumping {len(self.dumpable_sentences)} sentences to {filename}")
+        with open(filename, "w") as dumpfile:
+            dumpfile.seek(0)
+            dumpfile.truncate()
             for tag, ids in sorted(self.dumpable_sentences.items()):
                 word, pos = split_tag(tag)
                 row = [word, pos] + ids
 
-                outfile.write(",".join(row))
-                outfile.write("\n")
+                dumpfile.write(",".join(row))
+                dumpfile.write("\n")
 
 
     @staticmethod
