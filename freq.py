@@ -36,14 +36,27 @@ class FrequencyList():
         lines = {}
 
         # Read all the lines and do an initial lookup of lemmas
-        for line in freqlist:
-            word, count = line.strip().split(" ")
+        for linenum,line in enumerate(freqlist):
+            word, _, count = line.strip().partition(" ")
+            if not count or not count.isdigit():
+                if count:
+                    word = word + " " + count
+                count = str(linenum)
+
             if word in self.ignore:
                 continue
 
-            posrank = self.get_ranked_pos(word)
-            pos = posrank[0] if posrank else "none"
-            lemmas = self.get_lemmas(word, pos)
+            if ":" in word:
+                word, _, pos = word.partition(":")
+            else:
+                posrank = self.get_ranked_pos(word)
+                pos = posrank[0] if posrank else "none"
+
+            if word.startswith("@"):
+                lemmas = [ word[1:] ]
+            else:
+                lemmas = self.get_lemmas(word, pos)
+
             lines[word] = (pos, count, lemmas)
             if len(lemmas) == 1:
                 self.add_count(lemmas[0], pos, count, word)

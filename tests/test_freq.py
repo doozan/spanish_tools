@@ -586,4 +586,5 @@ izquierdos 234
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
 35065,izquierda,n,,34629:izquierda|436:izquierdas
+8384,izquierdo,adj,,8150:izquierdo|234:izquierdos\
 """
