@@ -54,10 +54,7 @@ class DeckBuilder():
         "Spanish",
         "Part of Speech",
         "Synonyms",
-        "ShortDef",
-        "Definition",
-        "Etymology",
-        "UsageNotes",
+        "Data",
         "Sentences",
         "Display",
         "Audio",
@@ -79,34 +76,34 @@ class DeckBuilder():
     _FEMALE2 = "Penelope"
     _MALE1 = "Miguel"
 
-    _words = None
-    _ignore = {}
-    _sentences = None
-
-    db_notes = {}
-    db_timestamps = {}
-
-    allwords = []
-    allwords_set = set()
-    allwords_positions = {}
-    shortdefs = {}
-
-    media_files = []
-
-    rows = []
-
     el_f_nouns = [ 'abra', 'acta', 'afta', 'ágora', 'agua', 'águila', 'ala', 'alba', 'alca',
             'álgebra', 'alma', 'alta', 'alza', 'ama', 'ancla', 'áncora', 'ánima', 'ansia',
             'app', 'arca', 'área', 'arma', 'arpa', 'asa', 'asma', 'aspa', 'asta', 'aula',
             'ave', 'haba', 'habla', 'hacha', 'hada', 'hambre', 'haya' ]
 
-    credits = {}
-    dumpable_sentences = {}
-    notes = {}
-    seen_guids = {}
-    seen_clues = {}
-
     def __init__(self, wordlist, sentences, ignore, allforms, shortdefs=None):
+
+        self._words = None
+        self._ignore = {}
+        self._sentences = None
+
+        self.db_notes = {}
+        self.db_timestamps = {}
+
+        self.allwords = []
+        self.allwords_set = set()
+        self.allwords_positions = {}
+        self.shortdefs = {}
+
+        self.media_files = []
+
+        self.rows = []
+
+        self.credits = {}
+        self.dumpable_sentences = {}
+        self.notes = {}
+        self.seen_guids = {}
+        self.seen_hints = {}
 
         self._words = wordlist
         self._ignore = ignore
@@ -114,8 +111,12 @@ class DeckBuilder():
         self._shortdefs = shortdefs
         self.all_forms = allforms
 
-    def filter_gloss(self, word, pos, note, gloss):
-        """ Returns True if the item matches an entry in the ignore list """
+    def filter_gloss(self, wordobj, sense):
+        word = wordobj.word
+        pos = wordobj.pos if wordobj.pos != "n" else wordobj.genders
+
+        note = sense.qualifier
+        gloss = sense.gloss
 
         ignore = self._ignore
 
@@ -129,7 +130,7 @@ class DeckBuilder():
                         if gloss.startswith(ignore_gloss):
                             return None
 
-        gloss = re.sub(r'[;:,.]?\s*(alternative case form|feminine|female equivalent) of "[^\"]+"[ :,.]*', '', gloss)
+        gloss = re.sub(r'[ ;:,.]*\s*(alternative case form|feminine|female equivalent) of "[^\"]+"[ :,.]*', '', gloss)
         if not re.match("[^ :,.]", gloss):
             return None
 
@@ -325,38 +326,60 @@ class DeckBuilder():
             return ""
         return f"[sound:{filename}]"
 
+    @staticmethod
+    def obscure_gloss(gloss, hide_word, distance=None, hide_first=False, hide_all=False):
+
+        def is_first_word(data):
+            if not len(data):
+                return True
+            if len(data) == 2 and data[0].lower() in ["a", "an", "to"]:
+                return True
+            return False
+
+        if distance is None:
+            distance = int(len(hide_word)/4)
+
+        if hide_all:
+            hide_first = True
+
+        data = []
+        splits = iter(re.split(r'(\W+)', gloss))
+        all_hidden = True
+        for word in splits:
+            sep = next(splits, None)
+            if not word and sep:
+                data.append(sep)
+                continue
+
+            if fuzzy_distance(word, hide_word)<=distance and (hide_first or not is_first_word(data)):
+                data.append("...")
+            else:
+                data.append(word)
+                if all_hidden and word.lower() not in ["a", "an", "to"]:
+                    all_hidden = False
+
+            if sep:
+                data.append(sep)
+
+        if hide_all or not all_hidden:
+            gloss = "".join(data)
+
+        # TODO: Ensure this doesn't obscure everything?
+        m = re.match(r'(?P<pre>.*?)(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"(?P<post>.*)', gloss)
+        if m and (hide_all or m.group("pre") or m.group("post")):
+            gloss = re.sub(r'(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"', r"...", gloss)
+
+        return gloss
+
 
     @staticmethod
-    def format_image(filename):
-        if not filename:
-            return ""
-        return f'<img src="{filename}" />'
-
-
-    @staticmethod
-    def obscured(items, hide_word, distance=None):
+    def obscure_list(items, hide_word, distance=None):
 
         if distance is None:
             distance = int(len(hide_word)/4)
 
         for item in items:
-            orig = []
-            splits = iter(re.split(r'(\W+)', item))
-            for word in splits:
-                sep = next(splits, None)
-                if not word and sep:
-                    orig.append(sep)
-                    continue
-
-                if fuzzy_distance(word, hide_word)<=distance:
-                    orig.append("...")
-                else:
-                    orig.append(word)
-
-                if sep:
-                    orig.append(sep)
-
-            yield "".join(orig)
+            yield DeckBuilder.obscure_gloss(item, hide_word, distance, True, True)
 
     @staticmethod
     def format_syns_html(deck, extra, css_class=''):
@@ -378,8 +401,8 @@ class DeckBuilder():
 
     @classmethod
     def format_syns(cls, deck, extra, hide_word=None):
-        obscured_deck = list(cls.obscured(deck, hide_word))
-        obscured_extra = list(cls.obscured(extra, hide_word))
+        obscured_deck = list(cls.obscure_list(deck, hide_word))
+        obscured_extra = list(cls.obscure_list(extra, hide_word))
 
         has_obscured = obscured_deck != deck or obscured_extra != extra
 
@@ -390,118 +413,121 @@ class DeckBuilder():
         return cls.format_syns_html(deck,extra)
 
     @classmethod
-    def format_etymology(cls, etymology):
-        if etymology is None:
-            return ""
+    def format_usage(cls, usage):
 
-        return html.escape(etymology).replace(r"\n", "<br>")
+        ety_footnotes = [ e["ety"] for e in usage if e.get("ety") ]
+        multi_etynotes = len(usage) > 1
+
+        usage_footnotes = [ w["note"] for e in usage for w in e["words"] if w.get("note") ]
+        multi_usenotes = len(usage_footnotes) > 0
+        data = []
+
+        primary_pos = usage[0]["words"][0]["pos"]
+        for ety_idx, ety in enumerate(usage):
+            classes = ["etymology", f"etymology_{ety_idx}"]
+            if len(usage) == 1:
+                classes.append("solo_etymology")
+            data.append(f'<div class="{" ".join(classes)}">\n')
+            ety_note = ety.get("ety")
+            ety_id = ety_footnotes.index(ety_note) if ety_note else None
+
+            for w in ety["words"]:
+                word_note = w.get("note", None)
+                usage_id = usage_footnotes.index(word_note) if word_note else None
+
+                for sense in w["senses"]:
+                    ety_key = chr(ord("a")+ety_id) if multi_etynotes and ety_id is not None else None
+                    usage_key = chr(ord("1")+usage_id) if multi_usenotes and usage_id is not None else None
+
+                    data += cls.format_sense(sense, w["pos"], w.get("noun_type", None), ety_key, usage_key, primary_pos)
+                    if "hint" in sense:
+                        data += cls.format_sense(sense, w["pos"], w.get("noun_type", None), ety_key, usage_key, primary_pos, hint=True)
+
+            data.append('</div>\n')
+
+        data += cls.format_usage_footnotes(usage_footnotes)
+        data += cls.format_ety_footnotes(ety_footnotes)
+
+        res = "".join(data)
+        return res
 
     @classmethod
-    def format_usage_notes(cls, usage):
-        if usage is None:
-            return ""
-        return html.escape(usage).replace(r"\n", "<br>")
+    def format_usage_footnotes(cls, notes, extra_classes=[]):
+        classes = ["usage_footnote"]
+        if len(notes) == 1:
+            classes.append("solo_footnote")
+        c = " ".join(classes + extra_classes)
+        return cls.format_footnotes(notes, c, "1")
 
     @classmethod
-    def format_def(cls, item, hide_word=None):
+    def format_ety_footnotes(cls, notes, extra_classes=[]):
+        classes = ["ety_footnote"]
+        if len(notes) == 1:
+            classes.append("solo_footnote")
+        c = " ".join(classes + extra_classes)
+        return cls.format_footnotes(notes, c, "a")
 
-        results = []
-        multi_pos = len(item) > 1
+    @classmethod
+    def format_footnotes(cls, notes, note_class, start_char):
+        res = []
 
-        prev_display_pos = None
-        for pos, tags in item.items():
+        for idx,note in enumerate(notes):
+            anchor = chr(ord(start_char)+idx)
+            res.append(f'<span id="footnote_{anchor}" class="footnote {note_class}"><span class="footnote_id">{anchor}</span><span class="footnote_data">' + re.sub(r"\\n", "<br>", note) + '</span></span>\n')
 
-            common_pos = Word.get_common_pos(pos)
-            safe_pos = pos.replace("/", "_")
+        return res
 
-            # Don't prefix the def with the part of speech if there's only one pos
-            # for this entry (unless it's a verb with type of usage specified)
-            if not prev_display_pos and len(item) == 1:
-                prev_display_pos = "{v}" if common_pos == "v" else f"{{{pos}}}"
+    @classmethod
+    def format_sense(cls, sense, pos, noun_type, ety_key, usage_key, primary_pos, hint=False):
+        res = []
 
-            for tag, usage in tags.items():
-                classes = ["pos", common_pos]
-                if common_pos != safe_pos:
-                    classes.append(safe_pos)
-
-                display_pos = f"{{{pos}}}"
-                display_tag = tag
-
-                # Only m/f and m-f nouns will have special pos in the tags
-                if common_pos == "n" and pos in ["m-f", "m/f"]:
-                    tag_pos, sep, other_tags = tag.partition(",")
-                    if tag_pos in ["m", "f", "mf"]:
-                        display_tag = other_tags.strip()
-                    else:
-                        tag_pos = "mf"
-
-                    classes.append(tag_pos)
-                    display_pos = f"{{{tag_pos}}}"
-
-                elif common_pos == "v" and ("r" in pos or "p" in pos):
-                    classes.append("reflexive")
-
-                if prev_display_pos == display_pos:
-                    display_pos = ""
-                else:
-                    prev_display_pos = display_pos
-
-                usage = "; ".join(item[pos][tag])
-
-                if hide_word:
-                    items = list(cls.obscured(item[pos][tag], hide_word))
-
-                    # Don't obscure the first word of the first definition
-                    if not results:
-                        words = items[0].lower().strip().split()
-
-                        if words[0].startswith("...") or (len(words)>1 and words[1].startswith("...") and words[0] in ["a", "an", "to"]):
-                            items[0] = item[pos][tag][0]
-
-                    # Skip anything that's completely excluded
-                    else:
-                        if all(i.lower() in ["...", "a ...", "an ...", "to ..."] for i in items):
-                            continue
-
-                    new_usage = "; ".join(items)
-                    new_usage = re.sub(
-                        r'(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"',
-                        r"\1 of ...",
-                        new_usage,
-                    ).strip()
-
-                    if (
-                        new_usage != usage
-                        and len(item.keys()) == 1
-                        and len(item[pos].keys()) == 1
-                        and "," not in usage
-                        and ";" not in usage
-                        and "(" not in usage
-                        and ":" not in usage
-                    ):
-                        pass
-#                        eprint(
-#                            f"Warning: obscured definition: ({usage}) may be completely obscured, reverting"
-#                        )
-                    else:
-                        usage = new_usage
-
-                if results:
-                    results.append("\n")
-
-                classes += sorted(cls.get_location_classes(tag))
-                results.append(f'<span class="{" ".join(classes)}">{display_pos} ')
-
-                if display_tag != "":
-                    results.append(f'<span class="tag">[{display_tag}]:</span>')
-
-                results.append(f'<span class="usage">{html.escape(usage)}</span>')
-
-                results.append("</span>")
-
-        return "".join(results)
+        if noun_type:
+            display_pos = noun_type
+        elif pos == "v":
+            display_pos = "v" + sense.get("type", "")
+        else:
+            display_pos = pos
 
 
+        classes = ["pos", pos]
+        if hint:
+            classes.append("hint")
+
+        if pos == "n" and "type" in sense:
+            classes.append(sense["type"])
+        elif pos == "n" and noun_type:
+            classes.append(re.sub("[^a-zA-Z]", "", noun_type))
+        elif pos == "v" and sense.get("type") in ["r","p"]:
+            classes.append("reflexive")
+
+        tags = []
+        if pos == "n" and "type" in sense and not hint:
+            tags.append(sense["type"])
+        if "tag" in sense:
+            tags.append(sense["tag"])
+            classes += sorted(cls.get_location_classes(sense["tag"]))
+
+        res.append(f'<span class="{" ".join(classes)}">')
+
+        c = "pos_tag pos_tag_primary" if pos == primary_pos else "pos_tag"
+        res.append(f'<span class="{c}">{display_pos}</span>')
+
+        if tags:
+            res.append(f'<span class="qualifier">{", ".join(tags)}</span>')
+
+
+        if not hint or not sense.get("hint"):
+            res.append(f'<span class="gloss">{html.escape(sense["gloss"])}</span>')
+        else:
+            res.append(f'<span class="gloss">{html.escape(sense["hint"])}</span>')
+
+        if usage_key:
+            res.append(f'<span class="footnote_link usage_link">{usage_key}</span>')
+        if ety_key:
+            res.append(f'<span class="footnote_link ety_link">{ety_key}</span>')
+
+        res.append("</span>\n")
+        return res
 
 
     def validate_note(self, item):
@@ -511,7 +537,7 @@ class DeckBuilder():
         else:
             self.seen_guids[item["guid"]] = 1
 
-        for key in ["Spanish", "Definition", "Part of Speech", "Audio"]:
+        for key in ["Spanish", "Data", "Part of Speech", "Audio"]:
             if item[key] == "":
                 eprint(f"Missing {key} from {item}")
                 return False
@@ -529,7 +555,7 @@ class DeckBuilder():
 
         return None
 
-    def get_noun_type(self, word_obj):
+    def get_noun_gender(self, word_obj):
         if not word_obj.genders:
             return "n"
 
@@ -545,322 +571,398 @@ class DeckBuilder():
 
         return noun_type
 
+    def get_filtered_senses(self, word):
+        pos = word.pos if word.pos != "n" else word.genders
+        return [s for s in word.senses if self.filter_gloss(word, s)]
 
-    def get_pos_usage(self, word, common_pos):
-        defs = {}
-        verb_types = {
-            "transitive": "t",
-            "reflexive": "r",
-            "intransitive": "i",
-            "pronominal": "p",
-            "takes a reflexive pronoun": "p",
-            "ambitransitive": "x",
-        }
+    def get_word_objs(self, word, primary_pos, get_all_pos=True):
 
-        for word_obj in self._words.get_words(word, common_pos):
-            #print("word", word_obj.word, word_obj.pos, word_obj.genders)
+        all_pos = []
 
-            for sense in word_obj.senses:
-                pos = word_obj.pos
-                if pos == "n":
-                    pos = self.get_noun_type(word_obj)
+        if get_all_pos:
+            poslemmas = self.all_forms.get_lemmas(word)
+            for pos, lemma  in [x.split("|") for x in sorted(poslemmas)]:
+                if pos not in [ primary_pos, "v" ] and pos not in all_pos:
+                    all_pos.append(pos)
+        all_pos = [ primary_pos ] + sorted(all_pos)
 
-                tag = sense.qualifier
-                if tag is None:
-                    tag = ""
-                elif pos == "v":
-                    keep_tags = []
-                    tags = tag.split(", ")
-                    verb_type = []
-                    for tag in tags:
-                        if tag in verb_types:
-                            verb_type.append(verb_types[tag])
-                        else:
-                            keep_tags.append(tag)
-                    pos = "v" + "".join(verb_type)
-                    tag = ", ".join(keep_tags)
+        items = []
+        for pos in all_pos:
+            if pos == primary_pos:
+                lemmas = [word]
+            else:
+                lemmas = self.get_lemmas(word, pos)
+            for lemma in lemmas:
+                # Don't match adjectives to their opposite gender nouns
+                if primary_pos == "adj" and pos == "n" and lemma != word:
+                    continue
 
-                #print("pos", pos, word_obj.pos, word_obj.form)
+                for wordobj in self._words.get_words(lemma, pos):
+                    # Skip noun forms
+                    if wordobj.pos == "n" and not wordobj.genders:
+                        continue
+                    if wordobj not in items:
+                        items.append(wordobj)
 
-                if pos not in defs:
-                    defs[pos] = {}
+                # Safety check, fail if the primary_pos isn't found
+                if pos == primary_pos and not len(items):
+                    return items
 
-                gloss = self.filter_gloss(word, pos, tag, sense.gloss)
+        return items
+
+    def has_usage(self, word, primary_pos):
+        return bool(self.get_usage(word, primary_pos, False))
+
+    def group_ety(self, words):
+        groups = {}
+        for word in words:
+            ety = word.etymology
+            groups[ety] = groups.get(ety, [])
+            groups[ety].append(word)
+        return groups.values()
+
+    def group_pos(self, words):
+        groups = {}
+        for word in words:
+            pos = word.pos
+            groups[pos] = groups.get(pos, [])
+            groups[pos].append(word)
+        return groups.values()
+
+    def process_nouns(self, words):
+
+        res = {}
+        for w in words:
+            if w.pos != "n":
+                continue
+
+            # Skip filtered words
+            if not any(self.get_filtered_senses(w)):
+                continue
+
+            gender = self.get_noun_gender(w)
+
+            # Tag f-el nouns
+            if gender == "f" and w.word in self.el_f_nouns:
+                res["f-el"] = res.get("f-el", []) + [w]
+
+            # Find opposite gender pair for m/f words (el doctor, la doctora)
+            elif gender == "m" and "f" in w.forms:
+                mates = []
+                for femnoun in w.forms["f"]:
+                    if femnoun == w.word:
+                        continue
+
+                    # Get all possible words for the given femnoun
+                    femwords = list(self._words.get_words(femnoun, "n"))
+
+                    # And then filter out only those that reference back to the masculine noun either in their declared forms
+                    # or with an explicit "feminine of" sense
+                    for f in femwords:
+                        if (w.word in f.forms.get("m",[]) or \
+                           any(re.search(fr'(feminine|female equivalent) of "{w.word}"', sense.gloss) for sense in f.senses)) and\
+                           f not in mates:
+                               mates.append(f)
+
+                res["m/f"] = res.get("m/f", [])
+                res["m/f"].append([w] + mates)
+                #res["m/f"] = res.get("m/f", []) + [w] + mates
+
+            else:
+                res[gender] = res.get(gender, []) + [w]
+
+        # mark m-f if there are both masculine and feminine uses for the same word (el cometa, la cometa)
+        # TODO: also check "m/f"
+        #mf = [k for k in res.keys() if k in ["m", "f", "m/f"]]
+        #if len(mf) > 1:
+        if "m" in res and "f" in res:
+            primary = next(k for k in res.keys() if k in ["m", "f"])
+            secondary = "f" if primary=="m" else "m"
+            res[primary] += res[secondary]
+            del res[secondary]
+            res = {"m-f" if k == primary else k:v for k,v in res.items()}
+
+        return res
+
+    @staticmethod
+    def shorten_gloss(gloss, max_length):
+
+        # Split and shorten until short enough
+        for separator in [ '(', '[', ';' ]:
+            if len(gloss) < max_length:
+                break
+
+            # strip () and [] only at the end of gloss
+            if separator == "(" and not gloss.endswith(")") or \
+               separator == "[" and not gloss.endswith("]"):
+                continue
+
+            break_pos = gloss.rfind(separator)
+            new = gloss[:break_pos].strip()
+            if new:
+                gloss = new
+
+        # If it's still too long, strip the last , until less than max length or no more , to strip
+        break_pos = len(gloss)
+        while break_pos and len(gloss) > max_length:
+            break_pos = gloss.rfind(",", 0, break_pos)
+            if break_pos <= 0:
+                break
+
+            # don't break if there's an open ( to the left of break_pos
+            if gloss.rfind("(", 0, break_pos) > gloss.rfind(")", 0, break_pos):
+                continue
+
+            if break_pos:
+                gloss = gloss[:break_pos]
+
+        return gloss.strip()
+
+    def add_shortdefs(self, usage, hide_word, max_length=60):
+
+        def is_reflexive(sense_data):
+            return any(x in sense_data.get("type","") for x in ["r","p"])
+
+        if not usage:
+            return
+
+        glosses = {}
+
+        pos_data = usage[0]["words"][0]
+
+        short_senses = [ pos_data["senses"][0] ]
+
+        # If a noun has male/female words, try to take a gloss from each
+        if pos_data["pos"] == "n" and pos_data.get("noun_type") in ["m-f","m/f"]:
+            for sense in pos_data["senses"][1:]:
+                if sense.get("type") != short_senses[0].get("type"):
+                    short_senses.append(sense)
+                    break
+
+        # If it's a verb and the first sense is not reflexive, search for a sense that is reflexive
+        if pos_data["pos"] == "v" and not is_reflexive(short_senses[0]):
+            for sense in pos_data["senses"][1:]:
+                if is_reflexive(sense):
+                    short_senses.append(sense)
+                    break
+
+        if len(short_senses) == 1 and len(pos_data["senses"]) > 1:
+            short_senses.append(pos_data["senses"][1])
+
+        for sense in pos_data["senses"]:
+            if sense in short_senses:
+                hint = self.shorten_gloss(self.obscure_gloss(sense["gloss"], hide_word), max_length)
+                if hint == sense["gloss"]:
+                    hint = ""
+                sense["hint"] = hint
+
+    def get_usage(self, word, primary_pos, get_all_pos=True, max_length=None):
+        """ Returns data structure:
+        [{
+            "ety": "etymology notes", # Optional
+            "words": [{
+                    "word": "word",
+                    "pos": "n",
+                    "noun_type": "m-f", # Optional, for nouns, "m-f", "m/f"
+                    "note": "usage notes", # Optional
+                    "senses": [{
+                        "type": "m", # Optional, for nouns, "m", "f", "mf", "f-el", for verbs a combination of [t,r,i,p,x]
+                        "tag": "tag data", # Optional, qualifier for gloss
+                        "gloss": "gloss"
+                        "hint": "" # Optional, signals that this sense should be included when displaying shortdefs
+                                          # if a non-empty string is provided, it will be used in place of the original gloss
+                    }]
+                    "usage": "usage notes" # Optional
+                }],
+        },
+        {
+            "ety": "etymology2",
+            "words": ....
+        }]
+        """
+
+        def get_verb_type_and_tag(sense):
+            verb_types = {
+                "transitive": "t",
+                "reflexive": "r",
+                "intransitive": "i",
+                "pronominal": "p",
+                "takes a reflexive pronoun": "p",
+                "ambitransitive": "x",
+            }
+
+            if not sense.qualifier:
+                return ["", ""]
+
+            tag_items = []
+            verb_type = []
+            for tag in sense.qualifier.split(", "):
+                if tag in verb_types:
+                    verb_type.append(verb_types[tag])
+                else:
+                    tag_items.append(tag)
+            pos = "".join(verb_type)
+            tag = ", ".join(tag_items)
+
+            return (pos, tag)
+
+        def get_sense_data(word, pos_type, word_tag):
+
+            senses = []
+            for sense in word.senses:
+                gloss = self.filter_gloss(word, sense)
                 if not gloss:
                     continue
 
-                if tag not in defs[pos]:
-                    defs[pos][tag] = [gloss]
+                if word.pos == "v":
+                    sense_type, sense_tag = get_verb_type_and_tag(sense)
+                elif word.pos == "n":
+                    sense_type = word_tag
+                    sense_tag = sense.qualifier
                 else:
-                    defs[pos][tag].append(gloss)
+                    sense_type = None
+                    sense_tag = sense.qualifier
 
-            # If all defs were ignored, drop the pos
-            if defs[pos] == {}:
-                del defs[pos]
+                s = {}
 
-        return defs
+                if sense_type:
+                    s["type"] = sense_type
+                if sense_tag:
+                    s["tag"] = sense_tag
+                s["gloss"] = gloss
+                senses.append(s)
 
-    @staticmethod
-    def def_len(defs):
-        return sum(
-            len(pos) + min(len(tag),20) + len("; ".join(values))
-            for pos,tags in defs.items()
-            for tag,values in tags.items()
-            )
+            return senses
 
+        def get_word_data(word, pos_type=None, sense_tag=None):
+            senses = get_sense_data(word, pos_type, sense_tag)
+            if not senses:
+                return {}
 
-    @classmethod
-    def get_primary_defs(cls, defs, only_first_def=False):
-        """
-        Returns the first pos and definitions
+            word_data = { "pos": word.pos, "senses": senses }
 
-        For nouns with male/female parts, try to include a definition for each gender
+            return word_data
 
-        For verbs with reflexive/non-reflexive, try to include a definition for each use
+        def get_noun_tag(word, words):
+            """
+            returns "mf" if word is noun is both masculine or feminine (dentista)
+            returns "m/f" if the word is the masculine part of a masculine/feminine pair and the the mate has no useful sense (doctor, doctora)
+            otherswise returns the nouns gender tag
+            """
 
-        Otherwise, try to include the first two distinct uses
-        """
+            if word.pos != "n":
+                raise ValueError("word is not noun")
 
-        first_pos = next(iter(defs))
+            noun_type = None
 
-        shortdefs = {}
+            if word.genders in [ "m", "f" ]:
+                mate = "m" if word.genders == "f" else "f"
 
-        if first_pos in ["m-f", "mf", "m/f"]:
-            pos = first_pos
-            shortdefs[pos] = {}
-            for tag,values in defs[pos].items():
-                for gender in ['m', 'f']:
-                    if tag.startswith(gender) and not any( x.startswith(gender) for x in shortdefs[pos] ):
-                        shortdefs[pos][tag] = values
-
-            if not len(shortdefs[pos]):
-                tag = next(iter(defs[pos]))
-                shortdefs[pos][tag] = defs[pos][tag]
-
-        elif first_pos.startswith("v"):
-            for pos,tags in defs.items():
-                if not pos.startswith("v"):
-                    continue
-
-                if len(shortdefs) and only_first_def:
-                    break
-
-                # Always take the first verb def, then check each pronomial or reflexive def
-                if len(shortdefs) and "p" not in pos and "r" not in pos:
-                    continue
-
-                # Limit to two defs (first + pronom or reflexive)
-                if len(shortdefs)>=2:
-                    break
-
-                # Use the first definition
-                for tag,values in tags.items():
-                    shortdefs[pos] = { tag: defs[pos][tag] }
-                    break
-
-        else:
-            pos = first_pos
-            tags = list(defs[pos].keys())
-
-            tag = tags[0]
-            shortdefs[pos] = { tag: defs[pos][tag] }
-
-            # take the first two tags
-            if len(tags) > 1:
-                tag = tags[1]
-                shortdefs[pos][tag] = defs[pos][tag]
-
-        # If there's only one usage, try to take two definitions from it
-        pos = next(iter(shortdefs))
-        if not only_first_def and len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
-            tag = next(iter(shortdefs[pos]))
-
-            if len(shortdefs[pos][tag])>1:
-                shortdefs[pos][";"] = shortdefs[pos][tag][1:]
-
-            shortdefs[pos][tag] = [shortdefs[pos][tag][0]]
-
-        # If there's one usage, and it doesn't contain mulitple defs
-        # take the second tag of the first pos
-        # or the first tag of the second pos
-        if not only_first_def and len(shortdefs) == 1 and len(shortdefs[pos]) == 1:
-            if len(defs[pos]) > 1:
-                next_tag = list(defs[pos].keys())[1]
-                shortdefs[pos][next_tag] = defs[pos][next_tag]
-            elif len(defs) > 1:
-                next_pos = list(defs.keys())[1]
-                tag = next(iter(defs[next_pos]))
-                shortdefs[next_pos] = { tag: defs[next_pos][tag] }
-
-        return shortdefs
-
-    @classmethod
-    def shorten_defs(cls, defs, max_len=60, only_first_def=False):
-        """
-        Get a shorter definition having less than max_len characters
-
-        Returns up to two possibly truncated glosses from the list provided
-
-        For nouns with male/female parts, try to include a definition for each gender
-
-        For verbs with reflexive/non-reflexive, try to include a definition for each use
-
-        Otherwise, try to include the first two distinct uses
-        """
-
-        shortdefs = cls.get_primary_defs(defs, only_first_def)
-
-        # count the entry with the most individual defs
-        maxdefs = 1
-        for pos in shortdefs.values():
-            for tag_defs in pos.values():
-                maxdefs = max(maxdefs, len(tag_defs))
-
-        # trim number defs until short enough
-        while maxdefs>1 and cls.def_len(shortdefs) > max_len:
-            maxdefs -= 1
-            for pos in shortdefs.values():
-                for tag, tag_defs in pos.items():
-                    pos[tag] = tag_defs[:maxdefs]
-                    if cls.def_len(shortdefs) <= max_len:
-                        break
-                if cls.def_len(shortdefs) <= max_len:
-                    break
-
-        # Split and shorten until short enough
-        for separator in [ ';', '(', '[' ]:
-            if cls.def_len(shortdefs) <= max_len:
-                break
-
-            for pos,tags in shortdefs.items():
-                for tag,values in tags.items():
-                    value = "; ".join(values)
-                    new,junk,old = value.partition(separator)
-                    if not new.strip():
-                        continue
-
-                    value = value.partition(separator)[0].strip()
-                    shortdefs[pos][tag] = [value]
-
-        # If it's still too long, strip the last , until less than max length or no more , to strip
-        can_strip=True
-        while can_strip and cls.def_len(shortdefs) > max_len:
-            can_strip=False
-            for pos,tags in shortdefs.items():
-                for tag,values in tags.items():
-                    value = "; ".join(values)
-                    strip_pos = value.rfind(",")
-                    if strip_pos > 0:
-                        # don't break inside parethesis
-                        if value.rfind("(", 0, strip_pos) > value.rfind(")", 0, strip_pos):
-                            continue
-
-                        can_strip=True
-                        shortdefs[pos][tag] = [value[:strip_pos].strip()]
-                        if cls.def_len(shortdefs) <= max_len:
-                            break
-
-        if only_first_def:
-            return shortdefs
-
-        # Rejoin any defs that we split out, unless it's a dup or too long
-        pos = next(iter(shortdefs))
-        if ";" in shortdefs[pos]:
-            tag = next(iter(shortdefs[pos]))
-
-            # If the second def is the same as the first def, retry without splitting the def
-            if shortdefs[pos][tag] == shortdefs[pos][';']:
-                shortdefs = cls.shorten_defs(defs, max_len=max_len, only_first_def=True)
-            else:
-                otherdefs = shortdefs[pos].pop(';')
-                shortdefs[pos][tag] += otherdefs
-
-        # If it's too long, try with just one definition
-        if cls.def_len(shortdefs) > max_len:
-            shortdefs = cls.shorten_defs(defs, max_len=max_len, only_first_def=True)
-
-        if cls.def_len(shortdefs) > max_len:
-            print(f"Alert: Trouble shortening def: {shortdefs}", file=sys.stderr)
-
-        return shortdefs
+                # word is part of a m/f pair, check if its mate has usable senses
+                if mate in word.forms and word.forms[mate] != word:
+                    mates = [ w for w in words if w.genders == mate ]
+                    if not any(w for w in mates for s in w.senses if self.filter_gloss(w, s)):
+                    #if not any(w for w in mates if any(self.get_filtered_senses(w))):
+                        return "m/f"
 
 
-    def get_shortdef(self, word, primary_pos, max_length=None):
-        item_tag = make_tag(word, primary_pos)
-        if item_tag in self.shortdefs:
-            return self.shortdefs[item_tag]
-        return self.get_usage(word, primary_pos, False, max_length)
+            noun_type = word.genders if word.genders else "unknown"
 
+            noun_type = re.sub("-p", "p", noun_type)
+            if noun_type == "mfbysense":
+                noun_type = "mf"
+            elif noun_type == "m; f":
+                noun_type = "mf"
+            elif noun_type == "mfbysensep":
+                noun_type = "mfp"
+            elif noun_type not in ["m", "f", "mf", "mp", "fp", "mfp"]:
+                raise ValueError("Unexpected noun type", noun_type, word.word, word.pos, word.genders)
 
-    def process_defs(self, word, alldefs):
+            return noun_type
 
-        # If there are independent defs for masculine and feminine use,
-        # tag it as m-f
-        if len( {"m","f","mf"} & alldefs.keys() ) > 1:
-            alldefs['m-f'] = {}
-            for oldpos in ['f', 'mf', 'm']:
-                if oldpos in alldefs:
-                    for oldnote,use in alldefs[oldpos].items():
-                        newnote = oldpos + ", " + oldnote if oldnote else oldpos
-                        alldefs['m-f'][newnote] = use
-                    del alldefs[oldpos]
+        res = []
+        words = self.get_word_objs(word, primary_pos, get_all_pos)
 
-        # Tag f-el nouns
-        elif "f" in alldefs and word in self.el_f_nouns:
-            alldefs["f-el"] = alldefs.pop("f")
+        etys = self.group_ety(words)
+        for ety_words in etys:
+            ety = {}
+            if ety_words[0].etymology:
+                ety["ety"] = ety_words[0].etymology
+            words_data = []
+            for group in self.group_pos(ety_words):
 
-        # Check for feminine equivalent nouns and tag as m/f
-        elif "m" in alldefs:
+                if group[0].pos == "n":
+                    m_f_data = None
+                    for noun_type,words in self.process_nouns(group).items():
+                        for w in words:
+                            word_data = {}
+                            word_notes = None
 
-            # If this has a "-a" feminine counterpart, reclassify the "m" defs as "m/f"
-            # and add any feminine definitions (ignoring the "feminine noun of xxx" def)
-            femnoun = self.get_feminine_noun(word)
-            if femnoun:
-                femdefs = []
-                if self._words.has_word(femnoun, "n"):
-                    femdefs = self.get_pos_usage(femnoun, "n")
+                            if noun_type == "m/f":
+                                # Unlike all other nouns, which are lists of words [word1, word2, word3],
+                                # m/f items will be a list of lists [[male1, female1], [male2, female2]]
+                                # that should be merged into one group of senses
+                                group = w
+                                group_data = {}
+                                for w in group:
+                                    noun_tag = get_noun_tag(w, group)
+                                    if noun_tag == noun_type:
+                                        noun_tag = None
 
-                if len(femdefs) and 'f' in femdefs:
-                    alldefs['f'] = femdefs['f']
-                    alldefs['m/f'] = {}
+                                    data = get_word_data(w, noun_type, noun_tag)
+                                    if not data:
+                                        continue
 
-                    for oldpos in ['f', 'm']:
-                        for oldnote,defs in alldefs[oldpos].items():
-                            newnote = oldpos + ", " + oldnote if oldnote != "" else oldpos
-                            alldefs['m/f'][newnote] = defs
-                        del alldefs[oldpos]
+                                    if not word_data:
+                                        word_data = data
+                                    else:
+                                        word_data["senses"] += data["senses"]
+                                        if w.use_notes:
+                                            if word_notes and w.use_notes != word_notes:
+                                                raise ValueError("usage conflict", word, word_notes, w.use_notes)
+                                            word_notes = w.use_notes
+
+                            else:
+                                noun_tag = get_noun_tag(w, words)
+                                if noun_tag == noun_type:
+                                    noun_tag = None
+                                word_data = get_word_data(w, noun_type, noun_tag)
+
+                                if word_notes and w.use_notes != word_notes:
+                                    raise ValueError("usage conflict", word)
+                                word_notes = w.use_notes
+
+                            if word_data:
+                                if noun_type:
+                                    word_data["noun_type"] = noun_type
+
+                                if word_notes:
+                                    word_data["note"] = word_notes
+
+                                if noun_type == "m-f":
+                                    if m_f_data:
+                                        m_f_data["senses"] += word_data["senses"]
+                                    else:
+                                        m_f_data = word_data
+                                        words_data.append(m_f_data)
+                                else:
+                                    words_data.append(word_data)
 
                 else:
-                    alldefs['m/f'] = alldefs.pop('m')
+                    for w in group:
+                        word_data = get_word_data(w)
+                        if word_data:
+                            if w.use_notes:
+                                word_data["note"] = w.use_notes
+                            words_data.append(word_data)
 
-        return alldefs
 
+            if words_data:
+                ety["words"] = words_data
+                res.append(ety)
 
-    def get_usage(self, word, primary_pos, get_all_pos=True, max_length=None):
-
-        defs = self.get_pos_usage(word, primary_pos)
-        if not defs:
-            return None
-
-        defs = self.process_defs(word, defs)
-
-        if get_all_pos:
-
-            all_pos = []
-            poslemmas = self.all_forms.get_lemmas(word)
-            for pos, lemma  in [x.split("|") for x in sorted(poslemmas)]:
-                if pos not in all_pos:
-                    all_pos.append(pos)
-
-            for common_pos in all_pos:
-                if common_pos not in [primary_pos, "v"]:
-                    lemmas = self.get_lemmas(word, common_pos)
-                    defs.update(self.get_pos_usage(lemmas[0], common_pos))
-
-        if max_length:
-            defs = self.shorten_defs(defs, max_length)
-
-        return defs
+        self.add_shortdefs(res, word)
+        return res
 
     def get_lemmas(self, word, pos):
 
@@ -902,7 +1004,7 @@ class DeckBuilder():
             word, pos = split_tag(wordtag)
 
             for word_obj in self._words.get_words(word, pos):
-                for sense in word_obj.senses:
+                for sense in self.get_filtered_senses(word_obj):
                     self.add_synonyms(word, pos, sense.synonyms)
                     for syn in sense.synonyms:
                         self.add_synonyms(syn, pos, [word])
@@ -1063,62 +1165,39 @@ class DeckBuilder():
         pos = pos.lower()
         item_tag = make_tag(spanish, pos)
 
-        english = ""
-        noun_type = ""
-
         usage = self.get_usage(spanish, pos)
+
         if not usage:
-            raise ValueError("No english", spanish, pos)
-        if pos == "n":
-            noun_type = next(iter(usage))
+            raise ValueError("No usage data", spanish, pos)
+        noun_type = usage[0]["words"][0]["noun_type"] if pos == "n" else ""
 
         deck_syns = self.get_synonyms(spanish, pos, self.MAX_SYNONYMS, only_in_deck=True)
-        extra_syns = (
-            [
+        extra_syns = [
                 k
                 for k in self.get_synonyms(spanish, pos, self.MAX_SYNONYMS, only_in_deck=False)
                 if k not in deck_syns
-            ]
-            if len(deck_syns) < self.MAX_SYNONYMS
-            else []
-        )
+            ] if len(deck_syns) < self.MAX_SYNONYMS else []
 
-        english = self.format_def(usage)
+        defs = []
+        for w in usage[0]["words"]:
+            for s in w["senses"]:
+                if "hint" in s:
+                    gloss = s["hint"] if s["hint"] else s["gloss"]
+                    defs += [z.strip() for x in gloss.split(";") for z in x.split(",")]
 
-        shortdef = self.get_shortdef(word, pos, max_length=60)
-
-        short_english = self.format_def(shortdef, hide_word=word) if shortdef else ""
-
-        # TODO: rework how format_def works so it doesn't mush all word_objs
-        # and make it work in parallel with etymology and usage_notes
-        word_obj = next(self._words.get_words(spanish, pos))
-        etymology = self.format_etymology(word_obj.etymology)
-        usage_notes = self.format_usage_notes(word_obj.use_notes)
-
-        defs = [
-            value.strip()
-            for tags in shortdef.values()
-            for defs in tags.values()
-            for d in defs
-            for split_def in d.split(";")
-            for value in split_def.split(",")
-        ]
         seen_tag = "|".join(sorted(deck_syns) + sorted(defs))
-        if seen_tag in self.seen_clues:
-            eprint(f"Warning: {seen_tag} is used by {item_tag} and {self.seen_clues[seen_tag]}, adding syn")
-            deck_syns.insert(0, self.seen_clues[seen_tag].split(":")[1])
+        if seen_tag in self.seen_hints:
+            eprint(f"Warning: {seen_tag} is used by {item_tag} and {self.seen_hints[seen_tag]}, adding syn")
+            deck_syns.insert(0, self.seen_hints[seen_tag].split(":")[1])
         else:
-            self.seen_clues[seen_tag] = item_tag
-
-        if short_english == english:
-            short_english = ""
+            self.seen_hints[seen_tag] = item_tag
 
         femnoun = self.get_feminine_noun(spanish) if pos == "n" else None
         tts_data = self.get_phrase(spanish, pos, noun_type, femnoun)
 
         sound = get_speech(tts_data["voice"], tts_data["phrase"], mediadir)
 
-        all_usage_pos = {Word.get_common_pos(k): 1 for k in usage.keys()}.keys()
+        all_usage_pos = {w["pos"] for ety in usage for w in ety["words"]}
         lookups = [[spanish, pos] for pos in all_usage_pos]
         sentences = self.get_sentences(lookups, 3)
 
@@ -1128,10 +1207,7 @@ class DeckBuilder():
             "Spanish": spanish,
             "Part of Speech": noun_type if pos == "n" else pos,
             "Synonyms": self.format_syns(deck_syns, extra_syns, hide_word=spanish),
-            "ShortDef": short_english,
-            "Definition": english,
-            "Etymology": etymology,
-            "UsageNotes": usage_notes,
+            "Data": self.format_usage(usage).replace("\n+", "\n<br>"),
             "Sentences": sentences,
             "Display": tts_data["display"],
             "Audio": self.format_sound(sound),
@@ -1181,7 +1257,7 @@ class DeckBuilder():
 
         index = self.wordlist_indexof(old_tag)
         if not index:
-            eprint(f"ERROR: {old_tag} not found in wordlist, unable to replace with {new_tag}")
+            #eprint(f"ERROR: {old_tag} not found in wordlist, unable to replace with {new_tag}")
             return
 
         old_tag = self.allwords[index]
@@ -1195,7 +1271,7 @@ class DeckBuilder():
 
         index = self.wordlist_indexof(wordtag)
         if index is None:
-            eprint(f"ERROR: {wordtag} not found in wordlist, unable to remove")
+#            eprint(f"ERROR: {wordtag} not found in wordlist, unable to remove")
             return
 
         old_tag = self.allwords[index]
@@ -1245,17 +1321,22 @@ class DeckBuilder():
                     if not row:
                         continue
 
+                    item_tag = make_tag(row["spanish"], row["pos"])
+
+                    position = row.get("position", None)
+                    # Negative position indicates that all previous instances of this word should be removed
+                    if position and position.startswith("-"):
+                        self.wordlist_remove(item_tag)
+                        continue
+
                     if "flags" in row and row["flags"]:
                         flags = set(row["flags"].split("; "))
                         if flags.difference(allowed_flags):
                             continue
 
-                    if not self.get_usage(row["spanish"], row["pos"]):
+                    if not self.has_usage(row["spanish"], row["pos"]):
                         continue
 
-                    item_tag = make_tag(row["spanish"], row["pos"])
-
-                    position = row.get("position", None)
                     if not position:
                         self.wordlist_append(item_tag)
 
@@ -1268,17 +1349,13 @@ class DeckBuilder():
                     elif not position[0].isdigit() and position[0] != "-":
                         self.wordlist_replace(position, item_tag)
 
-                    # Negative position indicates that all previous instances of this word should be removed
-                    elif int(position) < 0:
-                        self.wordlist_remove(item_tag)
-
                     # a digit in the position column indicates that it should be inserted at that position
                     elif int(position) > 0 and int(position) < len(self.allwords):
                         self.wordlist_insert(item_tag, int(position))
 
                     # otherwise put it at the end of the list
                     else:
-                        raise ValueError("Position {position} does not exist, ignoring")
+                        raise ValueError(f"Position {position} does not exist, ignoring")
 
         # Arrange any items with absolute positions
         for wordtag, position in sorted(
@@ -1433,7 +1510,7 @@ class DeckBuilder():
         return ignore
 
 
-def main():
+def build_deck(params=None):
 
     parser = argparse.ArgumentParser(description="Compile anki deck")
     parser.add_argument("deckname", help="Name of deck to build")
@@ -1498,7 +1575,7 @@ def main():
         help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",
     )
     parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
-    args = parser.parse_args()
+    args = parser.parse_args(params)
 
     if args.tag:
         for tag in args.tag:
@@ -1601,8 +1678,5 @@ def main():
     if args.dump_credits:
         deck.dump_credits(args.dump_credits)
 
-
-
-
 if __name__ == "__main__":
-    main()
+    build_deck(sys.argv[1:])
