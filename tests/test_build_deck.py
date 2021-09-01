@@ -426,7 +426,7 @@ pos: n
             'words': [{
                 'pos': 'n',
                 'senses': [
-                    {'gloss': 'turn (in a game)'}],
+                    {'gloss': 'turn (in a game)', 'syns': ['vez','turno']}],
                 'noun_type': 'm'
                 }]
             }]
@@ -445,7 +445,7 @@ pos: n
 <span class="pos n m"><span class="pos_tag pos_tag_primary">m</span><span class="qualifier">zoology</span><span class="gloss">sea trout</span><span class="footnote_link ety_link">b</span></span>
 </div>
 <div class="etymology etymology_2">
-<span class="pos n m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">turn (in a game)</span><span class="footnote_link ety_link">c</span></span>
+<span class="pos n m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">turn (in a game)</span><span class="footnote_link ety_link">c</span><span class="synonyms">vez, turno</span></span>
 </div>
 <span id="footnote_a" class="footnote ety_footnote"><span class="footnote_id">a</span><span class="footnote_data">Borrowed from Latin "reus" (“accused”). Compare réu .</span></span>
 <span id="footnote_b" class="footnote ety_footnote"><span class="footnote_id">b</span><span class="footnote_data">Uncertain; probably from Celto-Latin "rhēdo", redo.</span></span>
@@ -902,8 +902,8 @@ pos: v
         'words': [{
             'pos': 'v',
             'senses': [
-                {'type': 't', 'gloss': 'to return', 'hint': ''},
-                {'type': 'i', 'gloss': 'to come back'},
+                {'type': 't', 'gloss': 'to return', 'hint': '', 'syns': ['devolver']},
+                {'type': 'i', 'gloss': 'to come back', 'syns': ['regresar', 'retornar', 'volver']},
                 {'type': 't', 'gloss': 'to put back'},
                 {'type': 't', 'gloss': 'to change'},
                 {'type': 'i', 'gloss': 'to do again (+ a + infinitive)'},
@@ -947,7 +947,7 @@ pos: n
             'pos': 'n',
             'noun_type': 'm-f',
             'senses': [{
-                'type': 'f', 'gloss': 'anger', 'hint': ''},{
+                'type': 'f', 'gloss': 'anger', 'hint': '', 'syns': ['rabia']},{
                 'type': 'm', 'gloss': 'cholera', 'hint': ''}],
              }]
         }]
@@ -1062,9 +1062,9 @@ pos: n
             'pos': 'n',
             'noun_type': 'm',
             'senses': [
-                {'tag': 'Latin America', 'gloss': 'deer, stag', 'hint': ''},
+                {'tag': 'Latin America', 'gloss': 'deer, stag', 'hint': '', 'syns': ['ciervo'] },
                 {'gloss': 'venison', 'hint': ''},
-                {'tag': 'colloquial', 'gloss': 'cuckold, deceived husband or partner'}],
+                {'tag': 'colloquial', 'gloss': 'cuckold, deceived husband or partner', 'syns': ['cornudo'] }],
             }]
         }]
 
@@ -1095,6 +1095,7 @@ pos: v
     #assert deck.get_shortdef("abrigar", "v") == {'vtr': {'': ['to wrap up (to put on abundant clothing)']}, 'v': {'': ['to cover']}}
 
     usage = deck.get_usage("abrigar", "v")
+    print(usage)
     assert usage == [{
         'ety': 'Most likely from Late Latin "apricāre", from Latin "aprīcārī", present active infinitive of aprīcor (“warm in the sun”), from aprīcus (“sunny”)',
         'words': [{
@@ -1107,7 +1108,8 @@ pos: v
                 'gloss': 'to cover',
                 'hint': '',
                 }, {
-                'gloss': 'to shelter, to protect'
+                'gloss': 'to shelter, to protect',
+                'syns': ['resguardar']
                 }, {
                 'type': 'r',
                 'gloss': 'to bundle up'
@@ -1122,7 +1124,7 @@ pos: v
 <span class="pos v hint"><span class="pos_tag pos_tag_primary">vtr</span><span class="gloss">to wrap up (to put on abundant clothing)</span></span>
 <span class="pos v"><span class="pos_tag pos_tag_primary">v</span><span class="gloss">to cover</span></span>
 <span class="pos v hint"><span class="pos_tag pos_tag_primary">v</span><span class="gloss">to cover</span></span>
-<span class="pos v"><span class="pos_tag pos_tag_primary">v</span><span class="gloss">to shelter, to protect</span></span>
+<span class="pos v"><span class="pos_tag pos_tag_primary">v</span><span class="gloss">to shelter, to protect</span><span class="synonyms">resguardar</span></span>
 <span class="pos v reflexive"><span class="pos_tag pos_tag_primary">vr</span><span class="gloss">to bundle up</span></span>
 </div>
 <span id="footnote_a" class="footnote ety_footnote solo_footnote"><span class="footnote_id">a</span><span class="footnote_data">Most likely from Late Latin "apricāre", from Latin "aprīcārī", present active infinitive of aprīcor (“warm in the sun”), from aprīcus (“sunny”)</span></span>
@@ -1202,4 +1204,74 @@ pos: n
 <span class="pos adj"><span class="pos_tag">adj</span><span class="gloss">sniveling, weeping, whiny</span></span>
 </div>
 <span id="footnote_a" class="footnote ety_footnote solo_footnote"><span class="footnote_id">a</span><span class="footnote_data">llorar + -ón</span></span>
+"""
+
+
+def test_caudal():
+
+    wordlist_data = """\
+_____
+caudal
+pos: n
+  meta: {{es-noun|m}}
+  g: m
+  etymology: From Old Spanish "cabdal", from Latin "capitālis". Doublet of capital. Cognate with English "chattel", cattle and capital.
+  gloss: flow
+  gloss: volume
+  gloss: funds
+pos: adj
+  meta: {{es-adj}}
+  etymology: Borrowed from Latin "caudālis".
+  gloss: caudal
+_____
+caudales
+pos: adj
+  meta: {{head|es|adjective form|g=m-p|g2=f-p}}
+  g: m-p; f-p
+  gloss: plural of "caudal"
+pos: n
+  meta: {{head|es|noun form|g=m-p}}
+  g: m-p
+  gloss: plural of "caudal"
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = None
+    ignore = []
+    allforms = AllForms.from_wordlist(wordlist)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+
+    usage = deck.get_usage("caudal", "n")
+    print(usage)
+    assert usage == [{
+        'ety': 'From Old Spanish "cabdal", from Latin "capitālis". Doublet of capital. Cognate with English "chattel", cattle and capital.',
+        'words': [{
+            'pos': 'n',
+            'noun_type': 'm',
+            'senses': [
+                {'gloss': 'flow', 'hint': ''},
+                {'gloss': 'volume', 'hint': ''},
+                {'gloss': 'funds'}],
+            }]
+            }, {
+            'ety': 'Borrowed from Latin "caudālis".',
+            'words': [{
+                'pos': 'adj',
+                'senses': [{'gloss': 'caudal'}]}]}]
+
+    print("\n\n")
+    print(deck.format_usage(usage))
+    assert deck.format_usage(usage) == """\
+<div class="etymology etymology_0">
+<span class="pos n m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">flow</span><span class="footnote_link ety_link">a</span></span>
+<span class="pos n hint m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">flow</span><span class="footnote_link ety_link">a</span></span>
+<span class="pos n m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">volume</span><span class="footnote_link ety_link">a</span></span>
+<span class="pos n hint m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">volume</span><span class="footnote_link ety_link">a</span></span>
+<span class="pos n m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">funds</span><span class="footnote_link ety_link">a</span></span>
+</div>
+<div class="etymology etymology_1">
+<span class="pos adj"><span class="pos_tag">adj</span><span class="gloss">caudal</span><span class="footnote_link ety_link">b</span></span>
+</div>
+<span id="footnote_a" class="footnote ety_footnote"><span class="footnote_id">a</span><span class="footnote_data">From Old Spanish "cabdal", from Latin "capitālis". Doublet of capital. Cognate with English "chattel", cattle and capital.</span></span>
+<span id="footnote_b" class="footnote ety_footnote"><span class="footnote_id">b</span><span class="footnote_data">Borrowed from Latin "caudālis".</span></span>
 """

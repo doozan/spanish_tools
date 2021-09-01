@@ -526,6 +526,9 @@ class DeckBuilder():
         if ety_key:
             res.append(f'<span class="footnote_link ety_link">{ety_key}</span>')
 
+        if sense.get("syns"):
+            res.append(f'<span class="synonyms">{", ".join(sense["syns"])}</span>')
+
         res.append("</span>\n")
         return res
 
@@ -770,7 +773,8 @@ class DeckBuilder():
                         "tag": "tag data", # Optional, qualifier for gloss
                         "gloss": "gloss"
                         "hint": "" # Optional, signals that this sense should be included when displaying shortdefs
-                                          # if a non-empty string is provided, it will be used in place of the original gloss
+                                   # if a non-empty string is provided, it will be used in place of the original gloss
+                        "syns": ["syn1","syn2"] # Optional list of synonyms
                     }]
                     "usage": "usage notes" # Optional
                 }],
@@ -830,6 +834,8 @@ class DeckBuilder():
                 if sense_tag:
                     s["tag"] = sense_tag
                 s["gloss"] = gloss
+                if sense.synonyms:
+                    s["syns"] = sense.synonyms
                 senses.append(s)
 
             return senses
