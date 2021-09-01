@@ -90,9 +90,8 @@ class DeckBuilder():
         self.db_notes = {}
         self.db_timestamps = {}
 
-        self.allwords = []
-        self.allwords_set = set()
-        self.allwords_positions = {}
+        self.allwords = {}
+        self.allwords_index = []
         self.shortdefs = {}
 
         self.media_files = []
@@ -613,9 +612,6 @@ class DeckBuilder():
 
         return items
 
-    def has_usage(self, word, primary_pos):
-        return bool(self.get_usage(word, primary_pos, False))
-
     def group_ety(self, words):
         groups = {}
         for word in words:
@@ -995,25 +991,31 @@ class DeckBuilder():
         return sorted(good_lemmas)
 
 
-    def add_synonyms(self, word, pos, synonyms):
+    def add_synonyms(self, word, pos, synonyms, reciprocal=True):
         key = (word,pos)
         if key not in self.synonyms:
             self.synonyms[key] = synonyms
         else:
-            self.synonyms[key] += synonyms
+            for syn in synonyms:
+                if syn not in self.synonyms[key]:
+                    self.synonyms[key].append(syn)
+
+        if reciprocal:
+            for syn in synonyms:
+                if syn != word:
+                    self.add_synonyms(syn, pos, [word], False)
 
     def build_synonyms(self):
         self.synonyms = {}
 
         # Build synonyms
-        for wordtag in self.allwords:
-            word, pos = split_tag(wordtag)
-
-            for word_obj in self._words.get_words(word, pos):
-                for sense in self.get_filtered_senses(word_obj):
-                    self.add_synonyms(word, pos, sense.synonyms)
-                    for syn in sense.synonyms:
-                        self.add_synonyms(syn, pos, [word])
+        for k,usage in self.allwords.items():
+            word, pos = split_tag(k)
+            # Only take synonyms from the primary defs in the first etymology
+            for w in usage[0]["words"]:
+                for sense in w["senses"]:
+                    if "hint" in sense and "syns" in sense:
+                        self.add_synonyms(word, pos, sense["syns"])
 
 
     def get_synonyms(self, word, pos, limit=5, only_in_deck=True):
@@ -1028,7 +1030,7 @@ class DeckBuilder():
             if syn not in items:
                 items.append(syn)
 
-        in_deck = [k for k in items if make_tag(k, pos) in self.allwords_set]
+        in_deck = [k for k in items if make_tag(k, pos) in self.allwords]
         if only_in_deck or len(in_deck) > limit:
             return in_deck[:limit]
 
@@ -1171,7 +1173,7 @@ class DeckBuilder():
         pos = pos.lower()
         item_tag = make_tag(spanish, pos)
 
-        usage = self.get_usage(spanish, pos)
+        usage = self.allwords[item_tag]
 
         if not usage:
             raise ValueError("No usage data", spanish, pos)
@@ -1240,76 +1242,63 @@ class DeckBuilder():
 
     def wordlist_indexof(self, target):
         if ":" in target:
-            return self.allwords.index(target)
+            return self.allwords_index.index(target)
 
-        for index in range(len(self.allwords)):
-            word, pos = split_tag(self.allwords[index])
+        target = ":" + target
+        for i,item in enumerate(self.allwords_index):
+            if item.endswith(target):
+                return i
 
-            if word == target:
-                return index
+    def wordlist_insert_after(self, target, wordtag, usage):
 
-
-    def wordlist_insert_after(self, target, wordtag):
         index = self.wordlist_indexof(target)
         if not index:
             #eprint(f"ERROR: {target} not found in wordlist, unable to insert {wordtag} after it")
             return
 
-        self.allwords.insert(index + 1, wordtag)
-        self.allwords_set.add(wordtag)
-
-
-    def wordlist_replace(self, old_tag, new_tag):
-
-        index = self.wordlist_indexof(old_tag)
-        if not index:
-            #eprint(f"ERROR: {old_tag} not found in wordlist, unable to replace with {new_tag}")
+        # Do nothing if it's already in the wordlist
+        if wordtag in self.allwords:
             return
 
-        old_tag = self.allwords[index]
-        self.allwords_set.remove(old_tag)
-        self.allwords_set.add(new_tag)
+        self.allwords[wordtag] = usage
+        self.allwords_index.insert(index + 1, wordtag)
 
-        self.allwords[index] = new_tag
+    def wordlist_replace(self, target, wordtag, usage):
 
+        index = self.wordlist_indexof(target)
+        if not index:
+            #eprint(f"ERROR: {old_tag} not found in wordlist, unable to replace with {wordtag}")
+            return
 
-    def wordlist_remove(self, wordtag):
+        # If the replacement is already in the wordlist, just delete the replacee
+        if wordtag in self.allwords:
+            self.wordlist_remove(target)
+            return
 
-        index = self.wordlist_indexof(wordtag)
+        old_tag = self.allwords_index[index]
+        del self.allwords[old_tag]
+
+        self.allwords[wordtag] = usage
+        self.allwords_index[index] = wordtag
+
+    def wordlist_remove(self, target):
+        index = self.wordlist_indexof(target)
         if index is None:
 #            eprint(f"ERROR: {wordtag} not found in wordlist, unable to remove")
             return
 
-        old_tag = self.allwords[index]
-        self.allwords_set.remove(old_tag)
-        del self.allwords[index]
+        old_tag = self.allwords_index[index]
+        del self.allwords[old_tag]
+        del self.allwords_index[index]
 
 
-    def wordlist_insert(self, wordtag, position):
-        if wordtag in self.allwords_set:
-            eprint(
-                f"ERROR: {wordtag} already exists in wordlist, cannot insert at position {position}"
-            )
+    def wordlist_append(self, wordtag, usage):
+        # Do nothing if it's already in the wordlist
+        if wordtag in self.allwords:
             return
 
-        # Note, don't actually insert the word at the specified position, because later wordlists
-        # may delete items and rearrange the order.  Instead, add it to the bottom of the list and
-        # save the desired position in allwords_positions, which will be used after the wordlist
-        # is finished to position it absolutely
-
-        self.allwords_set.add(wordtag)
-        self.allwords.append(wordtag)
-        self.allwords_positions[wordtag] = position
-
-
-    def wordlist_append(self, wordtag):
-        if wordtag in self.allwords_set:
-            eprint(f"ERROR: {wordtag} already exists in wordlist, cannot be added again")
-            return
-
-        self.allwords.append(wordtag)
-        self.allwords_set.add(wordtag)
-
+        self.allwords[wordtag] = usage
+        self.allwords_index.append(wordtag)
 
     def load_wordlists(self, wordlists, allowed_flags):
 
@@ -1340,43 +1329,35 @@ class DeckBuilder():
                         if flags.difference(allowed_flags):
                             continue
 
-                    if not self.has_usage(row["spanish"], row["pos"]):
+                    usage = self.get_usage(row["spanish"], row["pos"])
+                    if not usage:
+                        continue
+
+                    # Skip words that have don't have usage for the given word/pos
+                    if usage[0]["words"][0]["pos"] != row["pos"]:
                         continue
 
                     if not position:
-                        self.wordlist_append(item_tag)
+                        self.wordlist_append(item_tag, usage)
 
                     # +pos:word indicates that the entry should be positioned immedialy after the specified pos:word
                     # or after the first occurance of word if pos: is not specified
                     elif position.startswith("+"):
-                        self.wordlist_insert_after(position[1:], item_tag)
+                        self.wordlist_insert_after(position[1:], item_tag, usage)
 
                     # pos:word will replace the specific pos:word or the first occurance of the word if pos: is not specified
                     elif not position[0].isdigit() and position[0] != "-":
-                        self.wordlist_replace(position, item_tag)
+                        self.wordlist_replace(position, item_tag, usage)
 
                     # a digit in the position column indicates that it should be inserted at that position
-                    elif int(position) > 0 and int(position) < len(self.allwords):
-                        self.wordlist_insert(item_tag, int(position))
+                    elif int(position) > 0 and int(position) < len(self.allwords_index):
+                        self.wordlist_insert(item_tag, int(position), usage)
 
-                    # otherwise put it at the end of the list
                     else:
                         raise ValueError(f"Position {position} does not exist, ignoring")
 
-        # Arrange any items with absolute positions
-        for wordtag, position in sorted(
-            self.allwords_positions.items(), key=lambda item: item[1]
-        ):
-            index = self.wordlist_indexof(wordtag)
-            if index != position:
-                self.allwords.pop(index)
-                self.allwords.insert(position - 1, wordtag)
-
-            word, pos = split_tag(wordtag)
-            print(
-                f"Absolute position for {wordtag}, consider using relative: ~{self.allwords[position-2]},{word},{pos}",
-                file=sys.stderr,
-            )
+            if len(self.allwords_index) != len(self.allwords):
+                raise ValueError("Mismatch", len(self.allwords_index), len(self.allwords), wordlist)
 
     def compile(self, infofile, deckname, mediadir, limit, ankideck=None, tags=[]):
 
@@ -1403,9 +1384,10 @@ class DeckBuilder():
             int(deck_guid), self.deck_info["deck"]["name"], self.deck_info["deck"]["desc"]
         )
 
-        if limit and limit < len(self.allwords):
-            self.allwords = self.allwords[:limit]
-            self.allwords_set = set(self.allwords)
+        if limit and limit < len(self.allwords_index):
+            for tag in self.allwords_index[limit:]:
+                del self.allwords[tag]
+            self.allwords_index = self.allwords_index[:limit]
 
 
         self.build_synonyms()
@@ -1413,10 +1395,11 @@ class DeckBuilder():
         self.rows = []
 
         position = 0
-        for wordtag in self.allwords:
+        for wordtag in self.allwords_index:
             word, pos = split_tag(wordtag)
 
             position += 1
+
             item = self.build_item(word, pos, mediadir)
             self.notes[item["guid"]] = item
             item["Rank"] = str(position)
