@@ -755,6 +755,44 @@ class DeckBuilder():
                     hint = ""
                 sense["hint"] = hint
 
+    @staticmethod
+    def get_verb_type_and_tag(qualifier):
+        if not qualifier:
+            return ["", ""]
+
+        verb_types = {
+            "transitive": "t",
+            "reflexive": "r",
+            "intransitive": "i",
+            "pronominal": "p",
+            "takes a reflexive pronoun": "p",
+            "ambitransitive": "x",
+        }
+
+        verb_type = []
+        def replace(m):
+            verb_type.append(verb_types[m.group("type")])
+            return ""
+
+        re_pattern = r"^\s*((also|or|and)\s+)?(?P<type>" + "|".join(verb_types.keys()) + r")\s*$"
+
+        tag_items = []
+        splits = iter(re.split("(, | or | and )", qualifier))
+        prev_sep = ""
+        for tag in splits:
+            sep = next(splits,"")
+            tag = re.sub(re_pattern, replace, tag)
+            if tag:
+                if prev_sep:
+                    tag_items.append(prev_sep)
+                tag_items.append(tag)
+                prev_sep = sep
+
+        new_type = "".join(verb_type)
+        new_tag = "".join(tag_items)
+
+        return new_type, new_tag
+
     def get_usage(self, word, primary_pos, get_all_pos=True, max_length=None):
         """ Returns data structure:
         [{
@@ -781,31 +819,6 @@ class DeckBuilder():
         }]
         """
 
-        def get_verb_type_and_tag(sense):
-            verb_types = {
-                "transitive": "t",
-                "reflexive": "r",
-                "intransitive": "i",
-                "pronominal": "p",
-                "takes a reflexive pronoun": "p",
-                "ambitransitive": "x",
-            }
-
-            if not sense.qualifier:
-                return ["", ""]
-
-            tag_items = []
-            verb_type = []
-            for tag in sense.qualifier.split(", "):
-                if tag in verb_types:
-                    verb_type.append(verb_types[tag])
-                else:
-                    tag_items.append(tag)
-            pos = "".join(verb_type)
-            tag = ", ".join(tag_items)
-
-            return (pos, tag)
-
         def get_sense_data(word, pos_type, word_tag):
 
             senses = []
@@ -815,7 +828,7 @@ class DeckBuilder():
                     continue
 
                 if word.pos == "v":
-                    sense_type, sense_tag = get_verb_type_and_tag(sense)
+                    sense_type, sense_tag = self.get_verb_type_and_tag(sense.qualifier)
                 elif word.pos == "n":
                     sense_type = word_tag
                     sense_tag = sense.qualifier
