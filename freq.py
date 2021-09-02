@@ -29,7 +29,7 @@ class FrequencyList():
     def load_ignore(self, ignore_data):
         self.ignore = {line.strip() for line in ignore_data if line.strip() and not line.strip().startswith("#")}
 
-    def process(self, freqlist, ignore_data=[]):
+    def process(self, freqlist, ignore_data=[], minuse=0):
         self.load_ignore(ignore_data)
         self.freq = {}
         self.all_lemmas = {}
@@ -75,6 +75,8 @@ class FrequencyList():
         for k, item in sorted(
             self.all_lemmas.items(), key=lambda item: (item[1]["count"]*-1, item[1]["word"])
         ):
+            if minuse and item["count"] < minuse:
+                break
             yield(
                 ",".join(
                     map(
@@ -340,14 +342,9 @@ class FrequencyList():
 
         return best
 
-
-
-
-if __name__ == "__main__":
-    import argparse
+def build_freq(params=None):
 
     parser = argparse.ArgumentParser(description="Lemmatize frequency list")
-    parser.add_argument("file", help="Frequency list")
     parser.add_argument("--ignore", help="List of words to ignore")
     parser.add_argument("--dictionary", help="Dictionary file name", required=True)
     parser.add_argument("--allforms", help="All-forms file name")
@@ -361,7 +358,17 @@ if __name__ == "__main__":
         help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",
     )
     parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
-    args = parser.parse_args()
+    parser.add_argument("--minuse", help="Require a lemmas to have a least N total uses", default=0, type=int)
+    parser.add_argument("--infile", help="Usage list")
+    parser.add_argument("--outfile", help="outfile (defaults to stdout)", default="-")
+    parser.add_argument("extra", nargs="*", help="Usage list")
+    args = parser.parse_args(params)
+
+    # allow first positional argument to replace undeclared --infile
+    if args.infile == parser.get_default("infile") and args.extra:
+        args.infile = args.extra.pop(0)
+
+    args = parser.parse_args(params)
 
     if not args.sentences:
         args.sentences = "sentences.tsv"
@@ -391,8 +398,22 @@ if __name__ == "__main__":
 
     flist = FrequencyList(wordlist, allforms, sentences)
 
-    with open(args.file) as infile:
-        for line in flist.process(infile, ignore_data):
-            print(line)
+    with open(args.infile) as infile:
+        if args.outfile and args.outfile != "-":
+            outfile = open(args.outfile, "w")
+        else:
+            outfile = sys.stdout
+
+        for line in flist.process(infile, ignore_data, args.minuse):
+            outfile.write(line)
+            outfile.write("\n")
+
+        if args.outfile:
+            outfile.close()
 
     ignore_data.close()
+
+
+if __name__ == "__main__":
+    build_freq(sys.argv[1:])
+
