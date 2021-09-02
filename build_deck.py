@@ -472,7 +472,7 @@ class DeckBuilder():
 
         for idx,note in enumerate(notes):
             anchor = chr(ord(start_char)+idx)
-            res.append(f'<span id="footnote_{anchor}" class="footnote {note_class}"><span class="footnote_id">{anchor}</span><span class="footnote_data">' + re.sub(r"\\n", "<br>", note) + '</span></span>\n')
+            res.append(f'<span id="footnote_{anchor}" class="footnote {note_class}"><span class="footnote_id">{anchor}</span><span class="footnote_data">' + re.sub(r"\\n", "<br>", html.escape(note)) + '</span></span>\n')
 
         return res
 
