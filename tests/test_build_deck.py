@@ -360,8 +360,8 @@ pos: v
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">directory</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">cocket</span></span>
 </div>
-<span id="footnote_1" class="footnote usage_footnote solo_footnote"><span class="footnote_id">1</span><span class="footnote_data">The noun guía is like several other Spanish nouns with a human referent and ending in a.<br>The masculine articles and adjectives are used when the referent is male or unknown.</span></span>
-<span id="footnote_a" class="footnote ety_footnote solo_footnote"><span class="footnote_id">a</span><span class="footnote_data">Probably from the verb guiar. Cf. also French &quot;guide&quot; (Old French &quot;guie&quot;), Italian &quot;guida&quot;.</span></span>
+<span id="footnote_1" class="footnote usage_footnote"><span class="footnote_id">1</span><span class="footnote_data">The noun guía is like several other Spanish nouns with a human referent and ending in a.<br>The masculine articles and adjectives are used when the referent is male or unknown.</span></span>
+<span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">Probably from the verb guiar. Cf. also French &quot;guide&quot; (Old French &quot;guie&quot;), Italian &quot;guida&quot;.</span></span>
 """
 
 def test_usage_reo():
@@ -1140,7 +1140,7 @@ pos: v
 <span class="pos v"><span class="pos_tag pos_tag_primary">v</span><span class="gloss">to shelter, to protect</span><span class="synonyms">resguardar</span></span>
 <span class="pos v reflexive"><span class="pos_tag pos_tag_primary">vr</span><span class="gloss">to bundle up</span></span>
 </div>
-<span id="footnote_a" class="footnote ety_footnote solo_footnote"><span class="footnote_id">a</span><span class="footnote_data">Most likely from Late Latin &quot;apricāre&quot;, from Latin &quot;aprīcārī&quot;, present active infinitive of aprīcor (“warm in the sun”), from aprīcus (“sunny”)</span></span>
+<span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">Most likely from Late Latin &quot;apricāre&quot;, from Latin &quot;aprīcārī&quot;, present active infinitive of aprīcor (“warm in the sun”), from aprīcus (“sunny”)</span></span>
 """
 
 
@@ -1216,7 +1216,7 @@ pos: n
 <span class="pos n f"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">f, informal</span><span class="gloss">banshee (in general, by extension of the legend)</span></span>
 <span class="pos adj"><span class="pos_tag">adj</span><span class="gloss">sniveling, weeping, whiny</span></span>
 </div>
-<span id="footnote_a" class="footnote ety_footnote solo_footnote"><span class="footnote_id">a</span><span class="footnote_data">llorar + -ón</span></span>
+<span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">llorar + -ón</span></span>
 """
 
 

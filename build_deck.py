@@ -415,10 +415,15 @@ class DeckBuilder():
     def format_usage(cls, usage):
 
         ety_footnotes = [ e["ety"] for e in usage if e.get("ety") ]
-        multi_etynotes = len(usage) > 1
+        general_etynote = len(usage) == 1
 
-        usage_footnotes = [ w["note"] for e in usage for w in e["words"] if w.get("note") ]
-        multi_usenotes = len(usage_footnotes) > 0
+        usage_footnotes = []
+        [ usage_footnotes.append(w["note"]) for e in usage for w in e["words"] if w.get("note") and w["note"] not in usage_footnotes ]
+        all_usage_footnotes = [w["note"] for e in usage for w in e["words"] if w.get("note") and w["note"]]
+
+        # set a flag if all senses share the same usenote
+        general_usenote = len(usage_footnotes) == 1 and all("note" in w for e in usage for w in e["words"])
+
         data = []
 
         primary_pos = usage[0]["words"][0]["pos"]
@@ -435,8 +440,8 @@ class DeckBuilder():
                 usage_id = usage_footnotes.index(word_note) if word_note else None
 
                 for sense in w["senses"]:
-                    ety_key = chr(ord("a")+ety_id) if multi_etynotes and ety_id is not None else None
-                    usage_key = chr(ord("1")+usage_id) if multi_usenotes and usage_id is not None else None
+                    ety_key = chr(ord("a")+ety_id) if not general_etynote and ety_id is not None else None
+                    usage_key = chr(ord("1")+usage_id) if not general_usenote and usage_id is not None else None
 
                     data += cls.format_sense(sense, w["pos"], w.get("noun_type", None), ety_key, usage_key, primary_pos)
                     if "hint" in sense:
@@ -444,8 +449,11 @@ class DeckBuilder():
 
             data.append('</div>\n')
 
-        data += cls.format_usage_footnotes(usage_footnotes)
-        data += cls.format_ety_footnotes(ety_footnotes)
+        extra_classes = ["general_footnote"] if general_usenote else []
+        data += cls.format_usage_footnotes(usage_footnotes, extra_classes)
+
+        extra_classes = ["general_footnote"] if general_etynote else []
+        data += cls.format_ety_footnotes(ety_footnotes, extra_classes)
 
         res = "".join(data)
         return res
@@ -453,16 +461,12 @@ class DeckBuilder():
     @classmethod
     def format_usage_footnotes(cls, notes, extra_classes=[]):
         classes = ["usage_footnote"]
-        if len(notes) == 1:
-            classes.append("solo_footnote")
         c = " ".join(classes + extra_classes)
         return cls.format_footnotes(notes, c, "1")
 
     @classmethod
     def format_ety_footnotes(cls, notes, extra_classes=[]):
         classes = ["ety_footnote"]
-        if len(notes) == 1:
-            classes.append("solo_footnote")
         c = " ".join(classes + extra_classes)
         return cls.format_footnotes(notes, c, "a")
 
