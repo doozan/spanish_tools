@@ -1372,10 +1372,7 @@ class DeckBuilder():
             if len(self.allwords_index) != len(self.allwords):
                 raise ValueError("Mismatch", len(self.allwords_index), len(self.allwords), wordlist)
 
-    def compile(self, infofile, deckname, mediadir, limit, ankideck=None, tags=[]):
-
-        with open(infofile) as jsonfile:
-            self.deck_info = json.load(jsonfile)
+    def compile(self, modelfile, filename, deck_name, deck_guid, deck_desc, mediadir, limit, ankideck=None, tags=[]):
 
         self.ankideck = ankideck
         if ankideck:
@@ -1386,16 +1383,15 @@ class DeckBuilder():
                 print("Cannot find anki database:", ankidb)
                 exit(1)
 
-            self.db_notes = self.load_db_notes(ankidb, self.deck_info["deck"]["name"])
+            self.db_notes = self.load_db_notes(ankidb, deck_name)
             for guid, item in self.db_notes.items():
                 hashval = self.get_note_hash(guid, item["flds"], item["tags"])
                 self.db_timestamps[hashval] = item["mod"]
 
-        card_model = self.make_card_model(self.deck_info["model"])
-        deck_guid = self.deck_info["deck"]["id"]
-        my_deck = genanki.Deck(
-            int(deck_guid), self.deck_info["deck"]["name"], self.deck_info["deck"]["desc"]
-        )
+        with open(modelfile) as infile:
+            model_info = json.load(infile)
+        card_model = self.make_card_model(model_info)
+        my_deck = genanki.Deck(deck_guid, deck_name, deck_desc)
 
         if limit and limit < len(self.allwords_index):
             for tag in self.allwords_index[limit:]:
@@ -1404,7 +1400,6 @@ class DeckBuilder():
 
 
         self.build_synonyms()
-
         self.rows = []
 
         position = 0
@@ -1456,7 +1451,7 @@ class DeckBuilder():
             my_deck.add_note(note)
             self.rows.append(row)
 
-        package_filename = os.path.join(os.getcwd(), deckname + ".apkg")
+        package_filename = os.path.join(os.getcwd(), filename + ".apkg")
         my_package = genanki.Package(my_deck)
         my_package.media_files = self.media_files
         my_package.write_to_file(package_filename)
@@ -1515,17 +1510,17 @@ class DeckBuilder():
 def build_deck(params=None):
 
     parser = argparse.ArgumentParser(description="Compile anki deck")
-    parser.add_argument("deckname", help="Name of deck to build")
+    parser.add_argument("deckfile", help="Name of deck to build")
     parser.add_argument(
         "-m",
         "--mediadir",
-        help="Directory containing deck media resources (default: DECKNAME.media)",
+        help="Directory containing deck media resources (default: DECKFILE.media)",
     )
     parser.add_argument(
         "-w",
         "--wordlist",
         action="append",
-        help="List of words to include/exclude from the deck (default: DECKNAME.csv)",
+        help="List of words to include/exclude from the deck (default: DECKFILE.csv)",
     )
     parser.add_argument(
         "-t",
@@ -1540,7 +1535,7 @@ def build_deck(params=None):
     )
     parser.add_argument(
         "--short-defs",
-        help="CSV file with short definitions (default DECKNAME.shortdefs)",
+        help="CSV file with short definitions (default DECKFILE.shortdefs)",
     )
     parser.add_argument("-l", "--limit", type=int, help="Limit deck to N entries")
     parser.add_argument(
@@ -1551,12 +1546,12 @@ def build_deck(params=None):
     parser.add_argument(
         "--dump-changes", help="Dump list of removed/added note ids to file (requires --anki)"
     )
-    parser.add_argument(
-        "--deckinfo",
-        help="Read model/deck info from JSON file (default: DECKNAME.json)",
-    )
+    parser.add_argument( "--model", help="Read model info from JSON file", required=True)
+    parser.add_argument("--deck-name", help="Deck Name", default="Deck")
+    parser.add_argument("--deck-guid", help="Deck GUID", required=True, type=int)
+    parser.add_argument("--deck-desc", help="Deck Description", default="")
     parser.add_argument("--anki", help="Read/write data from specified anki profile")
-    parser.add_argument( "--allforms", help="Load word forms from file")
+    parser.add_argument("--allforms", help="Load word forms from file")
     parser.add_argument(
         "--dictionary", help="Dictionary file name (DEFAULT: es-en.txt)",
         default="es-en.txt"
@@ -1594,13 +1589,13 @@ def build_deck(params=None):
         args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
 
     if not args.mediadir:
-        args.mediadir = args.deckname + ".media"
+        args.mediadir = args.deckfile + ".media"
 
     if not args.wordlist:
-        args.wordlist = [args.deckname + ".csv"]
+        args.wordlist = [args.deckfile + ".csv"]
 
-    if not args.short_defs and os.path.isfile(args.deckname + ".shortdefs"):
-        args.short_defs = args.deckname + ".shortdefs"
+    if not args.short_defs and os.path.isfile(args.deckfile + ".shortdefs"):
+        args.short_defs = args.deckfile + ".shortdefs"
 
     if not args.allow_flag:
         args.allow_flag = set()
@@ -1618,11 +1613,8 @@ def build_deck(params=None):
         print("Use of --dump-changes requires --anki profile to be specified")
         exit(1)
 
-    if not args.deckinfo:
-        args.deckinfo = args.deckname + ".json"
-
-    if not os.path.isfile(args.deckinfo):
-        print(f"Model JSON does not exist: {args.deckinfo}")
+    if not os.path.isfile(args.model):
+        print(f"Model JSON does not exist: {args.model}")
         exit(1)
 
     with open(args.dictionary) as wordlist_data:
@@ -1643,7 +1635,7 @@ def build_deck(params=None):
 
     deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs)
     deck.load_wordlists(args.wordlist, args.allow_flag)
-    deck.compile(args.deckinfo, args.deckname, args.mediadir, args.limit, args.anki, args.tag)
+    deck.compile(args.model, args.deckfile, args.deck_name, args.deck_guid, args.deck_desc, args.mediadir, args.limit, args.anki, args.tag)
 
     if args.dump_sentence_ids:
         deck.dump_sentences(args.dump_sentence_ids)
