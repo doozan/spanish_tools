@@ -1325,59 +1325,61 @@ class DeckBuilder():
         # read through all the files to populate the synonyms and excludes lists
         for wordlist in wordlists:
             with open(wordlist, newline="") as csvfile:
-                csvreader = csv.DictReader(csvfile)
-                for reqfield in ["pos", "spanish"]:
-                    if reqfield not in csvreader.fieldnames:
-                        raise ValueError(
-                            f"No '{reqfield}' field specified in file {wordlist}"
-                        )
+                self.load_wordlist(csvfile, allowed_flags)
 
-                for row in csvreader:
-                    if not row:
-                        continue
+    def load_wordlist(self, data, allowed_flags):
+        # data is an iterator that provides csv formatted data
 
-                    item_tag = make_tag(row["spanish"], row["pos"])
+        csvreader = csv.DictReader(data)
+        for reqfield in ["pos", "spanish"]:
+            if reqfield not in csvreader.fieldnames:
+                raise ValueError(
+                    f"No '{reqfield}' field specified in file {wordlist}"
+                )
 
-                    position = row.get("position", None)
-                    # Negative position indicates that all previous instances of this word should be removed
-                    if position and position.startswith("-"):
-                        self.wordlist_remove(item_tag)
-                        continue
+        for row in csvreader:
+            if not row:
+                continue
 
-                    if "flags" in row and row["flags"]:
-                        flags = set(row["flags"].split("; "))
-                        if flags.difference(allowed_flags):
-                            continue
+            item_tag = make_tag(row["spanish"], row["pos"])
 
-                    usage = self.get_usage(row["spanish"], row["pos"])
-                    if not usage:
-                        continue
+            position = row.get("position", None)
+            # Negative position indicates that all previous instances of this word should be removed
+            if position and position.startswith("-"):
+                self.wordlist_remove(item_tag)
+                continue
 
-                    # Skip words that have don't have usage for the given word/pos
-                    if usage[0]["words"][0]["pos"] != row["pos"]:
-                        continue
+            if "flags" in row and row["flags"]:
+                flags = set(row["flags"].split("; "))
+                if flags.difference(allowed_flags):
+                    continue
 
-                    if not position:
-                        self.wordlist_append(item_tag, usage)
+            usage = self.get_usage(row["spanish"], row["pos"])
+            if not usage:
+                continue
 
-                    # +pos:word indicates that the entry should be positioned immedialy after the specified pos:word
-                    # or after the first occurance of word if pos: is not specified
-                    elif position.startswith("+"):
-                        self.wordlist_insert_after(position[1:], item_tag, usage)
+            # Skip words that have don't have usage for the given word/pos
+            if usage[0]["words"][0]["pos"] != row["pos"]:
+                continue
 
-                    # pos:word will replace the specific pos:word or the first occurance of the word if pos: is not specified
-                    elif not position[0].isdigit() and position[0] != "-":
-                        self.wordlist_replace(position, item_tag, usage)
+            if not position:
+                self.wordlist_append(item_tag, usage)
 
-                    # a digit in the position column indicates that it should be inserted at that position
-                    elif int(position) > 0 and int(position) < len(self.allwords_index):
-                        self.wordlist_insert(item_tag, int(position), usage)
+            # +pos:word indicates that the entry should be positioned immedialy after the specified pos:word
+            # or after the first occurance of word if pos: is not specified
+            elif position.startswith("+"):
+                self.wordlist_insert_after(position[1:], item_tag, usage)
 
-                    else:
-                        raise ValueError(f"Position {position} does not exist, ignoring")
+            # pos:word will replace the specific pos:word or the first occurance of the word if pos: is not specified
+            elif not position[0].isdigit() and position[0] != "-":
+                self.wordlist_replace(position, item_tag, usage)
 
-            if len(self.allwords_index) != len(self.allwords):
-                raise ValueError("Mismatch", len(self.allwords_index), len(self.allwords), wordlist)
+            # a digit in the position column indicates that it should be inserted at that position
+            elif int(position) > 0 and int(position) < len(self.allwords_index):
+                self.wordlist_insert(item_tag, int(position), usage)
+
+            else:
+                raise ValueError(f"Position {position} does not exist, ignoring")
 
     def compile(self, modelfile, filename, deck_name, deck_guid, deck_desc, mediadir, limit, ankideck=None, tags=[]):
 
