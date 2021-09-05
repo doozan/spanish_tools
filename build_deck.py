@@ -701,9 +701,10 @@ class DeckBuilder():
                 continue
 
             break_pos = gloss.rfind(separator)
-            new = gloss[:break_pos].strip()
-            if new:
-                gloss = new
+            if break_pos > 1:
+                new = gloss[:break_pos]
+                if new:
+                    gloss = new
 
         # If it's still too long, strip the last , until less than max length or no more , to strip
         break_pos = len(gloss)

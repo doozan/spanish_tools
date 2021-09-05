@@ -161,78 +161,25 @@ test
 
 #[{'ety': None, 'words': [{'pos': 'n', 'senses': [{'tag': 'm', 'gloss': 'masculine', 'hint': ''}], 'noun_type': 'm-f'}]}]
 
-def notest_shorten_gloss():
+def test_shorten_gloss():
 
-    item = { "m": { "": [ "def1", "def2" ] } }
-    assert DeckBuilder.shorten_gloss(item, 1000) == { "m": { "": [ "def1", "def2" ] } }
+    short = DeckBuilder.shorten_gloss
+    assert short("A wrestler whose in-ring persona embodies heroic or virtuous traits. Contrast with rudo (Spanish) or heel (English)", 60) \
+            == "A wrestler whose in-ring persona embodies heroic or virtuous traits. Contrast with rudo (Spanish) or heel"
 
-    # No cutoff of number of items
-    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
-    assert DeckBuilder.shorten_gloss(item, 1000) == { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+    assert short("def1, def2", 100) == "def1, def2"
+    assert short("def1, def2", 5) == "def1"
 
-    # Only first two tags
-    item = { "m": { "": [ "def1", "def2", "def3", "def4" ], "x": ["x1", "x2", "x3"], "y": ["y1", "y2", "y3"] } }
-    assert DeckBuilder.shorten_gloss(item, 1000) == { "m": { "": [ "def1", "def2", "def3", "def4" ], "x": ["x1","x2","x3"] } }
+    assert short("(qualifier) def1", 100) == "(qualifier) def1"
+    assert short("(qualifier) def1", 5) == "(qualifier) def1"
 
-    # Only the first part of speech
-    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] }, "v": { "": ["v1", "v2", "v3"] } }
-    assert DeckBuilder.shorten_gloss(item, 1000) == { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
+    assert short("def1 (gloss)", 100) == "def1 (gloss)"
+    assert short("def1 (gloss)", 5) == "def1"
 
-    # m/f, mf, and m-f always include both m and f
-    item = { "m/f": { "m": [ "def1", "def2" ], "f": ["def4"] } }
-    assert DeckBuilder.shorten_gloss(item, 1000) == { "m/f": { "f": [ "def4" ], "m": [ "def1", "def2" ] } }
-    item = { "mf": { "m": [ "def1", "def2" ], "f": ["def4"] } }
-    assert DeckBuilder.shorten_gloss(item, 1000) == { "mf": { "f": [ "def4" ], "m": [ "def1", "def2" ] } }
-    item = { "m-f": { "m": [ "def1", "def2" ], "f": ["def4"] } }
-    assert DeckBuilder.shorten_gloss(item, 1000) == { "m-f": { "f": [ "def4" ], "m": [ "def1", "def2" ] } }
+    assert short("def1 (blah) still here", 100) == "def1 (blah) still here"
+    assert short("def1 (blah) still here", 5) == "def1 (blah) still here"
 
-    # simple shortener
-    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
-    assert DeckBuilder.shorten_gloss(item, 23) == { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
-
-    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
-    assert DeckBuilder.shorten_gloss(item, 22) == { "m": { "": [ "def1", "def2", "def3" ] } }
-
-    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
-    assert DeckBuilder.shorten_gloss(item, 16) == { "m": { "": [ "def1", "def2" ] } }
-
-    item = { "m": { "": [ "def1", "def2", "def3", "def4" ] } }
-    assert DeckBuilder.shorten_gloss(item, 10) == { "m": { "": [ "def1" ] } }
-
-
-    item = { "m": { "": [ "def1", "def2" ], "a really long tag":[ "def3", "def4" ] } }
-    assert DeckBuilder.shorten_gloss(item, 60) == {'m': {'': ['def1', 'def2'], 'a really long tag': ['def3', 'def4']}}
-
-    item = { "m": { "": [ "(qualifier) a really long def1", "def2" ] } }
-    assert DeckBuilder.shorten_gloss(item, 20) == {'m': {'': ['(qualifier) a really long def1']}}
-
-    item = { "m": { "": [ "(intransitive, or transitive with con(of) or en(about)) to dream", "def2" ] } }
-    assert DeckBuilder.shorten_gloss(item, 20) == {'m': {'': ['(intransitive, or transitive with con(of) or en(about)) to dream']}}
-
-    item = { "m": { "": [ "a really long def1 (blah)", "def2" ] } }
-    assert DeckBuilder.shorten_gloss(item, 20) == {'m': {'': ['a really long def1']}}
-
-    item = { "m": { "": [ "a really, really, long def1 (blah)", "def2" ] } }
-    assert DeckBuilder.shorten_gloss(item, 20) == {'m': {'': ['a really', 'def2']}}
-
-    item = {'mf': {'': ['interpreter (one who interprets speech in another language)'], 'music, dance': ['performer']}}
-
-    short = DeckBuilder.shorten_gloss(item, 200)
-    assert short == {'mf': {'': ['interpreter (one who interprets speech in another language)'], 'music, dance': ['performer']}}
-
-    short = DeckBuilder.shorten_gloss(item, 80)
-    assert short == {'mf': {'': ['interpreter'], 'music, dance': ['performer']}}
-
-    short = DeckBuilder.shorten_gloss(item, 20)
-    assert short == {'mf': {'': ['interpreter']}}
-
-    item = { "mf": { 'Mexico, derogatory': ['One who has a preference or infatuation for foreign (non-Mexican) culture, products or people'] }}
-    short = DeckBuilder.shorten_gloss(item, 20)
-    print(short)
-    assert short == { "mf": { 'Mexico, derogatory': ['One who has a preference or infatuation for foreign (non-Mexican) culture'] }}
-
-    item = {'adj': {'': ['popular'], 'politics, Spain': ['Pertaining to PP (Partido Popular)']}}
-    assert DeckBuilder.shorten_gloss(item, 20) == {'adj': {'': ['popular'], 'politics, Spain': ['Pertaining to PP']}}
+    assert short("def1 (blah), not here", 5) == "def1 (blah)"
 
 def test_usage():
 
@@ -559,7 +506,7 @@ pos: n
     defs = [ sense.gloss for word in words for sense in word.senses ]
     assert defs == ['accused of a crime', 'found guilty of a crime']
 
-    words = deck.get_word_objs("reo", "n", True)
+    words = deck.get_word_objs("reo", "n")
     assert len(words) == 4
     defs = [ sense.gloss for word in words for sense in word.senses ]
     assert defs == ['defendant (as in a trial)', 'delinquent', 'sea trout', 'turn (in a game)', 'accused of a crime', 'found guilty of a crime']
@@ -647,7 +594,7 @@ pos: n
     words = deck.get_word_objs("gringa", "n", False)
     assert len(words) == 1
 
-    words = deck.get_word_objs("gringo", "n", True)
+    words = deck.get_word_objs("gringo", "n")
     assert len(words) == 1
 
     etys = list(deck.group_ety(words))
@@ -726,7 +673,7 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
-    words = deck.get_word_objs("miembro", "n", True)
+    words = deck.get_word_objs("miembro", "n")
     assert len(words) == 2
 
     etys = list(deck.group_ety(words))
@@ -797,7 +744,7 @@ pos: v
     allforms = AllForms.from_wordlist(wordlist)
     deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
-    words = deck.get_word_objs("cometa", "n", True)
+    words = deck.get_word_objs("cometa", "n")
     assert len(words) == 2
 
     etys = list(deck.group_ety(words))
@@ -861,7 +808,7 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
-    words = deck.get_word_objs("ave", "n", True)
+    words = deck.get_word_objs("ave", "n")
     assert len(words) == 3
 
     etys = list(deck.group_ety(words))
@@ -906,7 +853,7 @@ pos: v
     allforms = AllForms.from_wordlist(wordlist)
     deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
-    words = deck.get_word_objs("tornar", "v", True)
+    words = deck.get_word_objs("tornar", "v")
     assert len(words) == 1
 
     print(deck.get_usage("tornar", "v"))
@@ -950,7 +897,7 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
-    words = deck.get_word_objs("cólera", "n", True)
+    words = deck.get_word_objs("cólera", "n")
     assert len(words) == 2
 
 
@@ -1025,7 +972,7 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     deck = DeckBuilder(wordlist, sentences, ignore, allforms)
 
-    words = deck.get_word_objs("moreno", "n", True)
+    words = deck.get_word_objs("moreno", "n")
     assert len(words) == 2
 
     assert deck.get_usage("moreno", "n") == [{
@@ -1288,3 +1235,4 @@ pos: n
 <span id="footnote_a" class="footnote ety_footnote"><span class="footnote_id">a</span><span class="footnote_data">From Old Spanish &quot;cabdal&quot;, from Latin &quot;capitālis&quot;. Doublet of capital. Cognate with English &quot;chattel&quot;, cattle and capital.</span></span>
 <span id="footnote_b" class="footnote ety_footnote"><span class="footnote_id">b</span><span class="footnote_data">Borrowed from Latin &quot;caudālis&quot;.</span></span>
 """
+
