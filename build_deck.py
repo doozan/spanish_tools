@@ -210,10 +210,10 @@ class DeckBuilder():
     @staticmethod
     def format_sentences(sentences):
         return "\n".join(
-            f'<div class="sentence"><span class="spa">{item[0]}</span><br>\n<span class="eng">{html.escape(item[1])}</span></div>'
+            f'<span class="spa">{html.escape(item[0])}</span>\n' \
+            f'<span class="eng">{html.escape(item[1])}</span>'
             for item in sentences
         )
-
 
     def get_sentences(self, items, count):
 
@@ -440,12 +440,12 @@ class DeckBuilder():
                 usage_id = usage_footnotes.index(word_note) if word_note else None
 
                 for sense in w["senses"]:
-                    ety_key = chr(ord("a")+ety_id) if not general_etynote and ety_id is not None else None
                     usage_key = chr(ord("1")+usage_id) if not general_usenote and usage_id is not None else None
+                    ety_key = chr(ord("a")+ety_id) if not general_etynote and ety_id is not None else None
 
-                    data += cls.format_sense(sense, w["pos"], w.get("noun_type", None), ety_key, usage_key, primary_pos)
+                    data += cls.format_sense(sense, w["pos"], w.get("noun_type", None), usage_key, ety_key, primary_pos)
                     if "hint" in sense:
-                        data += cls.format_sense(sense, w["pos"], w.get("noun_type", None), ety_key, usage_key, primary_pos, hint=True)
+                        data += cls.format_sense(sense, w["pos"], w.get("noun_type", None), usage_key, ety_key, primary_pos, hint=True)
 
             data.append('</div>\n')
 
@@ -476,12 +476,12 @@ class DeckBuilder():
 
         for idx,note in enumerate(notes):
             anchor = chr(ord(start_char)+idx)
-            res.append(f'<span id="footnote_{anchor}" class="footnote {note_class}"><span class="footnote_id">{anchor}</span><span class="footnote_data">' + re.sub(r"\\n", "<br>", html.escape(note)) + '</span></span>\n')
+            res.append(f'<span id="footnote_{anchor}" class="footnote {note_class}"><span class="footnote_id">{anchor}</span><span class="footnote_data">' + re.sub(r"\\n", '<br class="forced">', html.escape(note)) + '</span></span>\n')
 
         return res
 
     @classmethod
-    def format_sense(cls, sense, pos, noun_type, ety_key, usage_key, primary_pos, hint=False):
+    def format_sense(cls, sense, pos, noun_type, usage_key, ety_key, primary_pos, hint=False):
         res = []
 
         if noun_type:
@@ -1232,7 +1232,7 @@ class DeckBuilder():
             "Spanish": spanish,
             "Part of Speech": noun_type if pos == "n" else pos,
             "Synonyms": self.format_syns(deck_syns, extra_syns, hide_word=spanish),
-            "Data": self.format_usage(usage).replace("\n+", "\n<br>"),
+            "Data": self.format_usage(usage), #.replace("\n+", '<br class="forced">\n'),
             "Sentences": sentences,
             "Display": tts_data["display"],
             "Audio": self.format_sound(sound),

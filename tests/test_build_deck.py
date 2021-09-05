@@ -360,7 +360,7 @@ pos: v
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">directory</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">cocket</span></span>
 </div>
-<span id="footnote_1" class="footnote usage_footnote"><span class="footnote_id">1</span><span class="footnote_data">The noun guía is like several other Spanish nouns with a human referent and ending in a.<br>The masculine articles and adjectives are used when the referent is male or unknown.</span></span>
+<span id="footnote_1" class="footnote usage_footnote"><span class="footnote_id">1</span><span class="footnote_data">The noun guía is like several other Spanish nouns with a human referent and ending in a.<br class="forced">The masculine articles and adjectives are used when the referent is male or unknown.</span></span>
 <span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">Probably from the verb guiar. Cf. also French &quot;guide&quot; (Old French &quot;guie&quot;), Italian &quot;guida&quot;.</span></span>
 """
 
