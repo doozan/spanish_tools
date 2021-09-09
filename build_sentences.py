@@ -256,8 +256,6 @@ def get_original_form(tag, sentence, offset):
 
 def print_tagged_data(verbose=False):
 
-    isentences = iter_sentences()
-
     tagdata = {}
 
     count = 0
@@ -267,11 +265,12 @@ def print_tagged_data(verbose=False):
 
         items = ijson.kvitems(infile, "item")
 
-        for k, v in items:
-            if k != "sentences":
-                continue
+        for sid, english, spanish, credits, english_score, spanish_score in iter_sentences():
 
-            sid, english, spanish, credits, english_score, spanish_score = next(isentences)
+            for k,v in items:
+                if k == "sentences":
+                    break
+
             count += 1
             if not count % 1000 and verbose:
                 print(count, end="\r", file=sys.stderr)
