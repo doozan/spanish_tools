@@ -530,7 +530,7 @@ class DeckBuilder():
             res.append(f'<span class="footnote_link ety_link">{ety_key}</span>')
 
         if sense.get("syns"):
-            res.append(f'<span class="synonyms">{", ".join(sense["syns"])}</span>')
+            res.append(f'<span class="synonyms">{", ".join(sense["syns"][:cls.MAX_SYNONYMS])}</span>')
 
         res.append("</span>\n")
         return res
