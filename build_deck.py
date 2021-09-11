@@ -378,7 +378,7 @@ class DeckBuilder():
             distance = int(len(hide_word)/4)
 
         for item in items:
-            yield DeckBuilder.obscure_gloss(item, hide_word, distance, True, True)
+            yield DeckBuilder.obscure_gloss(item, hide_word, distance, hide_all=True)
 
     @staticmethod
     def format_syns_html(deck, extra, css_class=''):
@@ -476,7 +476,7 @@ class DeckBuilder():
 
         for idx,note in enumerate(notes):
             anchor = chr(ord(start_char)+idx)
-            res.append(f'<span id="footnote_{anchor}" class="footnote {note_class}"><span class="footnote_id">{anchor}</span><span class="footnote_data">' + re.sub(r"\\n", '<br class="forced">', html.escape(note)) + '</span></span>\n')
+            res.append(f'<span id="footnote_{anchor}" class="footnote {note_class}"><span class="footnote_id">{anchor}</span><span class="footnote_data">' + re.sub(r"\\n", '<br>', html.escape(note)) + '</span></span>\n')
 
         return res
 
@@ -756,7 +756,7 @@ class DeckBuilder():
         for sense in pos_data["senses"]:
             hide_all=False
             if sense in short_senses:
-                hint = self.shorten_gloss(self.obscure_gloss(sense["gloss"], hide_word, hide_all, hide_all), max_length)
+                hint = self.shorten_gloss(self.obscure_gloss(sense["gloss"], hide_word, hide_all=hide_all), max_length)
                 if hint == sense["gloss"]:
                     hint = ""
                 sense["hint"] = hint

@@ -307,7 +307,7 @@ pos: v
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">directory</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">cocket</span></span>
 </div>
-<span id="footnote_1" class="footnote usage_footnote"><span class="footnote_id">1</span><span class="footnote_data">The noun guía is like several other Spanish nouns with a human referent and ending in a.<br class="forced">The masculine articles and adjectives are used when the referent is male or unknown.</span></span>
+<span id="footnote_1" class="footnote usage_footnote"><span class="footnote_id">1</span><span class="footnote_data">The noun guía is like several other Spanish nouns with a human referent and ending in a.<br>The masculine articles and adjectives are used when the referent is male or unknown.</span></span>
 <span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">Probably from the verb guiar. Cf. also French &quot;guide&quot; (Old French &quot;guie&quot;), Italian &quot;guida&quot;.</span></span>
 """
 
@@ -433,6 +433,10 @@ def test_obscured():
     assert o('to test, blah', "test", hide_first=True) == 'to ..., blah'
     assert o('to test, test', "test", hide_all=False) == 'to test, ...'
     assert o('to test, test', "test", hide_first=True, hide_all=True) == 'to ..., ...'
+
+    assert o('slander, calumny, aspersion, libel, defamation', 'calumnia') == "slander, ..., aspersion, libel, defamation"
+    assert o('similarity, similitude', "similitud") == 'similarity, ...'
+    assert o('similarity, similitude', "similitud", True, True) == 'similarity, ...'
 
     # < 4 characters should require an exact match
     assert list(obscured(["abc", "abz"], "abc")) == ['...', 'abz']
@@ -1236,3 +1240,29 @@ pos: n
 <span id="footnote_b" class="footnote ety_footnote"><span class="footnote_id">b</span><span class="footnote_data">Borrowed from Latin &quot;caudālis&quot;.</span></span>
 """
 
+def test_similtud():
+
+    wordlist_data = """\
+_____
+similitud
+pos: n
+  meta: {{es-noun|f}}
+  g: f
+  etymology: From Latin "similitūdō" (“likeness, similarity”).
+  gloss: similarity, similitude
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = None
+    ignore = []
+    allforms = AllForms.from_wordlist(wordlist)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+
+    usage = deck.get_usage("similitud", "n")
+    print(usage)
+    assert usage == [{
+        'ety': 'From Latin "similitūdō" (“likeness, similarity”).',
+        'words': [{
+            'pos': 'n', 'senses': [
+                {'gloss': 'similarity, similitude', 'hint': 'similarity, ...'}],
+            'noun_type': 'f'}]}]
