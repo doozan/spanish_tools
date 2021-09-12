@@ -363,7 +363,6 @@ class DeckBuilder():
         if hide_all or not all_hidden:
             gloss = "".join(data)
 
-        # TODO: Ensure this doesn't obscure everything?
         m = re.match(r'(?P<pre>.*?)(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"(?P<post>.*)', gloss)
         if m and (hide_all or m.group("pre") or m.group("post")):
             gloss = re.sub(r'(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"', r"...", gloss)
@@ -749,8 +748,8 @@ class DeckBuilder():
         if len(short_senses) == 1 and len(pos_data["senses"]) > 1:
             short_senses.append(pos_data["senses"][1])
 
+        hide_all=False
         for sense in pos_data["senses"]:
-            hide_all=False
             if sense in short_senses:
                 hint = self.shorten_gloss(self.obscure_gloss(sense["gloss"], hide_word, hide_all=hide_all), max_length)
                 if hint == sense["gloss"]:

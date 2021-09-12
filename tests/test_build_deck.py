@@ -1277,3 +1277,34 @@ pos: n
 </div>
 <span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">From Latin &quot;similitūdō&quot; (“likeness, similarity”).</span></span>
 """
+
+
+def test_demente():
+
+    wordlist_data = """\
+_____
+demente
+pos: adj
+  meta: {{es-adj}}
+  etymology: Borrowed from Latin "demens, dementem".
+  gloss: crazy, insane
+    syn: loco; trastornado
+  gloss: demented
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = None
+    ignore = []
+    allforms = AllForms.from_wordlist(wordlist)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+
+    usage = deck.get_usage("demente", "adj")
+    print(usage)
+    assert usage == [{
+        'ety': 'Borrowed from Latin "demens, dementem".',
+        'words': [{
+            'pos': 'adj',
+            'senses': [
+                {'gloss': 'crazy, insane', 'syns': ['loco', 'trastornado'], 'hint': ''},
+                {'gloss': 'demented', 'hint': '...'}]}]}]
+
