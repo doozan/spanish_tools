@@ -552,15 +552,10 @@ class DeckBuilder():
         return True
 
 
-    def get_feminine_noun(self, word):
+    def get_feminine_forms(self, word):
         for word_obj in self._words.get_words(word, "n"):
-            if "f" in word_obj.forms:
-                return word_obj.forms["f"][0]
-
-            # Only look at the first word
-            return None
-
-        return None
+            # Return inside loop intentional, we only want to process the first word
+            return word_obj.forms.get("f")
 
     def get_noun_gender(self, word_obj):
         if not word_obj.genders:
@@ -1057,20 +1052,21 @@ class DeckBuilder():
 
         return items[:limit]
 
-    def get_phrase(self, word, pos, noun_type, femnoun):
+    def get_phrase(self, word, pos, noun_type, femforms):
         voice = ""
         phrase = ""
         display = None
 
         if noun_type:
-            if femnoun:
+            if femforms:
                 voice = self._MALE1
-                if femnoun in self.el_f_nouns:
-                    phrase = f"el {femnoun}. el {word}"
-                    display = f"el {femnoun}/el {word}"
-                else:
-                    phrase = f"la {femnoun}. el {word}"
-                    display = f"la {femnoun}/el {word}"
+
+                fems = [f"el {f}" if f in self.el_f_nouns else f"la {f}" for f in femforms]
+                fem_display = ", ".join(fems)
+                fem_phrase = ". ".join(fems)
+
+                phrase = f"{fem_phrase}. el {word}"
+                display = f"{fem_display}/el {word}"
             elif noun_type == "f-el":
                 voice = self._FEMALE2
                 phrase = f"el {word}"
@@ -1221,8 +1217,8 @@ class DeckBuilder():
         else:
             self.seen_hints[seen_tag] = item_tag
 
-        femnoun = self.get_feminine_noun(spanish) if pos == "n" else None
-        tts_data = self.get_phrase(spanish, pos, noun_type, femnoun)
+        femforms = self.get_feminine_forms(spanish) if pos == "n" else None
+        tts_data = self.get_phrase(spanish, pos, noun_type, femforms)
 
         sound = get_speech(tts_data["voice"], tts_data["phrase"], mediadir)
 
