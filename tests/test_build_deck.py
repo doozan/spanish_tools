@@ -1250,6 +1250,7 @@ pos: n
   g: f
   etymology: From Latin "similitūdō" (“likeness, similarity”).
   gloss: similarity, similitude
+  syn: test1; Thesaurus:test2
 """
 
     wordlist = Wordlist(wordlist_data.splitlines())
@@ -1264,5 +1265,15 @@ pos: n
         'ety': 'From Latin "similitūdō" (“likeness, similarity”).',
         'words': [{
             'pos': 'n', 'senses': [
-                {'gloss': 'similarity, similitude', 'hint': 'similarity, ...'}],
+                {'gloss': 'similarity, similitude', 'hint': 'similarity, ...', 'syns': ['test1', 'Thesaurus:test2']}],
             'noun_type': 'f'}]}]
+
+    print("\n\n")
+    print(deck.format_usage(usage))
+    assert deck.format_usage(usage) == """\
+<div class="etymology etymology_0 solo_etymology">
+<span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">similarity, similitude</span><span class="synonyms">test1, test2</span></span>
+<span class="pos n hint f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">similarity, ...</span><span class="synonyms">test1, test2</span></span>
+</div>
+<span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">From Latin &quot;similitūdō&quot; (“likeness, similarity”).</span></span>
+"""
