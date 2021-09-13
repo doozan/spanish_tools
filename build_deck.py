@@ -92,6 +92,7 @@ class DeckBuilder():
 
         self.allwords = {}
         self.allwords_index = []
+        self.allwords_meta = {}
         self.shortdefs = {}
 
         self.media_files = []
@@ -1199,6 +1200,7 @@ class DeckBuilder():
         item_tag = make_tag(spanish, pos)
 
         usage = self.allwords[item_tag]
+        meta = self.allwords_meta.get(item_tag)
 
         if not usage:
             raise ValueError("No usage data", spanish, pos)
@@ -1240,7 +1242,7 @@ class DeckBuilder():
             "Spanish": spanish,
             "Part of Speech": noun_type if pos == "n" else pos,
             "Synonyms": self.format_syns(deck_syns, extra_syns, hide_word=spanish),
-            "Data": self.format_usage(usage), #.replace("\n+", '<br class="forced">\n'),
+            "Data": self.format_usage(usage),
             "Sentences": sentences,
             "Display": tts_data["display"],
             "Audio": self.format_sound(sound),
@@ -1251,6 +1253,9 @@ class DeckBuilder():
         #    if "tags" in row and row['tags'] != "":
         #        for tag in row['tags'].split(" "):
         #            tags.append(tag)
+        if meta and "tags" in meta:
+            tags += meta["tags"]
+
         item["tags"] = tags
 
         FILE = os.path.join(mediadir, sound)
@@ -1303,6 +1308,9 @@ class DeckBuilder():
         old_tag = self.allwords_index[index]
         del self.allwords[old_tag]
 
+        # Preserve metadata
+        self.allwords_meta[wordtag] = self.allwords_meta[old_tag]
+
         self.allwords[wordtag] = usage
         self.allwords_index[index] = wordtag
 
@@ -1326,13 +1334,44 @@ class DeckBuilder():
         self.allwords_index.append(wordtag)
 
     def load_wordlists(self, wordlists, allowed_flags):
+        # Wordlist is a list of strings
+        # Each wordlist string must be a filename, optionally trailed ; separated key=value pairs
+        # wordlist.txt
+        # wordlist2.txt;limit=1000
+        # wordlist3.txt;limit=1000;allow=NOSENT
+        #
+        # allow options are applied only to the specified deck and are cumulative with the global
+        # --allow-flag options
+        #
+        # Specifying a limit will limit processing to the first N allowed words in the wordlist
 
         # read through all the files to populate the synonyms and excludes lists
         for wordlist in wordlists:
-            with open(wordlist, newline="") as csvfile:
-                self.load_wordlist(csvfile, allowed_flags)
 
-    def load_wordlist(self, data, allowed_flags):
+            all_allowed_flags = allowed_flags
+            limit = 0
+            metadata = {}
+
+            filename, *options = wordlist.split(";")
+            for option in options:
+                k,v = option.split("=")
+                k = k.lower().strip()
+                if k == "allow":
+                    all_allowed_flags.append(v)
+                elif k == "limit":
+                    limit = int(v)
+                elif k == "tag":
+                    if "tags" not in metadata:
+                        metadata["tags"] = [v]
+                    else:
+                        metadata["tags"].append(v)
+                else:
+                    raise ValueError(f'Unknown option "{option}" specified in wordlist {wordlist}')
+
+            with open(filename, newline="") as csvfile:
+                self.load_wordlist(csvfile, all_allowed_flags, limit, metadata)
+
+    def load_wordlist(self, data, allowed_flags, limit=0, metadata=None):
         # data is an iterator that provides csv formatted data
 
         csvreader = csv.DictReader(data)
@@ -1342,6 +1381,7 @@ class DeckBuilder():
                     f"No '{reqfield}' field specified in file {wordlist}"
                 )
 
+        count = 0
         for row in csvreader:
             if not row:
                 continue
@@ -1362,6 +1402,9 @@ class DeckBuilder():
             usage = self.get_usage(row["spanish"], row["pos"])
             if not usage:
                 continue
+
+            if metadata and item_tag not in self.allwords_meta:
+                self.allwords_meta[item_tag] = metadata
 
             # Skip words that have don't have usage for the given word/pos
             if usage[0]["words"][0]["pos"] != row["pos"]:
@@ -1385,6 +1428,11 @@ class DeckBuilder():
 
             else:
                 raise ValueError(f"Position {position} does not exist, ignoring")
+
+            count += 1
+            if limit and count>limit:
+                break
+
 
     def compile(self, modelfile, filename, deck_name, deck_guid, deck_desc, mediadir, limit, ankideck=None, tags=[]):
 
@@ -1619,6 +1667,7 @@ def build_deck(params=None):
         exit(1)
 
     for wordlist in args.wordlist:
+        wordlist = wordlist.split(";")[0]
         if not os.path.isfile(wordlist):
             print(f"Wordlist file does not exist: {wordlist}")
             exit(1)
