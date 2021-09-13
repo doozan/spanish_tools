@@ -19,18 +19,18 @@ def mem_use():
 
 class FrequencyList():
 
-    def __init__(self, wordlist, allforms, sentences):
+    def __init__(self, wordlist, allforms, sentences, ignore_data):
         self.wordlist = wordlist
         self.all_forms = allforms
         self.sentences = sentences
         self.freq = {}
         self.all_lemmas = {}
+        self.load_ignore(ignore_data)
 
     def load_ignore(self, ignore_data):
         self.ignore = {line.strip() for line in ignore_data if line.strip() and not line.strip().startswith("#")}
 
-    def process(self, freqlist, ignore_data=[], minuse=0):
-        self.load_ignore(ignore_data)
+    def process(self, freqlist, minuse=0):
         self.freq = {}
         self.all_lemmas = {}
         lines = {}
@@ -342,7 +342,12 @@ class FrequencyList():
 
         return best
 
+
 def build_freq(params=None):
+    flist, args = init_freq(params)
+    make_list(flist, args.infile, args.outfile, args.minuse)
+
+def init_freq(params):
 
     parser = argparse.ArgumentParser(description="Lemmatize frequency list")
     parser.add_argument("--ignore", help="List of words to ignore")
@@ -395,23 +400,27 @@ def build_freq(params=None):
     sentences = spanish_sentences(
         sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir
     )
+    print("sentences", mem_use(), file=sys.stderr)
 
-    flist = FrequencyList(wordlist, allforms, sentences)
-
-    with open(args.infile) as infile:
-        if args.outfile and args.outfile != "-":
-            outfile = open(args.outfile, "w")
-        else:
-            outfile = sys.stdout
-
-        for line in flist.process(infile, ignore_data, args.minuse):
-            outfile.write(line)
-            outfile.write("\n")
-
-        if args.outfile:
-            outfile.close()
-
+    flist = FrequencyList(wordlist, allforms, sentences, ignore_data)
     ignore_data.close()
+
+    return flist, args
+
+def make_list(flist, infile, outfile, minuse):
+
+    with open(infile) as _infile:
+        if outfile and outfile != "-":
+            _outfile = open(outfile, "w")
+        else:
+            _outfile = sys.stdout
+
+        for line in flist.process(_infile, minuse):
+            _outfile.write(line)
+            _outfile.write("\n")
+
+        if outfile:
+            _outfile.close()
 
 
 if __name__ == "__main__":
