@@ -110,7 +110,7 @@ class DeckBuilder():
         self._shortdefs = shortdefs
         self.all_forms = allforms
 
-    def filter_gloss(self, wordobj, sense):
+    def filter_gloss(self, wordobj, sense, filter_gloss=None):
         word = wordobj.word
         pos = wordobj.pos if wordobj.pos != "n" else wordobj.genders
 
@@ -130,7 +130,14 @@ class DeckBuilder():
                             return None
 
         gloss = re.sub(r'[ ;:,.]*\s*(alternative case form|feminine|female equivalent) of "[^\"]+"[ :,.]*', '', gloss)
+        gloss = gloss.lstrip(":;., ")
+        if gloss.startswith('(“') and gloss.endswith('”)'):
+            gloss = gloss[2:-2]
+
         if not re.match("[^ :,.]", gloss):
+            return None
+
+        if gloss == filter_gloss:
             return None
 
         return gloss
@@ -821,11 +828,11 @@ class DeckBuilder():
         }]
         """
 
-        def get_sense_data(word, pos_type, word_tag):
+        def get_sense_data(word, pos_type, word_tag, sense_filter=None):
 
             senses = []
             for sense in word.senses:
-                gloss = self.filter_gloss(word, sense)
+                gloss = self.filter_gloss(word, sense, sense_filter)
                 if not gloss:
                     continue
 
@@ -851,8 +858,8 @@ class DeckBuilder():
 
             return senses
 
-        def get_word_data(word, pos_type=None, sense_tag=None):
-            senses = get_sense_data(word, pos_type, sense_tag)
+        def get_word_data(word, pos_type=None, sense_tag=None, sense_filter=None):
+            senses = get_sense_data(word, pos_type, sense_tag, sense_filter)
             if not senses:
                 return {}
 
@@ -877,9 +884,9 @@ class DeckBuilder():
 
                 # word is part of a m/f pair, check if its mate has usable senses
                 if mate in word.forms and word.forms[mate] != word:
+                    main_gloss = word.senses[0].gloss
                     mates = [ w for w in words if w.genders == mate ]
-                    if not any(w for w in mates for s in w.senses if self.filter_gloss(w, s)):
-                    #if not any(w for w in mates if any(self.get_filtered_senses(w))):
+                    if not any(w for w in mates for s in w.senses if self.filter_gloss(w, s, main_gloss)):
                         return "m/f"
 
 
@@ -914,6 +921,7 @@ class DeckBuilder():
                         for w in words:
                             word_data = {}
                             word_notes = None
+                            primary_sense = None
 
                             if noun_type == "m/f":
                                 # Unlike all other nouns, which are lists of words [word1, word2, word3],
@@ -926,12 +934,13 @@ class DeckBuilder():
                                     if noun_tag == noun_type:
                                         noun_tag = None
 
-                                    data = get_word_data(w, noun_type, noun_tag)
+                                    data = get_word_data(w, noun_type, noun_tag, primary_sense)
                                     if not data:
                                         continue
 
                                     if not word_data:
                                         word_data = data
+                                        primary_sense = word_data["senses"][0]["gloss"]
                                     else:
                                         word_data["senses"] += data["senses"]
                                         if w.use_notes:

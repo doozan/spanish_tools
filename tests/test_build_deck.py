@@ -1308,3 +1308,39 @@ pos: adj
                 {'gloss': 'crazy, insane', 'syns': ['loco', 'trastornado'], 'hint': ''},
                 {'gloss': 'demented', 'hint': '...'}]}]}]
 
+
+def test_partidario():
+
+    wordlist_data = """\
+_____
+partidaria
+pos: n
+  meta: {{es-noun|f|m=partidario}}
+  g: f
+  gloss: female equivalent of "partidario" (“supporter, partisan”)
+_____
+partidario
+pos: n
+  meta: {{es-noun|m|f=partidaria}}
+  g: m
+  etymology: From partido + -ario.
+  gloss: supporter, partisan
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = None
+    ignore = []
+    allforms = AllForms.from_wordlist(wordlist)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+
+    usage = deck.get_usage("partidario", "n")
+    print(usage)
+    assert usage == [{
+        'ety': 'From partido + -ario.',
+        'words': [{
+            'pos': 'n',
+            'senses': [
+                {'gloss': 'supporter, partisan', 'hint': ''}],
+            'noun_type': 'm/f'},
+            ]}]
+
