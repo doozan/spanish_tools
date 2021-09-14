@@ -41,7 +41,7 @@ class FrequencyList():
             if not count or not count.isdigit():
                 if count:
                     word = word + " " + count
-                count = str(linenum)
+                count = str(100000-linenum)
 
             if word in self.ignore:
                 continue
