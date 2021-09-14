@@ -217,7 +217,9 @@ class sentences:
         source = None
 
         seen = set()
+
         for word, pos in items:
+
             # if there are multiple word/pos pairs specified, ideally use results from each equally
             # However, if one item doesn't have enough results we will use more results from this item
             # Thus, we need to retrieve "count" items, as we could be using them all if the other has none
@@ -225,6 +227,7 @@ class sentences:
             item_ids = []
 
             wordtag = make_tag(word, pos)
+
             forced_ids = [x for x in self.forced_ids.get(wordtag,[]) if
                     self.sentencedb[x][IDX_SPAID] not in seen and
                     self.sentencedb[x][IDX_ENGID] not in seen]
@@ -251,6 +254,8 @@ class sentences:
         for idx in range(count):
             if len(res)>=count:
                 break
+
+            # try to take a sentence from each pos and each form of each pos
             for pos,pos_ids in sentences.items():
                 if len(res)>=count:
                     break
@@ -264,17 +269,15 @@ class sentences:
 
         source = ""
 
-        # Find the hightest scoring sentences without repeating the english or spanish ids
+        # Find the highest scoring sentences without repeating the english or spanish ids
         # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
         scored = {}
         for i in all_ids:
             s = self.sentencedb[i]
             score = s[IDX_SCORE]
             if not score in scored:
-                scored[score] = { 'ids': set(), 'eng_ids': set(), 'spa_ids': set() }
-            scored[score]['ids'].add(i)
-            scored[score]['eng_ids'].add(s[IDX_ENGID])
-            scored[score]['spa_ids'].add(s[IDX_SPAID])
+                scored[score] = set()
+            scored[score].add(i)
 
 
         available = []
@@ -286,7 +289,7 @@ class sentences:
         # if it has more, add them all to available and let the selector choose
         for score in sorted( scored.keys(), reverse=True ):
 
-            for i in sorted(scored[score]['ids']):
+            for i in sorted(scored[score]):
                 s = self.sentencedb[i]
                 if s[IDX_ENGID] not in seen and s[IDX_SPAID] not in seen:
                     seen.add(s[IDX_ENGID])

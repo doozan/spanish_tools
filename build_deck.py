@@ -1264,7 +1264,7 @@ class DeckBuilder():
         if os.path.isfile(FILE):
             self.media_files.append(FILE)
         else:
-            item["Sound"] = ""
+            item["Audio"] = ""
 
         if not self.validate_note(item):
             exit(1)
@@ -1513,7 +1513,7 @@ class DeckBuilder():
                         print(f"  new tags: {note._format_tags()}")
 
             my_deck.add_note(note)
-            self.rows.append(row)
+            self.rows.append(row+[",".join(item["tags"])])
 
         package_filename = os.path.join(os.getcwd(), filename + ".apkg")
         my_package = genanki.Package(my_deck)
@@ -1709,14 +1709,14 @@ def build_deck(params=None):
         with open(args.dump_notes, "w", newline="") as outfile:
             csvwriter = csv.writer(outfile)
 
-            fields = deck._fields
-            del fields[7]  # audio
-            del fields[0]  # rank
+            fields = deck._fields+["tags"]
+            #del fields[7]  # audio
+            #del fields[0]  # rank
             csvwriter.writerow(fields)
 
             for row in deck.rows:
-                del row[7]
-                del row[0]
+                #del row[7]
+                #del row[0]
                 csvwriter.writerow(row)
 
     if args.dump_changes:
