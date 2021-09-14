@@ -1251,14 +1251,8 @@ class DeckBuilder():
             "guid": genanki.guid_for(item_tag, "Jeff's Spanish Deck"),
         }
 
-        tags = [noun_type if pos == "n" else pos]
-        #    if "tags" in row and row['tags'] != "":
-        #        for tag in row['tags'].split(" "):
-        #            tags.append(tag)
-        if meta and "tags" in meta:
-            tags += meta["tags"]
-
-        item["tags"] = tags
+        # This must be a copy of meta["tags"] because it will be modified
+        item["tags"] = [] + meta.get("tags", [])
 
         FILE = os.path.join(mediadir, sound)
         if os.path.isfile(FILE):
@@ -1466,16 +1460,27 @@ class DeckBuilder():
         self.build_synonyms()
         self.rows = []
 
-        position = 0
+        counter = {}
         for wordtag in self.allwords_index:
             word, pos = split_tag(wordtag)
 
-            position += 1
-
             item = self.build_item(word, pos, mediadir)
             self.notes[item["guid"]] = item
+
+            tags = item.get("tags",[])
+            if tags and len(tags) > 1:
+                print(item)
+                raise ValueError("Multiple tags", tags)
+            idx = tags[0] if tags else -1
+            if not idx in counter:
+                counter[idx] = 0
+            counter[idx] += 1
+            position = counter[idx]
+
             item["Rank"] = str(position)
+
             item["tags"] += tags
+            item["tags"].append(item["Part of Speech"])
             item["tags"].append(str(math.ceil(position / 500) * 500))
 
             row = []
