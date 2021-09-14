@@ -1232,7 +1232,9 @@ class DeckBuilder():
 
         sound = get_speech(tts_data["voice"], tts_data["phrase"], mediadir)
 
-        all_usage_pos = {w["pos"] for ety in usage for w in ety["words"]}
+        all_usage_pos = []
+        [all_usage_pos.append(w["pos"]) for ety in usage for w in ety["words"] if w["pos"] not in all_usage_pos]
+
         lookups = [[spanish, pos] for pos in all_usage_pos]
         sentences = self.get_sentences(lookups, 3)
 
