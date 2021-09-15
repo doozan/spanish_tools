@@ -343,11 +343,35 @@ class DeckBuilder():
                 return True
             return False
 
+
         if distance is None:
             distance = int(len(hide_word)/4)
 
         if hide_all:
             hide_first = True
+
+        m = re.match(r'(?P<pre>.*?)(?P<form>apocopic form|diminutive|ellipsis|clipping|superlative|plural) of "(?P<word>.*?)"(?P<post>.*)', gloss)
+        if m:
+            if not (hide_all or m.group("pre") or m.group("post")):
+                return gloss
+
+            new_gloss = []
+            if m.group("pre"):
+                new_gloss.append(DeckBuilder.obscure_gloss(m.group("pre"), hide_word, distance, hide_all=True))
+
+            new_gloss.append(m.group("form"))
+            new_gloss.append(' of "')
+            if m.group("form") in ["ellipsis", "clipping"]:
+                new_gloss.append("...")
+            else:
+                new_gloss.append(DeckBuilder.obscure_gloss(m.group("word"), hide_word, distance, hide_all=True))
+            new_gloss.append('"')
+
+            if m.group("post"):
+                new_gloss.append(DeckBuilder.obscure_gloss(m.group("post"), hide_word, distance, hide_all=True))
+
+            # This isn't perfect, if a gloss for blah is 'blah; diminutive of "blah"' it will
+            # be fully obscured to '...; diminutive of "..."'
 
         data = []
         splits = iter(re.split(r'(\W+)', gloss))
@@ -370,10 +394,6 @@ class DeckBuilder():
 
         if hide_all or not all_hidden:
             gloss = "".join(data)
-
-        m = re.match(r'(?P<pre>.*?)(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"(?P<post>.*)', gloss)
-        if m and (hide_all or m.group("pre") or m.group("post")):
-            gloss = re.sub(r'(apocopic form|diminutive|ellipsis|clipping|superlative|plural) of ".*?"', r"...", gloss)
 
         return gloss
 
