@@ -161,8 +161,7 @@ def iter_sentences():
         for line in infile:
 
             line = line.strip()
-            sdata = line.split("\t")
-            english, spanish, credits, english_score, spanish_score = sdata
+            english, spanish, credits, english_score, spanish_score = line.split("\t")
 
             wordcount = spanish.count(" ") + 1
 
@@ -178,8 +177,12 @@ def iter_sentences():
             else:
                 seen.add(uniqueid)
 
+            # de-prioritize meta sentences
+            if "atoeba" in english:
+                english_score = spanish_score = 0
+
             sid = re.search("& #([0-9]+)", credits).group(1)
-            yield [sid] + sdata
+            yield [sid, english, spanish, credits, english_score, spanish_score]
 
 
 def print_untagged_sentences():
