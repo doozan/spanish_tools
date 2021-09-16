@@ -122,12 +122,13 @@ class sentences:
                         wordtag = make_tag(word, pos)
                         ids = self.itemtags_to_ids(forced_itemtags)
                         if None in ids:
-                            if source == "preferred":
-                                print(f"preferred sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
-                                continue
-                            else:
-                                print(f"forced sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
-                                continue
+                            print(f"{source} sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
+                            continue
+
+                        elif source == "preferred" and any(self.sentencedb[i][IDX_SCORE] < 55 for i in ids):
+                            print(f"{source} sentences scores for {word},{pos} have dropped below 55, ignoring...", file=sys.stderr)
+                            continue
+
                         else:
                             self.forced_ids[wordtag] = ids
                             self.forced_ids_source[wordtag] = source
@@ -231,11 +232,13 @@ class sentences:
             forced_ids = [x for x in self.forced_ids.get(wordtag,[]) if
                     self.sentencedb[x][IDX_SPAID] not in seen and
                     self.sentencedb[x][IDX_ENGID] not in seen]
+
             if len(forced_ids):
                 source = self.forced_ids_source[wordtag]
                 item_ids = forced_ids[:count]
-                seen |= set( [ self.sentencedb[x][IDX_SPAID] for x in item_ids ] )
-                seen |= set( [ self.sentencedb[x][IDX_ENGID] for x in item_ids ] )
+                for x in item_ids:
+                    seen.add(self.sentencedb[x][IDX_SPAID])
+                    seen.add(self.sentencedb[x][IDX_ENGID])
 
             else:
                 res = self.get_all_sentence_ids(word, pos)
@@ -278,7 +281,6 @@ class sentences:
             if not score in scored:
                 scored[score] = set()
             scored[score].add(i)
-
 
         available = []
         selected = []
