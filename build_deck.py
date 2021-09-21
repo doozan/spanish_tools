@@ -1271,8 +1271,9 @@ class DeckBuilder():
             "guid": genanki.guid_for(item_tag, "Jeff's Spanish Deck"),
         }
 
-        # This must be a copy of meta["tags"] because it will be modified
-        item["tags"] = [] + meta.get("tags", [])
+        item["tags"] = []
+        if meta:
+            item["tags"] += meta.get("tags", [])
 
         FILE = os.path.join(mediadir, sound)
         if os.path.isfile(FILE):
@@ -1325,7 +1326,8 @@ class DeckBuilder():
         del self.allwords[old_tag]
 
         # Preserve metadata
-        self.allwords_meta[wordtag] = self.allwords_meta[old_tag]
+        if old_tag in self.allwords_meta:
+            self.allwords_meta[wordtag] = self.allwords_meta.pop(old_tag)
 
         self.allwords[wordtag] = usage
         self.allwords_index[index] = wordtag
@@ -1437,10 +1439,6 @@ class DeckBuilder():
             # pos:word will replace the specific pos:word or the first occurance of the word if pos: is not specified
             elif not position[0].isdigit() and position[0] != "-":
                 self.wordlist_replace(position, item_tag, usage)
-
-            # a digit in the position column indicates that it should be inserted at that position
-            elif int(position) > 0 and int(position) < len(self.allwords_index):
-                self.wordlist_insert(item_tag, int(position), usage)
 
             else:
                 raise ValueError(f"Position {position} does not exist, ignoring")
