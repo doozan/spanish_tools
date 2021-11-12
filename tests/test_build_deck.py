@@ -417,9 +417,9 @@ def test_obscured():
     o = DeckBuilder.obscure_gloss
 
     assert o("this is a test", "test") == "this is a ..."
-    assert o('plural of "blah"', "test") == 'plural of "blah"'
-    assert o('plural of "blah" (blah)', "test") == '... (blah)'
-    assert o('blah, plural of "blah"', "test") == 'blah, ...'
+    assert o('plural of "test"', "test") == 'plural of "test"'
+    assert o('plural of "test" (blah)', "test") == 'plural of "..." (blah)'
+    assert o('blah, plural of "test"', "test") == 'blah, plural of "..."'
 
     assert o('test, blah', "test", hide_first=False) == 'test, blah'
     assert o('test, blah', "test", hide_first=True) == '..., blah'
@@ -443,12 +443,11 @@ def test_obscured():
     assert list(obscured(["to be (essentially or identified as)"], "ser")) == ['to be (essentially or identified as)']
 
     # 4 characters allows distance 1
-    assert list(obscured(["test, pest, test1, test12, test123"], "test")) == ['..., ..., ..., test12, test123']
-    assert list(obscured(["test", "pest", "test1", "test12", "test123"], "test")) == ['...', '...', '...', 'test12', 'test123']
+    assert list(obscured(["test, pest, test, test12, test123, te12"], "test")) == ['..., ..., ..., ..., ..., te12']
 
-    # 8+ allows distance 2
-    assert list(obscured(["testtest, testpest, testtest1, testtest12, testtest123"], "testtest")) == ['..., ..., ..., ..., testtest123']
-    assert list(obscured(["testtest", "testpest", "testtest1", "testtest12", "testtest123"], "testtest")) == ['...', '...', '...', '...', 'testtest123']
+    # 8 allows distance 2
+    assert list(obscured(["testtest, testpest, testtest1, testte12, testt123"], "testtest")) == ['..., ..., ..., ..., testt123']
+    assert list(obscured(["testtest", "testpest", "testtest1234", "testte12", "testt123"], "testtest")) == ['...', '...', '...', '...', 'testt123']
 
     # split words with spaces
     assert list(obscured(["test 123", "123 test"], "test")) == ['... 123', '123 ...']
@@ -1340,7 +1339,7 @@ pos: n
         'words': [{
             'pos': 'n',
             'senses': [
-                {'gloss': 'supporter, partisan', 'hint': ''}],
+                {'gloss': 'supporter, partisan', 'hint': 'supporter, ...'}],
             'noun_type': 'm/f'},
             ]}]
 

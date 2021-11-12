@@ -334,7 +334,7 @@ class DeckBuilder():
         return f"[sound:{filename}]"
 
     @staticmethod
-    def obscure_gloss(gloss, hide_word, distance=None, hide_first=False, hide_all=False):
+    def obscure_gloss(gloss, hide_word, hide_first=False, hide_all=False):
 
         def is_first_word(data):
             if not len(data):
@@ -343,9 +343,6 @@ class DeckBuilder():
                 return True
             return False
 
-
-        if distance is None:
-            distance = int(len(hide_word)/4)
 
         if hide_all:
             hide_first = True
@@ -357,18 +354,18 @@ class DeckBuilder():
 
             new_gloss = []
             if m.group("pre"):
-                new_gloss.append(DeckBuilder.obscure_gloss(m.group("pre"), hide_word, distance, hide_all=True))
+                new_gloss.append(DeckBuilder.obscure_gloss(m.group("pre"), hide_word, hide_all=True))
 
             new_gloss.append(m.group("form"))
             new_gloss.append(' of "')
             if m.group("form") in ["ellipsis", "clipping"]:
                 new_gloss.append("...")
             else:
-                new_gloss.append(DeckBuilder.obscure_gloss(m.group("word"), hide_word, distance, hide_all=True))
+                new_gloss.append(DeckBuilder.obscure_gloss(m.group("word"), hide_word, hide_all=True))
             new_gloss.append('"')
 
             if m.group("post"):
-                new_gloss.append(DeckBuilder.obscure_gloss(m.group("post"), hide_word, distance, hide_all=True))
+                new_gloss.append(DeckBuilder.obscure_gloss(m.group("post"), hide_word, hide_all=True))
 
             # This isn't perfect, if a gloss for blah is 'blah; diminutive of "blah"' it will
             # be fully obscured to '...; diminutive of "..."'
@@ -382,7 +379,12 @@ class DeckBuilder():
                 data.append(sep)
                 continue
 
-            if fuzzy_distance(word, hide_word)<=distance and (hide_first or not is_first_word(data)):
+            l = min(len(word), len(hide_word))
+            if l<4:
+                l = len(hide_word)
+            distance = int(l/4)
+
+            if fuzzy_distance(word[:l], hide_word[:l])<=distance and (hide_first or not is_first_word(data)):
                 data.append("...")
             else:
                 data.append(word)
@@ -399,13 +401,9 @@ class DeckBuilder():
 
 
     @staticmethod
-    def obscure_list(items, hide_word, distance=None):
-
-        if distance is None:
-            distance = int(len(hide_word)/4)
-
+    def obscure_list(items, hide_word):
         for item in items:
-            yield DeckBuilder.obscure_gloss(item, hide_word, distance, hide_all=True)
+            yield DeckBuilder.obscure_gloss(item, hide_word, hide_all=True)
 
     @staticmethod
     def format_syns_html(deck, extra, css_class=''):
