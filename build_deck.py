@@ -1037,7 +1037,7 @@ class DeckBuilder():
     def add_synonyms(self, word, pos, synonyms, reciprocal=True):
         key = (word,pos)
         if key not in self.synonyms:
-            self.synonyms[key] = synonyms
+            self.synonyms[key] = list(synonyms) # Copy the list, since it will be modified
         else:
             for syn in synonyms:
                 if syn not in self.synonyms[key]:
@@ -1471,7 +1471,6 @@ class DeckBuilder():
             for tag in self.allwords_index[limit:]:
                 del self.allwords[tag]
             self.allwords_index = self.allwords_index[:limit]
-
 
         self.build_synonyms()
         self.rows = []
