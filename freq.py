@@ -8,6 +8,7 @@ import sys
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 from .spanish_sentences import sentences as spanish_sentences
+from .probability import PosProbability
 
 from .get_best_lemmas import is_good_lemma, get_best_lemmas
 
@@ -19,10 +20,11 @@ def mem_use():
 
 class FrequencyList():
 
-    def __init__(self, wordlist, allforms, sentences, ignore_data):
+    def __init__(self, wordlist, allforms, sentences, ignore_data, probs):
         self.wordlist = wordlist
         self.all_forms = allforms
         self.sentences = sentences
+        self.probs = probs
         self.freq = {}
         self.all_lemmas = {}
         self.load_ignore(ignore_data)
@@ -160,40 +162,59 @@ class FrequencyList():
                 usage.append(("@" + word, pos))
 
         pos_rank = self.rank_usage(usage)
+        pos_with_usage = [ pos for word,pos,count in pos_rank if count > 0 ]
+        if len(pos_with_usage) == 1:
+            return pos_with_usage
 
-        # If there's a tie, take non-verbs over verbs
+        # If preferred pos has at least 10 usages and is at least double the second use it
+        if pos_rank[0][2] > 10 and pos_rank[0][2] >= 2*(pos_rank[1][2]):
+            return [pos for form,pos,count in sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)]
+
+        # If there are usage sentences for multiple pos, let the probabilities table pick
+        if not use_lemma:
+            pos_by_prob = self.probs.get_pos_probs(word, pos_with_usage)
+            if pos_by_prob:
+                sorted_pos_by_prob = [(word,pos,count) for pos,count in sorted(pos_by_prob.items(), key=lambda x: x[1])]
+
+                if len(sorted_pos_by_prob) == 1 or sorted_pos_by_prob[0][2] > sorted_pos_by_prob[1][2]:
+                    return [pos for word,pos,count in sorted_pos_by_prob]
+
+        # If the probabilities table doesn't work, take the pos used most in the sentences
+        if pos_rank[0][2] > pos_rank[1][2]:
+            return [pos for form,pos,count in sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)]
+
+        # If there's still a tie, take non-verbs over verbs
         # If there's still a tie, use the lemam forms
         # Still tied? prefer adj > noun > non-verb > verb
-        if len(pos_rank) > 1 and pos_rank[0][2] == pos_rank[1][2]:
 
-            top_count = pos_rank[0][2]
+        top_count = pos_rank[0][2]
 
-            # prefer non-verbs over verbs
-            if top_count > 0 or use_lemma:
-                for i, (form, pos, count) in enumerate(pos_rank):
-                    if count != top_count:
-                        break
-                    if pos != "v":
-                        count += 1
-                    pos_rank[i] = (form, pos, count)
-
-                pos_rank = sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)
-
-            # Try with lemma forms
-            if pos_rank[0][2] == pos_rank[1][2] and not use_lemma:
-                return self.get_ranked_pos(word, use_lemma=True)
-
+        # prefer non-verbs over verbs
+        if top_count > 0 or use_lemma:
             for i, (form, pos, count) in enumerate(pos_rank):
                 if count != top_count:
                     break
-                if pos == "adj":
-                    count += 3
-                elif pos == "n":
-                    count += 2
-                elif pos != "v":
+                if pos != "v":
                     count += 1
-
                 pos_rank[i] = (form, pos, count)
+
+            pos_rank = sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)
+
+        # Try with lemma forms
+        if pos_rank[0][2] == pos_rank[1][2] and not use_lemma:
+            return self.get_ranked_pos(word, use_lemma=True)
+
+        for i, (form, pos, count) in enumerate(pos_rank):
+            if count != top_count:
+                break
+            if pos == "adj":
+                count += 3
+            elif pos == "n":
+                count += 2
+            elif pos != "v":
+                count += 1
+
+            pos_rank[i] = (form, pos, count)
 
         return [pos for form,pos,count in sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)]
 
@@ -353,6 +374,7 @@ def init_freq(params):
     parser.add_argument("--ignore", help="List of words to ignore")
     parser.add_argument("--dictionary", help="Dictionary file name", required=True)
     parser.add_argument("--allforms", help="All-forms file name")
+    parser.add_argument("--probs", help="Probability data file")
     parser.add_argument("--sentences", help="Sentences file name (DEFAULT: sentences.tsv)")
     parser.add_argument(
         "--data-dir",
@@ -368,6 +390,8 @@ def init_freq(params):
     parser.add_argument("--outfile", help="outfile (defaults to stdout)", default="-")
     parser.add_argument("extra", nargs="*", help="Usage list")
     args = parser.parse_args(params)
+
+    probs = PosProbability(args.probs)
 
     # allow first positional argument to replace undeclared --infile
     if args.infile == parser.get_default("infile") and args.extra:
@@ -402,7 +426,7 @@ def init_freq(params):
     )
     print("sentences", mem_use(), file=sys.stderr)
 
-    flist = FrequencyList(wordlist, allforms, sentences, ignore_data)
+    flist = FrequencyList(wordlist, allforms, sentences, ignore_data, probs)
     ignore_data.close()
 
     return flist, args
