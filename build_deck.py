@@ -333,19 +333,18 @@ class DeckBuilder():
             return ""
         return f"[sound:{filename}]"
 
-    @staticmethod
-    def obscure_gloss(gloss, hide_word, hide_first=False, hide_all=False):
+    @classmethod
+    def obscure_gloss(cls, gloss, hide_word, hide_first=False, hide_all=False, english=True):
 
         def is_first_word(data):
-            if not len(data):
-                return True
-            if len(data) == 2 and data[0].lower() in ["a", "an", "to"]:
+            if all(w.strip().lower() in ["", "a", "an", "to", "be", "of", "in"] for w in data):
                 return True
             return False
 
-
         if hide_all:
             hide_first = True
+
+        hide_words = cls.get_hide_words(hide_word, english)
 
         m = re.match(r'(?P<pre>.*?)(?P<form>apocopic form|diminutive|ellipsis|clipping|superlative|plural) of "(?P<word>.*?)"(?P<post>.*)', gloss)
         if m:
@@ -379,12 +378,7 @@ class DeckBuilder():
                 data.append(sep)
                 continue
 
-            l = min(len(word), len(hide_word))
-            if l<4:
-                l = len(hide_word)
-            distance = int(l/4)
-
-            if fuzzy_distance(word[:l], hide_word[:l])<=distance and (hide_first or not is_first_word(data)):
+            if any(h for h in hide_words if cls.should_obscure(word, h)) and (hide_first or not is_first_word(data)):
                 data.append("...")
             else:
                 data.append(word)
@@ -399,6 +393,93 @@ class DeckBuilder():
 
         return gloss
 
+    alt_endings = {
+        "ancia": ["ance", "ancy"],
+        "mente": ["ly"],
+        "mento": ["ment"],
+        "encia": ["ence", "ency"],
+        "adora": ["ing"],
+        "ante": ["ant"],
+        "ario": ["ary"],
+        "ente": ["ent"],
+        "ador": ["ing"],
+        "ante": ["ant"],
+        "cion": ["tion"],
+        "ente": ["ent"],
+        "ista": ["ist"],
+        "ura": ["ure"],
+        "ano": ["an"],
+        "ana": ["an"],
+        "ico": ["ic", "ical"],
+        "ica": ["ic", "ical"],
+        "ivo": ["ive"],
+        "io": ["y"],
+        "ía": ["y"],
+        "ia": ["y"],
+    }
+    _unstresstab = str.maketrans("áéíóú", "aeiou")
+    @classmethod
+    def unstress(cls, text):
+        return text.translate(cls._unstresstab)
+
+    @classmethod
+    def anglicise(cls, word):
+        for k,endings in cls.alt_endings.items():
+            if word.endswith(k):
+                base = word[:-1*len(k)]
+                return [base+new_ending for new_ending in endings]
+
+        return []
+
+    @classmethod
+    def get_hide_words(cls, hide_word, english):
+        if not english:
+            return [hide_word]
+
+        hide_word = cls.unstress(hide_word)
+        if hide_word[-2:] in ["ar", "er", "ir", "ír"]:
+            hide_word = hide_word[:-1]
+
+        hide_words = [hide_word]
+        hide_words += cls.anglicise(hide_word)
+        return list(map(cls.unstress, hide_words))
+
+    three_letter_english = ["ago","all","and","any","are","bad","bed","big","bit","boy","but","buy","bye",
+            "can","car","cut","dad","day","did","die","eat","far","for","fun","get","got","had","has",
+            "her","hey","him","his","hit","hot","how","law","let","lie","lot","man","men","met","new",
+            "not","now","off","one","our","out","put","say","see","set","she","sit","six","ten","the",
+            "too","try","two","was","way","who","why","yet","you"]
+
+    @classmethod
+    def should_obscure(cls, word, hide_word):
+
+        word = word.replace("h", "")
+        word = word.replace("ff", "f")
+        word = word.replace("dd", "d")
+        word = word.replace("ss", "s")
+        word = word.replace("aa", "a")
+        word = word.replace("ee", "e")
+        word = word.replace("oo", "o")
+        word = word.replace("ii", "i")
+
+        l = min(len(word), len(hide_word))
+        if l<=2:
+            return False
+
+        if l==3 and word in cls.three_letter_english:
+            return False
+        distance = int(l/4) if l >= 4 else 0
+        matches = [word[:l]]
+
+        # fix for matching blah to xblah (xbla doesn't match, but xblah does even though it's longer)
+        if l < len(word) and l >= len(word) - distance:
+            matches.append(word[:l+distance])
+
+        for match in matches:
+            if fuzzy_distance(match, hide_word[:l]) <= distance:
+                return True
+
+        return False
 
     @staticmethod
     def obscure_list(items, hide_word):
@@ -1079,46 +1160,66 @@ class DeckBuilder():
 
         return items[:limit]
 
-    def get_phrase(self, word, pos, noun_type, femforms):
+    def get_noun_type(self, usage):
+        return usage[0]["words"][0]["noun_type"] if usage[0]["words"][0]["pos"] == "n" else ""
+
+    def verb_has_reflexive(self, usage):
+
+        for sense in usage[0]["words"][0]["senses"]:
+            if "r" in sense.get("type", "") or "p" in sense.get("type", ""):
+                return True
+
+        return False
+
+    def get_phrase(self, word, usage):
         voice = ""
         phrase = ""
         display = None
 
-        if noun_type:
-            if femforms:
-                voice = self._MALE1
+        pos = usage[0]["words"][0]["pos"]
+        noun_type = self.get_noun_type(usage)
+        femforms = self.get_feminine_forms(word) if pos == "n" else None
+        if femforms:
+            voice = self._MALE1
 
-                fems = [f"el {f}" if f in self.el_f_nouns else f"la {f}" for f in femforms]
-                fem_display = ", ".join(fems)
-                fem_phrase = ". ".join(fems)
+            fems = [f"el {f}" if f in self.el_f_nouns else f"la {f}" for f in femforms]
+            fem_display = ", ".join(fems)
+            fem_phrase = ". ".join(fems)
 
-                phrase = f"{fem_phrase}. el {word}"
-                display = f"{fem_display}/el {word}"
-            elif noun_type == "f-el":
-                voice = self._FEMALE2
-                phrase = f"el {word}"
-            elif noun_type == "f":
-                voice = self._FEMALE2
-                phrase = f"la {word}"
-            elif noun_type == "fp":
-                voice = self._FEMALE2
-                phrase = f"las {word}"
-            elif noun_type == "m-f":
-                voice = self._FEMALE1
-                phrase = f"la {word}. el {word}"
-                display = f"la/el {word}"
-            elif noun_type == "m":
-                voice = self._MALE1
-                phrase = f"el {word}"
-            elif noun_type == "mf":
-                voice = self._MALE1
-                phrase = f"el {word}. la {word}"
-                display = f"el/la {word}"
-            elif noun_type == "mp":
-                voice = self._MALE1
-                phrase = f"los {word}"
-            else:
-                raise ValueError(f"Word {word} has unknown noun type {noun_type}")
+            phrase = f"{fem_phrase}. el {word}"
+            display = f"{fem_display}/el {word}"
+        elif noun_type == "f-el":
+            voice = self._FEMALE2
+            phrase = f"el {word}"
+        elif noun_type == "f":
+            voice = self._FEMALE2
+            phrase = f"la {word}"
+        elif noun_type == "fp":
+            voice = self._FEMALE2
+            phrase = f"las {word}"
+        elif noun_type == "m-f":
+            voice = self._FEMALE1
+            phrase = f"la {word}. el {word}"
+            display = f"la/el {word}"
+        elif noun_type == "m":
+            voice = self._MALE1
+            phrase = f"el {word}"
+        elif noun_type == "mf":
+            voice = self._MALE1
+            phrase = f"el {word}. la {word}"
+            display = f"el/la {word}"
+        elif noun_type == "mp":
+            voice = self._MALE1
+            phrase = f"los {word}"
+        elif pos == "n":
+            raise ValueError(f"Word {word} has unknown noun type {noun_type}")
+        elif pos == "v" \
+                and " " not in word \
+                and word[-2:] in ["ar", "er", "ir", "ír"] \
+                and self.verb_has_reflexive(usage):
+                    voice = self._FEMALE1
+                    phrase = f"{word}. {word}se"
+                    display = f"{word}/{word}se"
         else:
             voice = self._FEMALE1
             phrase = word
@@ -1222,7 +1323,6 @@ class DeckBuilder():
 
         if not usage:
             raise ValueError("No usage data", spanish, pos)
-        noun_type = usage[0]["words"][0]["noun_type"] if pos == "n" else ""
 
         deck_syns = self.get_synonyms(spanish, pos, self.MAX_SYNONYMS, only_in_deck=True)
         extra_syns = [
@@ -1238,15 +1338,14 @@ class DeckBuilder():
                     gloss = s["hint"] if s["hint"] else s["gloss"]
                     defs += [z.strip() for x in gloss.split(";") for z in x.split(",")]
 
-        seen_tag = "|".join(sorted(deck_syns) + sorted(defs))
+        seen_tag = "|".join(sorted([d for d in deck_syns if d != "..."]) + sorted([d for d in defs if d != "..."]))
         if seen_tag in self.seen_hints:
             eprint(f"Warning: {seen_tag} is used by {item_tag} and {self.seen_hints[seen_tag]}, adding syn")
             deck_syns.insert(0, self.seen_hints[seen_tag].split(":")[1])
         else:
             self.seen_hints[seen_tag] = item_tag
 
-        femforms = self.get_feminine_forms(spanish) if pos == "n" else None
-        tts_data = self.get_phrase(spanish, pos, noun_type, femforms)
+        tts_data = self.get_phrase(spanish, usage)
 
         sound = get_speech(tts_data["voice"], tts_data["phrase"], mediadir)
 
@@ -1258,9 +1357,11 @@ class DeckBuilder():
 
         self.store_sentences(lookups)
 
+        display_pos = self.get_noun_type(usage) if pos == "n" else pos
+
         item = {
             "Spanish": spanish,
-            "Part of Speech": noun_type if pos == "n" else pos,
+            "Part of Speech": display_pos,
             "Synonyms": self.format_syns(deck_syns, extra_syns, hide_word=spanish),
             "Data": self.format_usage(usage),
             "Sentences": sentences,

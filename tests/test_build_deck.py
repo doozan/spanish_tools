@@ -421,6 +421,9 @@ def test_obscured():
     assert o('plural of "test" (blah)', "test") == 'plural of "..." (blah)'
     assert o('blah, plural of "test"', "test") == 'blah, plural of "..."'
 
+#    assert o('to be incumbent', "incumbir", hide_first=False) == 'to be incumbent'
+#    assert o('to be incumbent', "incumbir", hide_first=True) == 'to be ...'
+
     assert o('test, blah', "test", hide_first=False) == 'test, blah'
     assert o('test, blah', "test", hide_first=True) == '..., blah'
 
@@ -452,6 +455,30 @@ def test_obscured():
     # split words with spaces
     assert list(obscured(["test 123", "123 test"], "test")) == ['... 123', '123 ...']
     assert list(obscured(["avarice"], "avaricia")) == ['...']
+
+
+    tests = [
+        ["blag", "blag"],
+        ["blagx", "blag"],
+        ["xblag", "blag"],
+        ["ahbhchdh", "abcd"],  # h is always stripped
+        ["action", "acción"],
+        ["collocation", "colocación"],
+        ["supposition", "suposición"],
+        ["perturbing", "perturbador"],
+        ["diffusion", "difusión"],
+        ["perturbing", "perturbador"],
+        ["adduce", "aducir"],
+        ["supposition", "suposición"],
+        ["gelid", "gélido"],
+        ["col", "collado"],
+    ]
+
+    so = DeckBuilder.should_obscure
+
+    for english, spanish in tests:
+        print(english, spanish)
+        assert any(so(english,w) for w in DeckBuilder.get_hide_words(spanish, True))
 
 
 def test_group_ety():
@@ -911,7 +938,7 @@ pos: n
             'noun_type': 'm-f',
             'senses': [{
                 'type': 'f', 'gloss': 'anger', 'hint': '', 'syns': ['rabia']},{
-                'type': 'm', 'gloss': 'cholera', 'hint': ''}],
+                'type': 'm', 'gloss': 'cholera', 'hint': '...'}],
              }]
         }]
 
