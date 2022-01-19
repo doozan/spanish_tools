@@ -1,9 +1,10 @@
 #!/bin/python3
 
 '''
-wget http://corpus.rae.es/frec/CREA_total.zipl
+wget https://github.com/hermitdave/FrequencyWords/raw/master/content/2018/es/es_full.txt
+wget http://corpus.rae.es/frec/CREA_total.zip
 zcat CREA_total.zip | tail -n +2 | awk '{gsub("\\,",""); print $2" "$3;}' | iconv -f ISO-8859-1 -t UTF-8  > CREA_full.txt
-python3 merge.py es_full.txt CREA_full.txt | head -50000 > merged_50k.txt
+python3 merge.py es_full.txt CREA_full.txt | awk '$2>3' > merged.txt
 '''
 
 import argparse
@@ -28,8 +29,9 @@ max_weight = max(stat["weight"] for stat in stats)
 print(stats, file=sys.stderr)
 
 for stat in stats:
-    scale = max_weight/stat["weight"]
-    print("scaling factor", scale, max_weight, stat["weight"], file=sys.stderr)
+    scale = 1
+    #scale = max_weight/stat["weight"]
+    #print("scaling factor", scale, max_weight, stat["weight"], file=sys.stderr)
     with open(stat["filename"]) as infile:
         for line in infile:
             word,count = line.split()
