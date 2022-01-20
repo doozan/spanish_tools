@@ -39,6 +39,7 @@ class FrequencyList():
 
         # Read all the lines and do an initial lookup of lemmas
         for linenum,line in enumerate(freqlist):
+            pos = None
             word, _, count = line.strip().partition(" ")
             if not count or not count.isdigit():
                 if count:
@@ -50,7 +51,13 @@ class FrequencyList():
 
             if ":" in word:
                 word, _, pos = word.partition(":")
-            else:
+
+            # Delay ambiguous plurals until all lemmas have been processed
+            elif self.maybe_plural(word):
+                lines[word] = (None, count, None)
+                continue
+
+            if not pos:
                 posrank = self.get_ranked_pos(word)
                 pos = posrank[0] if posrank else "none"
 
@@ -66,10 +73,108 @@ class FrequencyList():
         # Run through the lines again and use the earlier counts to
         # pick best lemmas from words with multiple lemmas
         for word, item in lines.items():
+
             pos,count,lemmas = item
+
+            # delay processing of plurals
+            if pos == None:
+                continue
+
             if len(lemmas) > 1:
+                print("multi-lemmas", word, pos, lemmas)
                 lemma = self.get_best_lemma(word, lemmas, pos)
+                lines[word] = (pos, count, [lemma])
                 self.add_count(lemma, pos, count, word)
+
+        # Finally, process plurals after all other lemmas have been processed
+        # if a plural has non-verb lemmas, take the non-verb lemma with the greatest usage
+        #
+        # fixes the following:
+        #
+        # mamá,n,,276902:mamá
+        # mamás,adv,NODEF; NOSENT,2379:mamás
+        #
+        # soltero,n,,9181:soltero|8614:soltera
+        # soltero,adj,DUPLICATE,3076:solteros|2356:solteras
+        #
+        for word, item in lines.items():
+
+            pos,count,lemmas = item
+            if pos != None:
+                continue
+
+            posrank = self.get_ranked_pos(word, lemmas, pos)
+            pos = posrank[0] if posrank else "none"
+
+            lemmas = self.get_lemmas(word, pos)
+            if len(lemmas) == 1:
+                lemma = lemmas[0]
+            else:
+                lemma = self.get_best_lemma(word, lemmas, pos)
+
+            # If the plural resolves to a lemma already in the list, follow that lemma's pos/lemma
+            if lemma != word:
+                new_pos = None
+                # feminine plurals should always follow the feminine singular
+                if word.endswith("as") and word[:-1] in lines:
+                    new_pos, _, new_lemmas = lines[word[:-1]]
+                elif lemma in lines:
+                    new_pos, _, new_lemmas = lines[lemma]
+
+                if new_pos and (new_pos != pos or new_lemmas[0] != lemma):
+                    # verify that word can actually be a form of the the given lemma, pos (eg the determiner sobre doesn't take sobres)
+                    if any(self.wordlist.get_formtypes(new_lemmas[0], new_pos, word)):
+                        print("override", word, lemma, pos, new_lemmas[0], new_pos)
+                        lemma = new_lemmas[0]
+                        pos = new_pos
+                    else:
+                        print("can't override", word, lemma, pos, new_lemmas[0], new_pos)
+
+            lines[word] = (pos, count, [lemma])
+            self.add_count(lemma, pos, count, word)
+            continue
+
+            # if there are verbs and non-verbs, remove the verbs
+#            if any(p.startswith("v|") for p in pos_lemmas) \
+#                and any(not p.startswith("v|") for p in pos_lemmas):
+#                    pos_lemmas = [p for p in pos_lemmas if not p.startswith("v|")]
+
+            if word == "bonos":
+                print(word, pos_lemmas)
+
+            if len(pos_lemmas) == 1:
+                pos, lemma = pos_lemmas[0].split("|")
+            else:
+                best = -1
+                for pos_lemma in pos_lemmas:
+                    p, l = pos_lemma.split("|")
+                    lemma_count = self.get_count(l, p)
+                    if word == "bonos":
+                        print(p, l, lemma_count)
+                    if lemma_count > best:
+                        best = lemma_count
+                        pos = p
+                        lemma = l
+
+                if best == -1:
+                    pos = "none"
+                    lemma = word
+
+                    posrank = self.get_ranked_pos(word)
+                    pos = posrank[0] if posrank else "none"
+                    lemma = self.get_lemmas(word, pos)[0]
+
+                    if pos_lemmas:
+                        print("NO LEMMAS FOUND", word, pos_lemmas, pos, lemma)
+
+            lines[word] = (pos, count, [lemma])
+            self.add_count(lemma, pos, count, word)
+
+            if word == "bonos":
+                print(lines[word])
+#                exit()
+
+
 
         self.build_freqlist()
 
@@ -94,6 +199,26 @@ class FrequencyList():
                 )
             )
 
+    def maybe_plural(self, word):
+        """ returns true if the form could be a plural """
+        if not word.endswith("s"):
+            return False
+
+        if word.startswith("@"):
+            return False
+
+        forms = self.all_forms.get_lemmas(word)
+        if len(forms) < 2:
+            return False
+
+        # Check if it's a lemma with usage
+        posrank = self.get_ranked_pos(word)
+        first_lemma = self.get_lemmas(word, posrank[0])[0]
+        if first_lemma == word:
+            return False
+
+        if len(list(f for f in forms if not f.endswith("|"+word))) >= 1:
+            return True
 
     def get_lemmas(self, word, pos):
 
@@ -134,18 +259,21 @@ class FrequencyList():
                 res.append(pos)
         return res
 
-    def get_ranked_pos(self, word, use_lemma=False):
-        """
-        Returns a list of all possible parts of speech, sorted by frequency of use
-        """
-
-        all_pos = []
+    def get_pos(self, word):
         forms = self.all_forms.get_lemmas(word)
+        all_pos = []
         for pos,lemma in [x.split("|") for x in sorted(forms)]:
             if pos not in all_pos:
                 all_pos.append(pos)
 
-        all_pos = self.filter_pos(word, all_pos)
+        return self.filter_pos(word, all_pos)
+
+    def get_ranked_pos(self, word, use_lemma=False, use_count=False):
+        """
+        Returns a list of all possible parts of speech, sorted by frequency of use
+        """
+
+        all_pos = self.get_pos(word)
 
         if not all_pos:
             return []
@@ -163,6 +291,12 @@ class FrequencyList():
 
         pos_rank = self.rank_usage(usage)
         pos_with_usage = [ pos for word,pos,count in pos_rank if count > 0 ]
+
+#        if word == "gracias":
+#            print(word, all_pos, use_lemma)
+#            print(pos_rank)
+#            print(pos_with_usage)
+
         if len(pos_with_usage) == 1:
             return pos_with_usage
 
@@ -202,7 +336,7 @@ class FrequencyList():
 
         # Try with lemma forms
         if pos_rank[0][2] == pos_rank[1][2] and not use_lemma:
-            return self.get_ranked_pos(word, use_lemma=True)
+            return self.get_ranked_pos(word, use_lemma=True, use_count=use_count)
 
         for i, (form, pos, count) in enumerate(pos_rank):
             if count != top_count:
