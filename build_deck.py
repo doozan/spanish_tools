@@ -1092,27 +1092,25 @@ class DeckBuilder():
 
     def get_lemmas(self, word, pos):
 
-        lemmas = []
-        poslemmas = self.all_forms.get_lemmas(word)
-        for form_pos, lemma  in [x.split("|") for x in sorted(poslemmas)]:
-            if form_pos != pos:
-                continue
-            if lemma not in lemmas:
-                lemmas.append(lemma)
-        if not lemmas:
-            return [word]
+        poslemmas = self.all_forms.get_lemmas(word, [pos])
+        lemmas = [x.split("|")[1] for x in sorted(poslemmas)] if poslemmas else [word]
 
         # remove verb-se if verb is already in lemmas
         if pos == "v":
             lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
 
-        # resolve lemmas that are "form of" other lemmas
-        good_lemmas = set()
-        for lemma in lemmas:
-            for word_obj in self._words.get_words(lemma, pos):
-                good_lemmas |= set(self._words.get_lemmas(word_obj).keys())
+        return lemmas
 
-        return sorted(good_lemmas)
+        # resolve lemmas that are "form of" other lemmas
+#        good_lemmas = set()
+#        for lemma in lemmas:
+#            for word_obj in self._words.get_words(lemma, pos):
+#                for maybe_lemma in self._words.get_words(word_obj.word, word_obj.pos)
+#                good_lemmas |= { 
+#
+#                good_lemmas |= set(self._words.get_lemmas(word_obj).keys())
+#
+#        return sorted(good_lemmas)
 
 
     def add_synonyms(self, word, pos, synonyms, reciprocal=True):

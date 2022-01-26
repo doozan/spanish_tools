@@ -73,9 +73,9 @@ unknown 10
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences)
+    freq = FrequencyList(wordlist, allforms, sentences, [], "probabilitats.dat")
 
-    assert freq.wordlist.has_lemma("protectora", "n") == False
+#    assert freq.wordlist.has_lemma("protectora", "n") == False
 
     assert freq.get_lemmas("protectores", "n") == ["protector"]
     assert freq.get_lemmas("protectoras", "n") == ["protector", "protectora"]

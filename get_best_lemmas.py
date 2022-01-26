@@ -7,9 +7,9 @@ def is_good_lemma(wordlist, lemma, pos):
                 not (sense.gloss and re.match(r"(archaic|dated|obsolete|rare) form of", sense.gloss)):
                     return True
 
-def word_is_lemma(wordlist, word, pos):
-    for word in wordlist.get_words(word, pos):
-        return word.is_lemma
+#def word_is_lemma(wordlist, word, pos):
+#    for word in wordlist.get_words(word, pos):
+#        return word.is_lemma
 
 def word_is_feminine(wordlist, word, pos):
     for word in wordlist.get_words(word, pos):
@@ -53,18 +53,17 @@ def get_best_lemmas(wordlist, word, lemmas, pos):
     Return the most frequently used lemma from a list of lemmas
     """
 
-
     # remove verb-se if verb is already in lemmas
     if pos == "v":
         lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
 
     # resolve lemmas that are "form of" other lemmas
-    good_lemmas = set()
-    for lemma in lemmas:
-        for word_obj in wordlist.get_words(lemma, pos):
-            good_lemmas |= set(wordlist.get_lemmas(word_obj).keys())
+#    good_lemmas = set()
+#    for lemma in lemmas:
+#        for word_obj in wordlist.get_words(lemma, pos):
+#            good_lemmas |= set(wordlist.get_lemmas(word_obj).keys())
 
-    lemmas = sorted(list(good_lemmas))
+#    lemmas = sorted(list(good_lemmas))
 
     # Hardcoded fixes for some verb pairs
     if pos == "v":
@@ -74,9 +73,9 @@ def get_best_lemmas(wordlist, word, lemmas, pos):
             lemmas.remove("salgar")
 
     # discard any lemmas that aren't lemmas in their first declaration
-    lemmas = [lemma for lemma in lemmas if word_is_lemma(wordlist, lemma, pos)]
-    if len(lemmas) == 1:
-        return lemmas
+#    lemmas = [lemma for lemma in lemmas if word_is_lemma(wordlist, lemma, pos)]
+#    if len(lemmas) == 1:
+#        return lemmas
 
 
     # discard any lemmas that don't declare this form in their first definition

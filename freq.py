@@ -18,6 +18,7 @@ def mem_use():
 
     return int(memusage.strip())
 
+
 class FrequencyList():
 
     def __init__(self, wordlist, allforms, sentences, ignore_data, probs):
@@ -35,12 +36,55 @@ class FrequencyList():
     def process(self, freqlist, minuse=0):
         self.freq = {}
         self.all_lemmas = {}
+
+        entries = self.init_list(freqlist)
+        self.resolve_lemmas(entries)
+        self.resolve_plurals(entries)
+        self.build_freqlist()
+
+        yield("count,spanish,pos,flags,usage")
+        for k, item in sorted(
+            self.all_lemmas.items(), key=lambda item: (item[1]["count"]*-1, item[1]["word"])
+        ):
+            if minuse and item["count"] < minuse:
+                break
+            yield(
+                ",".join(
+                    map(
+                        str,
+                        [
+                            item["count"],
+                            item["word"],
+                            item["pos"],
+                            "; ".join(item["flags"]),
+                            "|".join(sorted(item["usage"], key=lambda x: int(x.partition(":")[0]), reverse=True)),
+                        ],
+                    )
+                )
+            )
+
+    def init_list(self, freqlist):
+        """
+        freqlist is an iterable of strings formatted as "[@]word[:pos][ N]"
+          @ - optional, word will be treated as an exact lemma, without being resolved further
+          word - the word form
+          :pos - optional - word will be treated as the given part of speech
+          N - count, optional, must be preceeded by a space - the number of occurances of the word
+              if N is invalid or not specified, an arbitrary value will be assigned,
+              giving greater value to the words appearing earliest in the iterable
+
+        returns: { "form": (pos, count, [lemma1, lemma2]), ... }
+
+        note: pos will be NULL if the word can be a plural multiple types of pos
+        """
+        # TODO: instead or NULL, return a list of the possible POS?
+
         lines = {}
 
         # Read all the lines and do an initial lookup of lemmas
-        for linenum,line in enumerate(freqlist):
-            pos = None
+        for linenum, line in enumerate(freqlist):
             word, _, count = line.strip().partition(" ")
+            word, _, pos = word.partition(":")
             if not count or not count.isdigit():
                 if count:
                     word = word + " " + count
@@ -49,11 +93,8 @@ class FrequencyList():
             if word in self.ignore:
                 continue
 
-            if ":" in word:
-                word, _, pos = word.partition(":")
-
             # Delay ambiguous plurals until all lemmas have been processed
-            elif self.maybe_plural(word):
+            if self.maybe_plural(word):
                 lines[word] = (None, count, None)
                 continue
 
@@ -67,8 +108,12 @@ class FrequencyList():
                 lemmas = self.get_lemmas(word, pos)
 
             lines[word] = (pos, count, lemmas)
-            if len(lemmas) == 1:
-                self.add_count(lemmas[0], pos, count, word)
+#            if len(lemmas) == 1:
+#                self.add_count(lemmas[0], pos, count, word)
+
+        return lines
+
+    def resolve_lemmas(self, lines):
 
         # Run through the lines again and use the earlier counts to
         # pick best lemmas from words with multiple lemmas
@@ -81,10 +126,11 @@ class FrequencyList():
                 continue
 
             if len(lemmas) > 1:
-                print("multi-lemmas", word, pos, lemmas)
                 lemma = self.get_best_lemma(word, lemmas, pos)
                 lines[word] = (pos, count, [lemma])
                 self.add_count(lemma, pos, count, word)
+
+    def resolve_plurals(self, lines):
 
         # Finally, process plurals after all other lemmas have been processed
         # if a plural has non-verb lemmas, take the non-verb lemma with the greatest usage
@@ -139,9 +185,6 @@ class FrequencyList():
 #                and any(not p.startswith("v|") for p in pos_lemmas):
 #                    pos_lemmas = [p for p in pos_lemmas if not p.startswith("v|")]
 
-            if word == "bonos":
-                print(word, pos_lemmas)
-
             if len(pos_lemmas) == 1:
                 pos, lemma = pos_lemmas[0].split("|")
             else:
@@ -149,8 +192,6 @@ class FrequencyList():
                 for pos_lemma in pos_lemmas:
                     p, l = pos_lemma.split("|")
                     lemma_count = self.get_count(l, p)
-                    if word == "bonos":
-                        print(p, l, lemma_count)
                     if lemma_count > best:
                         best = lemma_count
                         pos = p
@@ -169,35 +210,6 @@ class FrequencyList():
 
             lines[word] = (pos, count, [lemma])
             self.add_count(lemma, pos, count, word)
-
-            if word == "bonos":
-                print(lines[word])
-#                exit()
-
-
-
-        self.build_freqlist()
-
-        yield("count,spanish,pos,flags,usage")
-        for k, item in sorted(
-            self.all_lemmas.items(), key=lambda item: (item[1]["count"]*-1, item[1]["word"])
-        ):
-            if minuse and item["count"] < minuse:
-                break
-            yield(
-                ",".join(
-                    map(
-                        str,
-                        [
-                            item["count"],
-                            item["word"],
-                            item["pos"],
-                            "; ".join(item["flags"]),
-                            "|".join(sorted(item["usage"], key=lambda x: int(x.partition(":")[0]), reverse=True)),
-                        ],
-                    )
-                )
-            )
 
     def maybe_plural(self, word):
         """ returns true if the form could be a plural """
@@ -220,60 +232,33 @@ class FrequencyList():
         if len(list(f for f in forms if not f.endswith("|"+word))) >= 1:
             return True
 
+
     def get_lemmas(self, word, pos):
 
-        lemmas = []
-        forms = self.all_forms.get_lemmas(word)
-        for form_pos,lemma in [x.split("|") for x in sorted(forms)]:
-            if form_pos != pos:
-                continue
-            if lemma not in lemmas:
-                lemmas.append(lemma)
-        if not lemmas:
-            return [word]
+        poslemmas = self.all_forms.get_lemmas(word, [pos])
+        lemmas = [x.split("|")[1] for x in sorted(poslemmas)] if poslemmas else [word]
 
-        # remove verb-se if verb is already in lemmas
-        if pos == "v":
-            lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
+        return lemmas
 
-        # resolve lemmas that are "form of" other lemmas
-        good_lemmas = set()
-        for lemma in lemmas:
-            for word_obj in self.wordlist.get_words(lemma, pos):
-                good_lemmas |= set(self.wordlist.get_lemmas(word_obj).keys())
-
-        return sorted(good_lemmas)
-
-    def include_word(self, word, pos):
-        """ Returns True if the word/pos has a useful sense """
-        for lemma in self.get_lemmas(word, pos):
-            if is_good_lemma(self.wordlist, lemma, pos):
-                return True
-
-    def filter_pos(self, word, all_pos):
-        """ Remove pos from list if all of its words are archaic/obsolete """
-
-        res = []
-        for pos in all_pos:
-            if self.include_word(word, pos):
-                res.append(pos)
-        return res
-
-    def get_pos(self, word):
-        forms = self.all_forms.get_lemmas(word)
+    def get_all_pos(self, word):
+        """
+        Returns a list of all POS for a given word form, excluding
+        POS that only have dated/archaic usage
+        """
         all_pos = []
-        for pos,lemma in [x.split("|") for x in sorted(forms)]:
-            if pos not in all_pos:
+        for x in self.all_forms.get_lemmas(word):
+            pos, lemma = x.split("|")
+            if pos not in all_pos and is_good_lemma(self.wordlist, lemma, pos):
                 all_pos.append(pos)
 
-        return self.filter_pos(word, all_pos)
+        return sorted(all_pos)
 
     def get_ranked_pos(self, word, use_lemma=False, use_count=False):
         """
         Returns a list of all possible parts of speech, sorted by frequency of use
         """
 
-        all_pos = self.get_pos(word)
+        all_pos = self.get_all_pos(word)
 
         if not all_pos:
             return []
@@ -498,10 +483,6 @@ class FrequencyList():
         return best
 
 
-def build_freq(params=None):
-    flist, args = init_freq(params)
-    make_list(flist, args.infile, args.outfile, args.minuse)
-
 def init_freq(params):
 
     parser = argparse.ArgumentParser(description="Lemmatize frequency list")
@@ -580,6 +561,9 @@ def make_list(flist, infile, outfile, minuse):
         if outfile:
             _outfile.close()
 
+def build_freq(params=None):
+    flist, args = init_freq(params)
+    make_list(flist, args.infile, args.outfile, args.minuse)
 
 if __name__ == "__main__":
     build_freq(sys.argv[1:])
