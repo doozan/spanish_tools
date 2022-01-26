@@ -14,7 +14,7 @@ filename=$1
 workspace=`mktemp -d`
 unzip -q "$filename" -d "$workspace"
 
-htmlfiles="$(find $workspace -maxdepth 10 -type f -name "*.*html")"
+htmlfiles="$(find $workspace -maxdepth 10 -type f -name "*.*htm*")"
 
 for f in $htmlfiles; do
     sed -r -e "s/>/>\n/g" -e "s/</\n</g" $f \
