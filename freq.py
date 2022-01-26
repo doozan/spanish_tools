@@ -10,7 +10,7 @@ from enwiktionary_wordlist.all_forms import AllForms
 from .spanish_sentences import sentences as spanish_sentences
 from .probability import PosProbability
 
-from .get_best_lemmas import is_good_lemma, get_best_lemmas
+DEBUG_WORD="afueras"
 
 def mem_use():
     with open('/proc/self/status') as f:
@@ -40,7 +40,7 @@ class FrequencyList():
         entries = self.init_list(freqlist)
         self.resolve_lemmas(entries)
         self.resolve_plurals(entries)
-        self.build_freqlist()
+        self.build_freqlist(entries)
 
         yield("count,spanish,pos,flags,usage")
         for k, item in sorted(
@@ -84,7 +84,8 @@ class FrequencyList():
         # Read all the lines and do an initial lookup of lemmas
         for linenum, line in enumerate(freqlist):
             word, _, count = line.strip().partition(" ")
-            word, _, pos = word.partition(":")
+            word, _, pos_override = word.partition(":")
+
             if not count or not count.isdigit():
                 if count:
                     word = word + " " + count
@@ -93,23 +94,38 @@ class FrequencyList():
             if word in self.ignore:
                 continue
 
-            # Delay ambiguous plurals until all lemmas have been processed
-            if self.maybe_plural(word):
-                lines[word] = (None, count, None)
-                continue
-
-            if not pos:
-                posrank = self.get_ranked_pos(word)
-                pos = posrank[0] if posrank else "none"
-
+            lemmas = None
             if word.startswith("@"):
                 lemmas = [ word[1:] ]
+                word = word[1:]
+
+            if pos_override:
+                pos = [pos_override]
             else:
-                lemmas = self.get_lemmas(word, pos)
+
+                if self.maybe_plural(word):
+                    pos = self.get_good_pos(word)
+                    #print("maybe plural", word, pos, self.all_forms.get_lemmas(word))
+                    #if not len(pos) > 1:
+                    #    print("maybe plural", word, pos, self.all_forms.get_lemmas(word))
+                    if word == DEBUG_WORD:
+                        print("###", word, "maybe_plural", pos)
+                else:
+                    # TODO: instead of get_ranked_pos, make a new get_best_pos ?
+                    # returns multi value if it can't be determined
+                    #  - when would they get resolved? how?
+                    posrank = self.get_ranked_pos(word)
+                    if word == DEBUG_WORD:
+                        print("###", word, "ranked_pos", posrank)
+
+                    pos = posrank[:1] if posrank else []
+
+            if not lemmas and len(pos) == 1:
+                lemmas = self.get_lemmas(word, pos[0])
+                if word == DEBUG_WORD:
+                    print("###", word, "getting lemmas", lemmas, posrank)
 
             lines[word] = (pos, count, lemmas)
-#            if len(lemmas) == 1:
-#                self.add_count(lemmas[0], pos, count, word)
 
         return lines
 
@@ -118,17 +134,19 @@ class FrequencyList():
         # Run through the lines again and use the earlier counts to
         # pick best lemmas from words with multiple lemmas
         for word, item in lines.items():
-
             pos,count,lemmas = item
 
-            # delay processing of plurals
-            if pos == None:
+            if not lemmas or len(lemmas) == 1:
                 continue
 
-            if len(lemmas) > 1:
-                lemma = self.get_best_lemma(word, lemmas, pos)
-                lines[word] = (pos, count, [lemma])
-                self.add_count(lemma, pos, count, word)
+            if not pos or len(pos) > 1:
+                continue
+
+            if word == DEBUG_WORD:
+                print("###", word, "resolving lemmas", item)
+
+            lemma = self.get_best_lemma(word, lemmas, pos[0])
+            lines[word] = (pos, count, [lemma])
 
     def resolve_plurals(self, lines):
 
@@ -144,103 +162,123 @@ class FrequencyList():
         # soltero,adj,DUPLICATE,3076:solteros|2356:solteras
         #
         for word, item in lines.items():
-
-            pos,count,lemmas = item
-            if pos != None:
+            good_pos,count,lemmas = item
+            if not good_pos or len(good_pos) <= 1:
                 continue
 
-            posrank = self.get_ranked_pos(word, lemmas, pos)
-            pos = posrank[0] if posrank else "none"
+            if word == DEBUG_WORD:
+                print("###", word, "resolving plurals", item)
 
-            lemmas = self.get_lemmas(word, pos)
-            if len(lemmas) == 1:
-                lemma = lemmas[0]
+
+            # Plurals should use the same POS as the singular, unless the plural usage is more common
+            # in which case it should use get_best_pos
+            best = None
+            best_count = -1
+
+            # Special handling for feminine plurals, stay with the feminine
+            # form instead of using the masculine lemma
+            if word.endswith("as"):
+                item = lines.get(word[:-1])
+                if item:
+                    lemma_posrank, lemma_count, lemma_lemmas = item
+                    if int(lemma_count) > int(count):
+                        best = word[:-1]
+                        best_count = int(lemma_count)
+
+            if not best:
+
+                checked_lemmas = []
+                for poslemma in self.get_preferred_poslemmas(word):
+                    p,lemma = poslemma.split("|")
+                    if lemma in checked_lemmas:
+                        continue
+
+                    item = lines.get(lemma)
+                    if not item:
+                        continue
+
+                    lemma_posrank, lemma_count, lemma_lemmas = item
+                    if not lemma_posrank:
+                        continue
+
+                    if lemma_posrank[0] == "v" or lemma_posrank[0] not in good_pos:
+                        continue
+
+                    if int(lemma_count) > best_count:
+                        best = lemma
+                        best_count = int(lemma_count)
+
+            if word == DEBUG_WORD:
+                print("##", word, good_pos, count, lemmas, checked_lemmas, best, lines.get(best))
+
+            # If the singular is more popular than the plural, use it
+            # sometimes the form is a lemma (gracias, iterj) so the count
+            # will be equal
+            if best_count > int(count):
+                _posrank, _count, _lemmas = lines[best]
+                pos = _posrank
+                lemmas = _lemmas
+
+                if word == DEBUG_WORD:
+                    print(word, "following singular", best)
+
+
+                #print("resolved plural", word, count, best)
+
+            # No singular form has more usage than the plural,
+            # fallback to handling it like any other word
             else:
-                lemma = self.get_best_lemma(word, lemmas, pos)
+                #print("popular plural", word, count, best)
+                if word == DEBUG_WORD:
+                    print(word, "popular plural, not following", best)
 
-            # If the plural resolves to a lemma already in the list, follow that lemma's pos/lemma
-            if lemma != word:
-                new_pos = None
-                # feminine plurals should always follow the feminine singular
-                if word.endswith("as") and word[:-1] in lines:
-                    new_pos, _, new_lemmas = lines[word[:-1]]
-                elif lemma in lines:
-                    new_pos, _, new_lemmas = lines[lemma]
+                posrank = self.get_ranked_pos(word)
+                pos = posrank[:1]
+                lemmas = self.get_lemmas(word, pos[0])
 
-                if new_pos and (new_pos != pos or new_lemmas[0] != lemma):
-                    # verify that word can actually be a form of the the given lemma, pos (eg the determiner sobre doesn't take sobres)
-                    if any(self.wordlist.get_formtypes(new_lemmas[0], new_pos, word)):
-                        print("override", word, lemma, pos, new_lemmas[0], new_pos)
-                        lemma = new_lemmas[0]
-                        pos = new_pos
-                    else:
-                        print("can't override", word, lemma, pos, new_lemmas[0], new_pos)
+                assert lemmas
 
-            lines[word] = (pos, count, [lemma])
-            self.add_count(lemma, pos, count, word)
-            continue
+                if len(lemmas) > 1:
+                    lemmas = [self.get_best_lemma(word, lemmas, pos[0])]
 
-            # if there are verbs and non-verbs, remove the verbs
-#            if any(p.startswith("v|") for p in pos_lemmas) \
-#                and any(not p.startswith("v|") for p in pos_lemmas):
-#                    pos_lemmas = [p for p in pos_lemmas if not p.startswith("v|")]
-
-            if len(pos_lemmas) == 1:
-                pos, lemma = pos_lemmas[0].split("|")
-            else:
-                best = -1
-                for pos_lemma in pos_lemmas:
-                    p, l = pos_lemma.split("|")
-                    lemma_count = self.get_count(l, p)
-                    if lemma_count > best:
-                        best = lemma_count
-                        pos = p
-                        lemma = l
-
-                if best == -1:
-                    pos = "none"
-                    lemma = word
-
-                    posrank = self.get_ranked_pos(word)
-                    pos = posrank[0] if posrank else "none"
-                    lemma = self.get_lemmas(word, pos)[0]
-
-                    if pos_lemmas:
-                        print("NO LEMMAS FOUND", word, pos_lemmas, pos, lemma)
-
-            lines[word] = (pos, count, [lemma])
-            self.add_count(lemma, pos, count, word)
+            lines[word] = (pos, count, lemmas)
+        return
 
     def maybe_plural(self, word):
-        """ returns true if the form could be a plural """
+        """
+        returns True if the form could be a plural
+        A form may be plural if it ends with 's' and has any non-verb lemmas that don't match the form
+        """
         if not word.endswith("s"):
             return False
 
-        if word.startswith("@"):
-            return False
+        poslemmas = self.all_forms.get_lemmas(word)
+        nonverb_lemmas = [x.split("|")[1] for x in poslemmas if not x.startswith("v|")]
 
-        forms = self.all_forms.get_lemmas(word)
-        if len(forms) < 2:
-            return False
+        if word == DEBUG_WORD:
+            print("###", word, "checking if plural", nonverb_lemmas, poslemmas)
 
-        # Check if it's a lemma with usage
-        posrank = self.get_ranked_pos(word)
-        first_lemma = self.get_lemmas(word, posrank[0])[0]
-        if first_lemma == word:
-            return False
-
-        if len(list(f for f in forms if not f.endswith("|"+word))) >= 1:
+        if len(nonverb_lemmas) and any(x != word for x in nonverb_lemmas):
             return True
 
-
     def get_lemmas(self, word, pos):
-
+        """ Returns a list of all possible lemmas for a given word,pos """
         poslemmas = self.all_forms.get_lemmas(word, [pos])
-        lemmas = [x.split("|")[1] for x in sorted(poslemmas)] if poslemmas else [word]
+        if word == DEBUG_WORD:
+            print("found:", word, pos, poslemmas)
+        return [x.split("|")[1] for x in sorted(poslemmas)] if poslemmas else [word]
 
-        return lemmas
+    def get_preferred_poslemmas(self, word, pos=[]):
+        """ Returns a list of preferred lemmas for a given word, pos """
+        lemmas = []
+        for x in self.all_forms.get_lemmas(word, pos):
+            pos, lemma = x.split("|")
+            if x not in lemmas and not self.is_rare_lemma(self.wordlist, lemma, pos):
+                lemmas.append(x)
 
-    def get_all_pos(self, word):
+        return sorted(lemmas)
+
+    def get_good_pos(self, word):
         """
         Returns a list of all POS for a given word form, excluding
         POS that only have dated/archaic usage
@@ -248,23 +286,15 @@ class FrequencyList():
         all_pos = []
         for x in self.all_forms.get_lemmas(word):
             pos, lemma = x.split("|")
-            if pos not in all_pos and is_good_lemma(self.wordlist, lemma, pos):
+            if pos not in all_pos and not self.is_rare_lemma(self.wordlist, lemma, pos):
                 all_pos.append(pos)
 
         return sorted(all_pos)
 
-    def get_ranked_pos(self, word, use_lemma=False, use_count=False):
+    def get_ranked_usage(self, word, all_pos, use_lemma=False):
         """
-        Returns a list of all possible parts of speech, sorted by frequency of use
+        Returns a list of (word, pos, count), sorted by count, descending
         """
-
-        all_pos = self.get_all_pos(word)
-
-        if not all_pos:
-            return []
-
-        if len(all_pos) == 1:
-            return all_pos
 
         usage = []
         for pos in all_pos:
@@ -274,10 +304,37 @@ class FrequencyList():
             else:
                 usage.append(("@" + word, pos))
 
-        pos_rank = self.rank_usage(usage)
+        res = [ (word, pos, self.sentences.get_usage_count(word, pos)) for word, pos in usage ]
+        return sorted(res, key=lambda k: int(k[2]), reverse=True)
+
+
+    def get_ranked_pos(self, word, use_lemma=False, use_count=False):
+        """
+        Returns a list of all possible parts of speech, sorted by frequency of use
+        """
+
+        all_pos = self.get_good_pos(word)
+
+        if word == DEBUG_WORD:
+            print("get_ranked_pos", word, all_pos, use_lemma, use_count)
+
+        if not all_pos:
+            return []
+
+        if len(all_pos) == 1:
+            return all_pos
+
+        pos_rank = self.get_ranked_usage(word, all_pos, use_lemma)
+
+        if word == DEBUG_WORD:
+            print("get_ranked_pos:posrank", word, pos_rank)
+
         pos_with_usage = [ pos for word,pos,count in pos_rank if count > 0 ]
 
-#        if word == "gracias":
+        if word == DEBUG_WORD:
+            print("get_ranked_pos:posrank:with_usage", word, pos_with_usage)
+
+#        if word == DEBUG_WORD:
 #            print(word, all_pos, use_lemma)
 #            print(pos_rank)
 #            print(pos_with_usage)
@@ -285,22 +342,45 @@ class FrequencyList():
         if len(pos_with_usage) == 1:
             return pos_with_usage
 
+        if word == DEBUG_WORD:
+            print("get_ranked_pos:0")
+
         # If preferred pos has at least 10 usages and is at least double the second use it
         if pos_rank[0][2] > 10 and pos_rank[0][2] >= 2*(pos_rank[1][2]):
             return [pos for form,pos,count in sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)]
 
+        if word == DEBUG_WORD:
+            print("get_ranked_pos:1")
+
+
+        # Sometimes wiktionary and freeling disagree about the POS for a word, in which case
+        # the sentences database will be tagged with freeling's preference and there will
+        # be no usage count for any of the wiktionary POS (example 'esas' - wikipedia says determiner/pronoun,
+        # but freeling tags it as an adjective
+
         # If there are usage sentences for multiple pos, let the probabilities table pick
         if not use_lemma:
-            pos_by_prob = self.probs.get_pos_probs(word, pos_with_usage)
+            pos_by_prob = self.probs.get_pos_probs(word, all_pos)
+            if word == DEBUG_WORD:
+                print("get_ranked_pos:XX", pos_by_prob)
             if pos_by_prob:
                 sorted_pos_by_prob = [(word,pos,count) for pos,count in sorted(pos_by_prob.items(), key=lambda x: x[1])]
 
+                if word == DEBUG_WORD:
+                    print("get_ranked_pos:XX+", sorted_pos_by_prob)
                 if len(sorted_pos_by_prob) == 1 or sorted_pos_by_prob[0][2] > sorted_pos_by_prob[1][2]:
                     return [pos for word,pos,count in sorted_pos_by_prob]
+
+        if word == DEBUG_WORD:
+            print("get_ranked_pos:2")
+
 
         # If the probabilities table doesn't work, take the pos used most in the sentences
         if pos_rank[0][2] > pos_rank[1][2]:
             return [pos for form,pos,count in sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)]
+
+        if word == DEBUG_WORD:
+            print("get_ranked_pos:3")
 
         # If there's still a tie, take non-verbs over verbs
         # If there's still a tie, use the lemam forms
@@ -319,9 +399,15 @@ class FrequencyList():
 
             pos_rank = sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)
 
+        if word == DEBUG_WORD:
+            print("get_ranked_pos:4")
+
         # Try with lemma forms
         if pos_rank[0][2] == pos_rank[1][2] and not use_lemma:
             return self.get_ranked_pos(word, use_lemma=True, use_count=use_count)
+
+        if word == DEBUG_WORD:
+            print("get_ranked_pos:5")
 
         for i, (form, pos, count) in enumerate(pos_rank):
             if count != top_count:
@@ -335,22 +421,16 @@ class FrequencyList():
 
             pos_rank[i] = (form, pos, count)
 
+        if word == DEBUG_WORD:
+            print("get_ranked_pos:6")
+
         return [pos for form,pos,count in sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)]
 
 
-    def rank_usage(self, usage):
-        """
-        Ranks a list of (word, pos) tuples according to their usage
-        Returns a list of (word, pos, count), sorted by count, descending
-        """
-
-        res = [ (word, pos, self.sentences.get_usage_count(word, pos)) for word, pos in usage ]
-
-        return sorted(res, key=lambda k: int(k[2]), reverse=True)
-
-
     def add_count(self, word, pos, count, origword):
-        tag = (word, pos)
+        if not pos:
+            pos = ["none"]
+        tag = (word, pos[0])
         if tag not in self.freq:
             self.freq[tag] = {"count": 0, "usage": []}
 
@@ -413,7 +493,18 @@ class FrequencyList():
 
         return flags
 
-    def build_freqlist(self):
+    def build_freqlist(self, lines):
+
+        for word, item in lines.items():
+            pos,count,lemmas = item
+            if not lemmas:
+                lemmas = [word]
+            elif len(lemmas) != 1:
+                raise ValueError(word, item)
+            self.add_count(lemmas[0], pos, count, word)
+            if word == DEBUG_WORD:
+                print("###", word, "counting", item)
+
         wordusage = {}
         count = 1
         for tag, item in sorted(
@@ -462,8 +553,8 @@ class FrequencyList():
                     self.all_lemmas[(word, pos)]["flags"].append("DUPLICATE")
 
     def get_best_lemma(self, word, lemmas, pos):
-        lemmas = get_best_lemmas(self.wordlist, word, lemmas, pos)
-        if len(lemmas) == 1:
+        lemmas = self.get_best_lemmas(self.wordlist, word, lemmas, pos)
+        if lemmas and len(lemmas) == 1:
             return lemmas[0]
 
         best = "_NOLEMMA"
@@ -481,6 +572,66 @@ class FrequencyList():
             return lemmas[0]
 
         return best
+
+    @staticmethod
+    def is_rare_lemma(wordlist, lemma, pos):
+        # Returns True if all senses of the given lemma, pos are rare/archaic
+        for word_obj in wordlist.get_words(lemma, pos):
+            for sense in word_obj.senses:
+                if not (sense.qualifier and re.match(r"(archaic|dated|obsolete|rare)", sense.qualifier)) and \
+                    not (sense.gloss and re.match(r"(archaic|dated|obsolete|rare) form of", sense.gloss)):
+                        return False
+        return True
+
+    @staticmethod
+    def form_in_lemma(wordlist, form, lemma, pos):
+        if form == lemma:
+            return True
+
+        for word in wordlist.get_words(lemma, pos):
+            for formtype, forms in word.forms.items():
+                if form in forms:
+                    return True
+            # Only check the first word
+            return False
+        return False
+
+    @classmethod
+    def get_best_lemmas(cls, wordlist, word, lemmas, pos):
+        """
+        Return the most likely lemmas for a given word, pos from a list of lemmas
+        """
+
+        # remove verb-se if verb is already in lemmas
+        if pos == "v":
+            lemmas = [x for x in lemmas if not (x.endswith("se") and x[:-2] in lemmas)]
+
+        # Hardcoded fixes for some verb pairs
+        if pos == "v":
+            if "creer" in lemmas and "crear" in lemmas:
+                lemmas.remove("crear")
+            if "salir" in lemmas and "salgar" in lemmas:
+                lemmas.remove("salgar")
+
+        # remove dated/obsolete
+        new_lemmas = [lemma for lemma in lemmas if not cls.is_rare_lemma(wordlist, lemma, pos)]
+        if new_lemmas:
+            lemmas = new_lemmas
+        if len(lemmas) == 1:
+            return lemmas
+
+        # discard any lemmas that don't declare this form in their first definition
+        new_lemmas = [lemma for lemma in lemmas if cls.form_in_lemma(wordlist, word, lemma, pos)]
+        if new_lemmas:
+            lemmas = new_lemmas
+        if len(lemmas) == 1:
+            return lemmas
+
+        # if one lemma is the word, use that
+        if word in lemmas:
+            return [word]
+
+        return lemmas
 
 
 def init_freq(params):

@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Parses a FreeLing probabilitats.dat XML file
 
 class PosProbability():
 
@@ -35,6 +36,7 @@ class PosProbability():
                         inSuffix = True
                     elif line.startswith("<FormTagFreq"):
                         inForm = True
+
                 elif inSuffix:
                     word, total, *items = line.strip().split(" ")
                     self.suffix_probs[word] = items
@@ -42,6 +44,7 @@ class PosProbability():
                 elif inForm:
                     word, types, *items = line.strip().split(" ")
                     self.form_probs[word] = items
+
 
     @staticmethod
     def tag_to_pos(tag):
@@ -105,14 +108,8 @@ class PosProbability():
                 total += weight
                 data[pos] = data.get(pos,0) + weight
 
-
         if total == 0:
 #            print("failed", word, filter_pos, file=sys.stderr)
             return
 
         return {k: count/total for k,count in sorted(data.items(), key=lambda x: (x[1]*-1, x[0]))}
-
-
-
-
-
