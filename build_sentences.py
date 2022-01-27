@@ -12,8 +12,7 @@ import sys
 
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
-
-from .get_best_lemmas import get_best_lemmas
+from .freq import Frequency
 
 parser = argparse.ArgumentParser(description="Manage tagged sentences")
 parser.add_argument(
@@ -138,15 +137,8 @@ def get_interjections(string):
 
 
 def get_lemmas(wordlist, word, pos):
-    lemmas = []
-    forms = all_forms.get_lemmas(word)
-    for form_pos,lemma in [x.split("|") for x in sorted(forms)]:
-        if form_pos != pos:
-            continue
-        if lemma not in lemmas:
-            lemmas.append(lemma)
-
-    lemmas = get_best_lemmas(wordlist, word, lemmas, pos)
+    lemmas = all_forms.get_lemmas(word, [pos])
+    lemmas = Frequency.get_best_lemmas(wordlist, word, lemmas, pos)
 
     if not lemmas:
         return word
