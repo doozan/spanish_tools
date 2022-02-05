@@ -104,9 +104,11 @@ class FrequencyList():
             else:
 
                 if self.maybe_plural(word):
-                    pos = self.get_good_pos(word)
+                    good_pos = self.get_good_pos(word)
                     if word == DEBUG_WORD:
-                        print("###", word, "maybe_plural", pos)
+                        print("###", word, "maybe_plural", good_pos)
+                    lines[word] = (good_pos, count, None)
+                    continue
                 else:
                     # TODO: instead of get_ranked_pos, make a new get_best_pos ?
                     # returns multi value if it can't be determined
@@ -161,7 +163,10 @@ class FrequencyList():
         #
         for word, item in lines.items():
             good_pos,count,lemmas = item
-            if not good_pos or len(good_pos) <= 1:
+            if not good_pos:
+                continue
+
+            if lemmas:
                 continue
 
             if word == DEBUG_WORD:
@@ -299,13 +304,13 @@ class FrequencyList():
         Returns a list of all POS for a given word form, excluding
         POS that only have dated/archaic usage
         """
-        all_pos = []
+        good_pos = set()
         for x in self.all_forms.get_lemmas(word):
             pos, lemma = x.split("|")
-            if pos not in all_pos and not self.is_rare_lemma(self.wordlist, lemma, pos):
-                all_pos.append(pos)
+            if not self.is_rare_lemma(self.wordlist, lemma, pos):
+                good_pos.add(pos)
 
-        return sorted(all_pos)
+        return sorted(good_pos)
 
     def get_ranked_usage(self, word, all_pos, use_lemma=False):
         """
