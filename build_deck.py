@@ -672,10 +672,10 @@ class DeckBuilder():
             noun_type = "mf"
         elif noun_type == "m; f":
             noun_type = "mf"
-        elif noun_type == "mfbysensep":
+        elif noun_type in ["mfbysensep", "mp; fp"]:
             noun_type = "mfp"
         elif noun_type not in ["m", "f", "mf", "mp", "fp", "mfp"]:
-            raise ValueError("Unexpected noun type", noun_type)
+            raise ValueError("Unexpected noun type", word_obj.word, noun_type)
 
         return noun_type
 
@@ -989,20 +989,7 @@ class DeckBuilder():
                     if not any(w for w in mates for s in w.senses if self.filter_gloss(w, s, main_gloss)):
                         return "m/f"
 
-
-            noun_type = word.genders if word.genders else "unknown"
-
-            noun_type = re.sub("-p", "p", noun_type)
-            if noun_type == "mfbysense":
-                noun_type = "mf"
-            elif noun_type == "m; f":
-                noun_type = "mf"
-            elif noun_type == "mfbysensep":
-                noun_type = "mfp"
-            elif noun_type not in ["m", "f", "mf", "mp", "fp", "mfp"]:
-                raise ValueError("Unexpected noun type", noun_type, word.word, word.pos, word.genders)
-
-            return noun_type
+            return self.get_noun_gender(word)
 
         res = []
         words = self.get_word_objs(word, primary_pos, get_all_pos)
@@ -1206,6 +1193,10 @@ class DeckBuilder():
             voice = self._MALE1
             phrase = f"el {word}. la {word}"
             display = f"el/la {word}"
+        elif noun_type == "mfp":
+            voice = self._MALE1
+            phrase = f"los {word}. las {word}"
+            display = f"los/las {word}"
         elif noun_type == "mp":
             voice = self._MALE1
             phrase = f"los {word}"
