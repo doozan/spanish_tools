@@ -12,7 +12,7 @@ import sys
 
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
-from .freq import Frequency
+from .freq import FrequencyList as Freq
 
 parser = argparse.ArgumentParser(description="Manage tagged sentences")
 parser.add_argument(
@@ -100,6 +100,8 @@ def tag_to_pos(tag, word):
         verb_lemma = get_lemmas(wordlist, word, "v")
         adj_res = f"{word}|{adj_lemma}" if adj_lemma != word else word
         verb_res = f"{word}|{verb_lemma}" if verb_lemma != word else word
+
+        # NOTE: part-verb doesn't match "v", but this is intentional
         return [("part-adj", adj_res), ("part-verb", verb_res)]
 
     if word != lemma:
@@ -137,14 +139,14 @@ def get_interjections(string):
 
 
 def get_lemmas(wordlist, word, pos):
-    lemmas = all_forms.get_lemmas(word, [pos])
-    lemmas = Frequency.get_best_lemmas(wordlist, word, lemmas, pos)
+
+    lemmas = [x.split("|")[1] for x in all_forms.get_lemmas(word, [pos])]
+    lemmas = Freq.get_best_lemmas(wordlist, word, lemmas, pos)
 
     if not lemmas:
         return word
 
-    return "|".join(lemmas)
-
+    return "|".join(sorted(lemmas))
 
 def iter_sentences():
 

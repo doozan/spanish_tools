@@ -139,6 +139,8 @@ class sentences:
         for tagpos,words in tags.items():
 
             # Each past participle has both a part-verb and a part-adj tag
+            # NOTE: part-verb will be tagged as "verb", while normal verbs are "v"
+            # THIS IS INTENTIONAL, and is used to distinguish normal verb usage
             pos = tagpos[len("part-"):] if tagpos.startswith("part-") else tagpos
 
             for word in words:
