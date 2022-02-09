@@ -1,7 +1,11 @@
+import base64
+import hashlib
 import math
 import os
+import pickle
 import re
 import sys
+from collections import defaultdict
 
 IDX_SPANISH=0
 IDX_ENGLISH=1
@@ -18,16 +22,20 @@ class sentences:
 
     def __init__(self, sentences="sentences.tsv", data_dir=None, custom_dir=None):
 
-        self.grepdb = []
+        if self.load_cache(sentences, data_dir, custom_dir):
+            return
+
         self.sentencedb = []
+        self.grepdb = []
         self.tagdb = {}
         self.id_index = {}
         self.tagfixes = {}
         self.tagfix_sentences = {}
-        self.tagfix_count = {}
         self.filter_ids = {}
         self.forced_ids = {}
         self.forced_ids_source = {}
+
+        tagfix_count = defaultdict(int)
 
         if not data_dir:
             data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
@@ -35,12 +43,8 @@ class sentences:
         if not custom_dir:
             custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
 
-        dataprefix = os.path.splitext(sentences)[0]
 
-        # Tagfixes must be loaded before the main file
-        for datafile in [ os.path.join(dirname, dataprefix + ".tagfixes") for dirname in [ data_dir, custom_dir ] if dirname ]:
-            if not os.path.isfile(datafile):
-                continue
+        for datafile in self.get_modfiles(sentences, [data_dir, custom_dir], ".tagfixes"):
             with open(datafile) as infile:
                 for line in infile:
                     line = line.strip()
@@ -59,9 +63,7 @@ class sentences:
                         self.tagfixes[f"{oldword}:{oldpos}"] = [newword, newpos]
 
         # Ignore list must be loaded before the main file
-        for datafile in [ os.path.join(dirname, dataprefix + ".ignore") for dirname in [ data_dir, custom_dir ] if dirname ]:
-            if not os.path.isfile(datafile):
-                continue
+        for datafile in self.get_modfiles(sentences, [data_dir, custom_dir], ".ignore"):
             with open(datafile) as infile:
                 self.filter_ids = set( int(line.strip().split(" ",1)[0]) for line in infile if not line.startswith("#") )
 
@@ -94,22 +96,22 @@ class sentences:
 
                 self.id_index[f"{spa_id}:{eng_id}"] = index
 
-                self.add_tags_to_db(tags,index,spa_id)
+                self.add_tags_to_db(tags,index,spa_id, tagfix_count)
                 index+=1
 
         for old,new in self.tagfixes.items():
-            if old not in self.tagfix_count:
+            if old not in tagfix_count:
                 print(f"Tagfix: {old} {new} does not match any sentences", file=sys.stderr)
 
         for sid,tagfixes in self.tagfix_sentences.items():
             for old,new in tagfixes.items():
                 fixid = f"{old}@{sid}"
-                if fixid not in self.tagfix_count:
+                if fixid not in tagfix_count:
                     print(f"Tagfix: {fixid} {new} does not match any sentences", file=sys.stderr)
 
         # Forced/preferred items must be processed last
         for source in [ "preferred", "forced" ]:
-            for datafile in [ os.path.join(dirname, dataprefix + "." + source) for dirname in [ data_dir, custom_dir ] if dirname ]:
+            for datafile in self.get_modfiles(sentences, [data_dir, custom_dir], "."+source):
                 if not os.path.isfile(datafile):
                     continue
                 with open(datafile) as infile:
@@ -133,9 +135,91 @@ class sentences:
                             self.forced_ids[wordtag] = ids
                             self.forced_ids_source[wordtag] = source
 
+        self.save_cache(sentences, data_dir, custom_dir)
+
+    @staticmethod
+    def get_modfiles(srcfile, paths, suffix):
+        dataprefix = os.path.splitext(srcfile)[0]
+        modfiles = []
+        for dirname in paths:
+            if not dirname:
+                continue
+            modfile = os.path.join(dirname, dataprefix + suffix)
+            if os.path.isfile(modfile) and modfile not in modfiles:
+                modfiles.append(modfile)
+
+        return modfiles
+
+
+    def save_cache(self, sentences, data_dir, custom_dir):
+        cached = self.get_cache_filename(sentences, data_dir, custom_dir)
+        print("saving cache", cached)
+        with open(cached, "wb") as outfile:
+            pickle.dump([
+                self.sentencedb,
+                self.grepdb,
+                self.tagdb,
+                self.id_index,
+                self.tagfixes,
+                self.tagfix_sentences,
+                self.filter_ids,
+                self.forced_ids,
+                self.forced_ids_source,
+                ], outfile)
+
+
+    @classmethod
+    def get_datafiles_list(cls, sentences, data_dir, custom_dir):
+        datafile = os.path.join(data_dir, sentences)
+        files = [datafile]
+        files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".tagfixes")
+        files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".ignore")
+        files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".preferred")
+        files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".forced")
+
+        return files
+
+    @classmethod
+    def get_cache_filename(cls, sentences, data_dir, custom_dir):
+        files = "::".join(sorted(cls.get_datafiles_list(sentences, data_dir, custom_dir)))
+        hash_obj = hashlib.sha1(bytes(files, "utf-8"))
+        cid = str(base64.b32encode(hash_obj.digest()), "utf-8")
+
+        datafile = os.path.join(data_dir, sentences)
+        return datafile + ".~" + cid
+
+    def load_cache(self, sentences, data_dir, custom_dir):
+
+        datafile = os.path.join(data_dir, sentences)
+        files = self.get_datafiles_list(sentences, data_dir, custom_dir)
+
+        cached = self.get_cache_filename(sentences, data_dir, custom_dir)
+        if not os.path.exists(cached):
+            return
+
+        if any(os.path.getctime(f) > os.path.getctime(cached) for f in files):
+            return
+
+        # check for cached version
+        print("loading cached", cached)
+        with open(cached, "rb") as infile:
+            res = pickle.load(infile)
+
+            self.sentencedb, \
+            self.grepdb, \
+            self.tagdb, \
+            self.id_index, \
+            self.tagfixes, \
+            self.tagfix_sentences, \
+            self.filter_ids, \
+            self.forced_ids, \
+            self.forced_ids_source = res
+
+        return True
+
     # tags are in the form:
     # { pos: [word1, word2] }
-    def add_tags_to_db(self, tags, index, sid):
+    def add_tags_to_db(self, tags, index, sid, tagfix_count):
         for tagpos,words in tags.items():
 
             # Each past participle has both a part-verb and a part-adj tag
@@ -155,8 +239,7 @@ class sentences:
                     newword,newpos = self.tagfixes.get(fixid,[None,None])
 
                 if newword:
-                    count = self.tagfix_count.get(fixid,0)
-                    self.tagfix_count[fixid] = count+1
+                    tagfix_count[fixid] += 1
 
                     word = newword
                     pos = newpos
