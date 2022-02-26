@@ -1079,7 +1079,7 @@ class DeckBuilder():
 
     def get_lemmas(self, word, pos):
 
-        poslemmas = self.all_forms.get_lemmas(word, [pos])
+        poslemmas = self.all_forms.get_lemmas(word, pos)
         lemmas = [x.split("|")[1] for x in sorted(poslemmas)] if poslemmas else [word]
 
         # remove verb-se if verb is already in lemmas

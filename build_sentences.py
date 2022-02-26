@@ -140,7 +140,7 @@ def get_interjections(string):
 
 def get_lemmas(wordlist, word, pos):
 
-    lemmas = [x.split("|")[1] for x in all_forms.get_lemmas(word, [pos])]
+    lemmas = [x.split("|")[1] for x in all_forms.get_lemmas(word, pos)]
     lemmas = Freq.get_best_lemmas(wordlist, word, lemmas, pos)
 
     if not lemmas:
