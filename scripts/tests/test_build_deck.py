@@ -1,6 +1,6 @@
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
-from ..build_deck import DeckBuilder
+from ..utils.build_deck import DeckBuilder
 
 def test_get_location_classes():
     get_location_classes = DeckBuilder.get_location_classes
@@ -521,7 +521,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    assert len(allforms.all_forms) == 4
+    assert len(list(allforms.all_forms)) == 4
 
     # Full definition without ignore list
     deck = DeckBuilder(wordlist, sentences, ignore, allforms)
@@ -613,7 +613,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    assert len(allforms.all_forms) == 4
+    assert len(list(allforms.all_forms)) == 4
 
     # Full definition without ignore list
     deck = DeckBuilder(wordlist, sentences, ignore, allforms)

@@ -69,7 +69,9 @@ class sentences:
 
         datafile = os.path.join(data_dir, sentences)
         if not os.path.isfile(datafile):
-            raise FileNotFoundError(f"Cannot open file: '{datafile}'")
+            print(f"Cannot open file: '{datafile}'", file=sys.stderr)
+            return
+            #raise FileNotFoundError(f"Cannot open file: '{datafile}'")
 
         index=0
         with open(datafile) as infile:
@@ -170,7 +172,7 @@ class sentences:
 
     @classmethod
     def get_datafiles_list(cls, sentences, data_dir, custom_dir):
-        datafile = os.path.join(data_dir, sentences)
+        datafile = os.path.join(data_dir, sentences) if data_dir else sentences
         files = [datafile]
         files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".tagfixes")
         files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".ignore")
@@ -185,12 +187,14 @@ class sentences:
         hash_obj = hashlib.sha1(bytes(files, "utf-8"))
         cid = str(base64.b32encode(hash_obj.digest()), "utf-8")
 
-        datafile = os.path.join(data_dir, sentences)
+        datafile = os.path.join(data_dir, sentences) if data_dir else sentences
         return datafile + ".~" + cid
 
     def load_cache(self, sentences, data_dir, custom_dir):
 
-        datafile = os.path.join(data_dir, sentences)
+        print("load_cache", [sentences, data_dir, custom_dir])
+
+        datafile = os.path.join(data_dir, sentences) if data_dir else sentences
         files = self.get_datafiles_list(sentences, data_dir, custom_dir)
 
         cached = self.get_cache_filename(sentences, data_dir, custom_dir)
