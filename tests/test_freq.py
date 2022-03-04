@@ -1,11 +1,11 @@
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 import pytest
-from ...sentences import sentences as spanish_sentences
+from ..sentences import SpanishSentences
 
-from ...freq import FrequencyList
+from ..freq import FrequencyList
 
-sentences = spanish_sentences()
+sentences = SpanishSentences()
 
 def test_simple():
 
@@ -60,8 +60,8 @@ unknown 10
 #    assert freq.wordlist.has_lemma("protectora", "n") == False
 
     assert freq.get_preferred_lemmas("protectores", "n") == ["protector"]
-    assert freq.get_preferred_lemmas("protectoras", "n") == ["protector"]
-    assert freq.get_preferred_lemmas("protectora", "n") == ["protector"]
+    assert freq.get_preferred_lemmas("protectoras", "n") == ["protector", "protectora"]
+    assert freq.get_preferred_lemmas("protectora", "n") == ["protector", "protectora"]
     assert freq.get_preferred_lemmas("notaword", "n") == []
 
     assert freq.get_ranked_pos("protectoras") == ["n"]

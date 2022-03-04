@@ -1,6 +1,6 @@
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
-from ..utils.build_deck import DeckBuilder
+from ..deckbuilder import DeckBuilder
 
 def test_get_location_classes():
     get_location_classes = DeckBuilder.get_location_classes
@@ -642,11 +642,11 @@ pos: n
             if k == "m/f":
                 ws = w
                 for w in ws:
-                    data.append(f"    {w.word} {w.pos} {w.genders} {w.forms}")
+                    data.append(f"    {w.word} {w.pos} {w.genders} {dict(w.forms)}")
 
                 data.append(f"    --")
             else:
-                data.append(f"    {w.word} {w.pos} {w.genders} {w.forms}")
+                data.append(f"    {w.word} {w.pos} {w.genders} {dict(w.forms)}")
 
     data = "\n".join(data)
     print(data)
@@ -720,11 +720,11 @@ pos: n
             if k == "m/f":
                 ws = w
                 for w in ws:
-                    data.append(f"    {w.word} {w.pos} {w.genders} {w.forms}")
+                    data.append(f"    {w.word} {w.pos} {w.genders} {dict(w.forms)}")
 
                 data.append(f"    --")
             else:
-                data.append(f"    {w.word} {w.pos} {w.genders} {w.forms}")
+                data.append(f"    {w.word} {w.pos} {w.genders} {dict(w.forms)}")
 
     data = "\n".join(data)
     print(data)
@@ -791,11 +791,11 @@ pos: v
             if k == "m/f":
                 ws = w
                 for w in ws:
-                    data.append(f"    {w.word} {w.pos} {w.genders} {w.forms}")
+                    data.append(f"    {w.word} {w.pos} {w.genders} {dict(w.forms)}")
 
                 data.append(f"    --")
             else:
-                data.append(f"    {w.word} {w.pos} {w.genders} {w.forms}")
+                data.append(f"    {w.word} {w.pos} {w.genders} {dict(w.forms)}")
 
     data = "\n".join(data)
     print(data)

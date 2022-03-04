@@ -8,17 +8,11 @@ import sys
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.word import Word
 from enwiktionary_wordlist.all_forms import AllForms
+
 from .probability import PosProbability
-from ..sentences import sentences as spanish_sentences
+from ..sentences import SpanishSentences
 
-DEBUG_WORD=None # set by args
-
-def mem_use():
-    with open('/proc/self/status') as f:
-        memusage = f.read().split('VmRSS:')[1].split('\n')[0][:-3]
-
-    return int(memusage.strip())
-
+DEBUG_WORD="protectora" # set by args
 
 class FrequencyList():
 
@@ -116,7 +110,6 @@ class FrequencyList():
         words that are not part of the spanish database will have NULL pos and lemma but will not be
         included in the multilemma or maybeplural lists
         """
-        # TODO: instead or NULL, return a list of the possible POS?
 
         lines = {}
         multi_lemmas = []
@@ -341,20 +334,17 @@ class FrequencyList():
         """ Returns a list of preferred lemmas for a given word, pos """
         lemmas = []
         all_lemmas = sorted(set(poslemma.split("|")[1] for poslemma in self.all_forms.get_lemmas(word, pos)))
-        preferred_lemmas = [lemma for lemma in all_lemmas if self.is_preferred_lemma(self.wordlist, lemma, pos)]
-
-        if word == DEBUG_WORD:
-            print("###", word, "all_lemmas", pos, all_lemmas)
-            print("###", word, "preferred_lemmas", pos, preferred_lemmas)
-
-        return preferred_lemmas if preferred_lemmas else all_lemmas
+        preferred_lemmas = [lemma for lemma in all_lemmas if not self.is_rare_lemma(self.wordlist, lemma, pos)]
+        if preferred_lemmas:
+            return preferred_lemmas
+        return all_lemmas
 
     def get_preferred_poslemmas(self, word, pos=[]):
         """ Returns a list of preferred lemmas for a given word, pos """
         lemmas = []
         for x in self.all_forms.get_lemmas(word, pos):
             pos, lemma = x.split("|")
-            if x not in lemmas and self.is_preferred_lemma(self.wordlist, lemma, pos):
+            if x not in lemmas and not self.is_rare_lemma(self.wordlist, lemma, pos):
                 lemmas.append(x)
 
         return sorted(lemmas)
@@ -370,7 +360,7 @@ class FrequencyList():
         good_pos = set()
         for x in self.all_forms.get_lemmas(word):
             pos, lemma = x.split("|")
-            if self.is_preferred_lemma(self.wordlist, lemma, pos):
+            if not self.is_rare_lemma(self.wordlist, lemma, pos):
                 good_pos.add(pos)
 
         return sorted(good_pos)
@@ -732,23 +722,6 @@ class FrequencyList():
         return True
 
     @staticmethod
-    def is_primary_lemma(wordlist, lemma, pos):
-        # Returns true if the first sense of the first word is not a form of another word
-        # and if the headword doesn't declare a masculine form
-        for word_obj in wordlist.get_words(lemma, pos):
-            if word_obj.pos == "n" and any(formtype == "m" for formtype, form in word_obj.meta_forms):
-                return False
-            for sense in word_obj.senses:
-                return sense.formtype is None
-
-    @classmethod
-    def is_preferred_lemma(cls, wordlist, lemma, pos):
-        if cls.is_rare_lemma(wordlist, lemma, pos):
-            return False
-
-        return cls.is_primary_lemma(wordlist, lemma, pos)
-
-    @staticmethod
     def form_in_lemma(wordlist, form, lemma, pos):
         if form == lemma:
             return True
@@ -802,25 +775,10 @@ class FrequencyList():
             print("###", word, "get_best_lemmas3 - all are dated/obsolete")
 
         if word == DEBUG_WORD:
-            print("###", word, "get_best_lemmas - non-rare lemmas", lemmas)
+            print("###", word, "get_best_lemmas3", lemmas)
 
         if len(lemmas) == 1:
             return lemmas
-
-
-        # remove words that are not primarily lemmas
-        new_lemmas = [lemma for lemma in lemmas if cls.is_primary_lemma(wordlist, lemma, pos)]
-        if new_lemmas:
-            lemmas = new_lemmas
-        elif word == DEBUG_WORD:
-            print("###", word, "get_best_lemmas - all are non-primary lemmas")
-
-        if word == DEBUG_WORD:
-            print("###", word, "get_best_lemmas - primary lemmas", lemmas)
-
-        if len(lemmas) == 1:
-            return lemmas
-
 
         # discard any lemmas that don't declare this form in their first definition
         new_lemmas = [lemma for lemma in lemmas if cls.form_in_lemma(wordlist, word, lemma, pos)]
@@ -840,3 +798,109 @@ class FrequencyList():
             return [word]
 
         return lemmas
+
+
+def init_freq(params):
+
+    parser = argparse.ArgumentParser(description="Lemmatize frequency list")
+    parser.add_argument("--ignore", help="List of words to ignore")
+    parser.add_argument("--dictionary", help="Dictionary file name", required=True)
+    parser.add_argument("--allforms", help="All-forms file name")
+    parser.add_argument("--probs", help="Probability data file")
+    parser.add_argument("--sentences", help="Sentences file name (DEFAULT: sentences.tsv)")
+    parser.add_argument(
+        "--data-dir",
+        help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')",
+    )
+    parser.add_argument(
+        "--custom-dir",
+        help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",
+    )
+    parser.add_argument("--formtypes", help="Create a formtypes list intsead of a lemma list", action='store_true')
+    parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
+    parser.add_argument("--minuse", help="Require a lemmas to have a least N total uses", default=0, type=int)
+    parser.add_argument("--infile", help="Usage list")
+    parser.add_argument("--outfile", help="outfile (defaults to stdout)", default="-")
+    parser.add_argument("--debug", help="debug specific word")
+    parser.add_argument("extra", nargs="*", help="Usage list")
+    args = parser.parse_args(params)
+
+    probs = PosProbability(args.probs)
+
+    global DEBUG_WORD
+    DEBUG_WORD = args.debug
+
+    # allow first positional argument to replace undeclared --infile
+    if args.infile == parser.get_default("infile") and args.extra:
+        args.infile = args.extra.pop(0)
+
+    args = parser.parse_args(params)
+
+    if not args.sentences:
+        args.sentences = "sentences.tsv"
+
+    if not args.data_dir:
+        args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
+
+    if not args.custom_dir:
+        args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
+
+    cache_words = not args.low_mem
+    wordlist = Wordlist.from_file(args.dictionary, cache_words=cache_words)
+
+    ignore_data = open(args.ignore) if args.ignore else []
+
+    if args.allforms:
+        allforms = AllForms.from_file(args.allforms)
+    else:
+        allforms = AllForms.from_wordlist(wordlist)
+
+    sentences = SpanishSentences(
+        sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir
+    )
+
+    flist = FrequencyList(wordlist, allforms, sentences, ignore_data, probs)
+    ignore_data.close()
+
+    return flist, args
+
+def make_list(flist, infile, outfile, minuse):
+
+    with open(infile) as _infile:
+        if outfile and outfile != "-":
+            _outfile = open(outfile, "w")
+        else:
+            _outfile = sys.stdout
+
+        for line in flist.process(_infile, minuse):
+            _outfile.write(line)
+            _outfile.write("\n")
+
+        if outfile:
+            _outfile.close()
+
+def make_formtypes_list(flist, infile, outfile):
+
+    with open(infile) as _infile:
+        if outfile and outfile != "-":
+            _outfile = open(outfile, "w")
+        else:
+            _outfile = sys.stdout
+
+        for line in flist.formtypes(_infile):
+            _outfile.write(line)
+            _outfile.write("\n")
+
+        if outfile:
+            _outfile.close()
+
+def build_freq(params=None):
+    flist, args = init_freq(params)
+    if args.formtypes:
+        make_formtypes_list(flist, args.infile, args.outfile)
+    else:
+        make_list(flist, args.infile, args.outfile, args.minuse)
+
+if __name__ == "__main__":
+    build_freq(sys.argv[1:])
+
