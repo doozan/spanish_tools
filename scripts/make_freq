@@ -5,6 +5,10 @@ import os
 import sys
 
 from spanish_tools.freq import FrequencyList
+from spanish_tools.freq import PosProbability
+from spanish_tools.sentences import SpanishSentences
+from enwiktionary_wordlist.wordlist import Wordlist
+from enwiktionary_wordlist.all_forms import AllForms
 
 def init_freq(params):
 
@@ -24,7 +28,7 @@ def init_freq(params):
     )
     parser.add_argument("--formtypes", help="Create a formtypes list intsead of a lemma list", action='store_true')
     parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
-    parser.add_argument("--minuse", help="Require a lemmas to have a least N total uses", default=0, type=int)
+    parser.add_argument("--minuse", help="Only print lemmas with at least N total uses", default=0, type=int)
     parser.add_argument("--infile", help="Usage list")
     parser.add_argument("--outfile", help="outfile (defaults to stdout)", default="-")
     parser.add_argument("--debug", help="debug specific word")
@@ -32,9 +36,6 @@ def init_freq(params):
     args = parser.parse_args(params)
 
     probs = PosProbability(args.probs)
-
-    global DEBUG_WORD
-    DEBUG_WORD = args.debug
 
     # allow first positional argument to replace undeclared --infile
     if args.infile == parser.get_default("infile") and args.extra:
@@ -54,21 +55,18 @@ def init_freq(params):
     cache_words = not args.low_mem
     wordlist = Wordlist.from_file(args.dictionary, cache_words=cache_words)
 
-    print("wordlist", mem_use(), file=sys.stderr)
     ignore_data = open(args.ignore) if args.ignore else []
 
     if args.allforms:
         allforms = AllForms.from_file(args.allforms)
     else:
         allforms = AllForms.from_wordlist(wordlist)
-    print("all_forms", mem_use(), file=sys.stderr)
 
-    sentences = spanish_sentences(
+    sentences = SpanishSentences(
         sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir
     )
-    print("sentences", mem_use(), file=sys.stderr)
 
-    flist = FrequencyList(wordlist, allforms, sentences, ignore_data, probs)
+    flist = FrequencyList(wordlist, allforms, sentences, ignore_data, probs, debug_word=args.debug)
     ignore_data.close()
 
     return flist, args
