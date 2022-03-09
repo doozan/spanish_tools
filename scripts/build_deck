@@ -13,7 +13,10 @@ import sqlite3
 import sys
 from Levenshtein import distance as fuzzy_distance
 
+from spanish_tools.sentences import SpanishSentences
 from spanish_tools.deckbuilder import DeckBuilder
+from enwiktionary_wordlist.wordlist import Wordlist
+from enwiktionary_wordlist.all_forms import AllForms
 
 def build_deck(params=None):
 
@@ -126,9 +129,7 @@ def build_deck(params=None):
         print(f"Model JSON does not exist: {args.model}")
         exit(1)
 
-    with open(args.dictionary) as wordlist_data:
-        cache_words = not args.low_mem
-        dictionary = Wordlist(wordlist_data, cache_words=cache_words)
+    dictionary = Wordlist.from_file(args.dictionary, cache_words=not args.low_mem)
 
     if args.allforms:
         allforms = AllForms.from_file(args.allforms)
