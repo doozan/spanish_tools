@@ -22,6 +22,7 @@ class FrequencyList():
        ("creer", "crear"),
        ("salir", "salgar"),
        ("salir", "salar"),
+       ('soler', 'solar'),
        ("prender", "prendar"),
     ]
 
@@ -846,7 +847,15 @@ class FrequencyList():
         ### tamales get_best_lemma ['tamal', 'tamale'] no best, defaulting to first tamal
 
         if best is None and len(lemmas):
-            print("###", word, pos, "get_best_lemma", lemmas, "no best, defaulting to first", lemmas[0])
-            return lemmas[0]
+
+            usage = [(self.sentences.get_usage_count(l.word, pos), l.word) for l in possible_lemmas]
+            ranked = sorted(usage, key=lambda x: (x[0]*-1, x[1]))
+            if word == self.DEBUG_WORD:
+                print("###", word, pos, "get_best_lemma", lemmas, "no best, using sentences frequency", ranked)
+
+            if ranked[0][0] == ranked[1][0]:
+                print("###", word, pos, "get_best_lemma", lemmas, "no best, no sentences frequency", ranked)
+
+            return ranked[0][1]
 
         return best
