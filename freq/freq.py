@@ -16,16 +16,6 @@ from ..sentences import SpanishSentences
 
 class FrequencyList():
 
-    # Some verbs can have the same forms, hard code a list of
-    # preferred verbs, lesser verb
-    _verb_fixes = [
-       ("creer", "crear"),
-       ("salir", "salgar"),
-       ("salir", "salar"),
-       ('soler', 'solar'),
-       ("prender", "prendar"),
-    ]
-
     def __init__(self, wordlist, allforms, sentences, ignore_data, probs, debug_word=None):
         self.wordlist = wordlist
         self.allforms = allforms
@@ -186,29 +176,34 @@ class FrequencyList():
 
             lines[word] = (pos, count, lemma)
 
-        # Run through the lines again and use the earlier counts to
-        # pick best lemmas from words with multiple lemmas
+
+        # count all forms of all lemmas so far, used to pick
+        # the most popular lemmas from words with multiple lemmas
+        lemma_freq = self.get_lemma_freq(lines)
+
         print(f"resolving {len(multi_lemmas)} multi lemmas")
         for word, preferred_lemmas in multi_lemmas:
             item = lines[word]
             pos,count,_ = item
 
-            lemma = self.get_most_frequent_lemma(lines, word, pos, preferred_lemmas)
+            lemma = self.get_most_frequent_lemma(lemma_freq, word, pos, preferred_lemmas)
 
             lines[word] = (pos, count, lemma)
 
             if word == self.DEBUG_WORD:
                 print("###", word, "resolving lemmas", item, "to", lemma)
 
+        lemma_freq = self.get_lemma_freq(lines)
+
         print(f"resolving {len(maybe_plurals)} maybe plurals")
         for word, preferred_lemmas in maybe_plurals:
-            entry = self.resolve_plurals(lines, word, preferred_lemmas)
+            entry = self.resolve_plurals(lines, lemma_freq, word, preferred_lemmas)
             lines[word] = entry
 
         return lines
 
 
-    def resolve_plurals(self, lines, word, preferred_lemmas):
+    def resolve_plurals(self, lines, lemma_freq, word, preferred_lemmas):
 
         # process plurals after all other lemmas have been processed
         # if a plural has non-verb lemmas, take the non-verb lemma with the greatest usage
@@ -247,7 +242,7 @@ class FrequencyList():
             print(word, "popular plural, not following")
 
         pos = self.get_best_pos(word, preferred_lemmas)
-        lemma = self.get_most_frequent_lemma(lines, word, pos, preferred_lemmas)
+        lemma = self.get_most_frequent_lemma(lemma_freq, word, pos, preferred_lemmas)
 
         if not lemma:
             for l in preferred_lemmas:
@@ -459,9 +454,6 @@ class FrequencyList():
             print("filter_secondary", form, len(lemmas),  len(filtered_lemmas))
         lemmas = filtered_lemmas if filtered_lemmas else lemmas
 
-        if not filter_pos or filter_pos == "v":
-            lemmas = self.filter_rare_verbs(lemmas)
-
         return lemmas
 
     def get_claimed_lemmas(self, form, pos):
@@ -575,16 +567,6 @@ class FrequencyList():
             res.append(l)
         return res
 
-
-    def filter_rare_verbs(self, lemmas):
-
-        seen = {l.word for l in lemmas if l.pos == "v"}
-
-        for preferred, nonpreferred in self._verb_fixes:
-            if preferred in seen and nonpreferred in seen:
-                lemmas = [ l for l in lemmas if l.pos != "v" or l.word != nonpreferred ]
-
-        return lemmas
 
     def get_all_pos(self, lemmas):
         return sorted(set(l.pos for l in lemmas))
@@ -904,7 +886,7 @@ class FrequencyList():
     def filter_rare_lemmas(self, lemmas):
         return [lemma for lemma in lemmas if not self.is_rare_lemma(lemma)]
 
-    def get_most_frequent_lemma(self, entries, word, pos, possible_lemmas):
+    def get_most_frequent_lemma(self, lemma_freq, word, pos, possible_lemmas):
 
         lemmas = []
         for lemma in possible_lemmas:
@@ -929,7 +911,7 @@ class FrequencyList():
         # Pick the more common lemma
         # NOTE: this only looks at the count for the raw lemma, not the count of the lemma plus all of its forms
         for lemma in lemmas:
-            _,count,_ = entries.get(lemma, [None, -1, None])
+            count = lemma_freq.get((lemma, pos), {}).get("count",-1)
             if count > best_count:
                 best = lemma
                 best_count = count
