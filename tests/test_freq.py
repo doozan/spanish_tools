@@ -1225,3 +1225,49 @@ pos: particle
 
 #    assert freq.get_resolved_lemmas(w1, "facto") == [w2]
     assert freq.get_preferred_lemmas("facto") == [w2]
+
+
+
+def test_llantas(sentences):
+
+    # llantas should resolve to llanta and not follow the obsolete
+    # llanta to planta
+
+    wordlist_data = """\
+_____
+llanta
+pos: n
+  meta: {{es-noun|f}}
+  g: f
+  gloss: tyre rim, wheelrim
+pos: n
+  meta: {{es-noun|f}}
+  g: f
+  gloss: obsolete form of "planta"
+_____
+llantas
+pos: n
+  meta: {{head|es|noun form|g=f-p}}
+  g: f-p
+  gloss: plural of "llanta"
+_____
+planta
+pos: n
+  meta: {{es-noun|f}}
+  g: f
+form lla
+  gloss: plant (organism of the kingdom Plantae)
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="llantas")
+
+    w1 = next(wordlist.get_words("llantas", "n"))
+    w2 = next(wordlist.get_words("llanta", "n"))
+
+    assert freq.word_is_lemma(w1) == False
+    assert freq.word_is_lemma(w2) == True
+
+#    assert freq.get_preferred_lemmas("llanta") == [w2]
+    assert freq.get_preferred_lemmas("llantas") == [w2]

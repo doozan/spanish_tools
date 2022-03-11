@@ -429,6 +429,12 @@ class FrequencyList():
         lemmas = []
 
         unresolved = self.get_unresolved_items(form, filter_pos)
+
+        # Remove rare form of before resolving lemmas
+        filtered = [x for x in unresolved if not self.is_rare_lemma(x[0])]
+        unresolved = filtered if filtered else unresolved
+
+
         if not unresolved and self.allforms.get_lemmas(form, filter_pos):
             print("No matching lemmas", form, filter_pos, self.allforms.get_lemmas(form, filter_pos))
         if form == self.DEBUG_WORD:
@@ -467,7 +473,6 @@ class FrequencyList():
         items = []
 
         for word in self.wordlist.get_words(form, pos):
-            # skip lemmas, they'll be handled later when read from allforms?
             if self.word_is_lemma(word):
                 if word not in seen:
                     items.append((word, None))
