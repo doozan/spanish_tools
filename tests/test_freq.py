@@ -774,6 +774,89 @@ pos: n
   etymology: From VL "rattus" (“rat”), of gem origin. It is not known how the noun made the jump to a feminine noun.
   gloss: rat (a medium-sized rodent belonging to the genus Rattus)
 _____
+ratas
+pos: n
+  meta: {{head|es|noun form|g=f-p}}
+  g: f-p
+  gloss: plural of "rata"
+_____
+rato
+pos: n
+  meta: {{es-noun|m}}
+  g: m
+  etymology: From Latin "raptus".
+  gloss: a while, bit (a short period of time)
+  gloss: time
+pos: n
+  meta: {{es-noun|m|f=rata}}
+  g: m
+  etymology: From rata, this from Proto-Germanic "*rattaz".
+  gloss: male rat
+    q: archaic
+_____
+ratos
+pos: n
+  meta: {{head|es|noun form|g=m-p}}
+  g: m-p
+  gloss: plural of "rato"
+"""
+
+    wordlist = Wordlist(data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+
+    print("\n".join(allforms.all_csv))
+    assert "\n".join(allforms.all_csv) == """\
+rata,n,rata,rato
+ratas,n,rata,rato
+rato,n,rato
+ratos,n,rato\
+"""
+
+    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="ratos")
+
+    rata = next(wordlist.get_words("rata", "n"))
+    rato1 = list(wordlist.get_words("rato", "n"))[0]
+    rato2 = list(wordlist.get_words("rato", "n"))[1]
+
+    assert freq.word_is_lemma(rata) == True
+    assert freq.word_is_lemma(rato1) == True
+    # Archaic words aren't lemmas
+    assert freq.word_is_lemma(rato2) == False
+
+    assert freq.get_preferred_lemmas("ratas") == [rata]
+
+    flist_data = """\
+rata 10
+ratas 15
+rato 20
+ratos 20
+"""
+
+    res = list(freq.process(flist_data.splitlines()))
+    print("\n".join(res))
+
+    assert "\n".join(res) == """\
+count,spanish,pos,flags,usage
+40,rato,n,,20:rato|20:ratos
+25,rata,n,,15:ratas|10:rata\
+"""
+
+
+
+def test_rare_lemma_compact_wordlist(sentences):
+
+    # rare lemmas should be ignored
+    # ratas -> rata not rato
+
+    data="""\
+_____
+rata
+pos: n
+  meta: {{es-noun|f|m=rato}}
+  g: f
+  etymology: From VL "rattus" (“rat”), of gem origin. It is not known how the noun made the jump to a feminine noun.
+  gloss: rat (a medium-sized rodent belonging to the genus Rattus)
+_____
 rato
 pos: n
   meta: {{es-noun|m}}
@@ -802,6 +885,17 @@ ratos,n,rato\
 
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="ratas")
 
+    rata = next(wordlist.get_words("rata", "n"))
+    rato1 = list(wordlist.get_words("rato", "n"))[0]
+    rato2 = list(wordlist.get_words("rato", "n"))[1]
+
+    assert freq.word_is_lemma(rata) == True
+    assert freq.word_is_lemma(rato1) == True
+    # Archaic words aren't lemmas
+    assert freq.word_is_lemma(rato2) == False
+
+    assert freq.get_preferred_lemmas("ratas") == [rata]
+
     flist_data = """\
 rata 10
 ratas 15
@@ -809,12 +903,13 @@ rato 20
 ratos 20
 """
 
-    print("\n".join(freq.process(flist_data.splitlines())))
+    res = list(freq.process(flist_data.splitlines()))
+    print("\n".join(res))
 
-    assert "\n".join(freq.process(flist_data.splitlines())) == """\
+    assert "\n".join(res) == """\
 count,spanish,pos,flags,usage
-25,rata,n,,15:ratas|10:rata
-40,rato,n,,20:rato|20:ratos\
+40,rato,n,,20:rato|20:ratos
+25,rata,n,,15:ratas|10:rata\
 """
 
 
@@ -851,9 +946,9 @@ pos: pron
     w2 = next(wordlist.get_words("esto", "pron"))
     w3 = next(wordlist.get_words("éste", "pron"))
 
-    assert freq.get_resolved_lemma_objs(w3) == [w3]
-    assert freq.get_resolved_lemma_objs(w2) == [w3]
-    assert freq.get_resolved_lemma_objs(w1) == [w3]
+    assert freq.get_resolved_lemmas(w3) == [w3]
+    assert freq.get_resolved_lemmas(w2) == [w3]
+    assert freq.get_resolved_lemmas(w1) == [w3]
 
     assert freq.get_resolved_poslemmas("ésto", "pron") == ["pron|éste"]
     assert freq.get_resolved_poslemmas("ésto", "pron") == ["pron|éste"]
@@ -898,9 +993,9 @@ pos: n
     w1 = next(wordlist.get_words("ros", "n"))
     w2 = next(wordlist.get_words("roses", "n"))
 
-    for lemma in freq.get_resolved_lemma_objs(w2):
+    for lemma in freq.get_resolved_lemmas(w2):
         print(lemma.word, lemma.pos)
-    assert freq.get_resolved_lemma_objs(w2) == [w1]
+    assert freq.get_resolved_lemmas(w2) == [w1]
 
     assert freq.get_preferred_lemmas("roses") == [w1]
 
@@ -960,9 +1055,9 @@ pos: pron
 
     assert freq.word_is_lemma(w3[0]) == True
 
-#    for lemma in freq.get_resolved_lemma_objs(w2):
+#    for lemma in freq.get_resolved_lemmas(w2):
 #        print(lemma.word, lemma.pos)
-#    assert freq.get_resolved_lemma_objs(w2) == [w1]
+#    assert freq.get_resolved_lemmas(w2) == [w1]
 
     res = freq.get_preferred_lemmas("nos")
     for lemma in res:
@@ -1012,7 +1107,7 @@ pos: n
     assert freq.word_is_lemma(w2) == True
     assert freq.word_is_lemma(w3) == False
 
-    assert freq.get_resolved_lemma_objs(w1) == [w2]
+    assert freq.get_resolved_lemmas(w1) == [w2]
     assert freq.get_preferred_lemmas("paises") == [w2]
 
 def test_resolution3(sentences):
@@ -1083,9 +1178,50 @@ pos: v
     possible_lemmas = freq.get_possible_lemmas("estan", None, '')
     assert possible_lemmas == [w3]
 
-    assert freq.get_resolved_lemma_objs(w3) == [w3]
-    assert freq.get_resolved_lemma_objs(w2) == [w3]
-    assert freq.get_resolved_lemma_objs(w1) == [w3]
+    assert freq.get_resolved_lemmas(w3) == [w3]
+    assert freq.get_resolved_lemmas(w2) == [w3]
+    assert freq.get_resolved_lemmas(w1) == [w3]
 
     assert freq.get_resolved_poslemmas("estan", "v") == ["v|estar"]
     assert freq.get_resolved_poslemmas("están", "v") == ["v|estar"]
+
+
+
+def test_facto(sentences):
+
+    # facto should resolve to "de facto" even though it changes from particle to adverb
+
+    wordlist_data = """\
+_____
+de facto
+pos: adv
+  meta: {{es-adv}}
+  gloss: truly
+  gloss: indeed
+  gloss: in fact
+_____
+facto
+pos: n
+  meta: {{head|es|noun}}
+  etymology: Borrowed from Latin "factum". Compare the inherited doublet hecho.
+  gloss: fact (something which is real)
+    q: archaic
+pos: particle
+  meta: {{head|es|particle}}
+  etymology: Borrowed from Latin "factum". Compare the inherited doublet hecho.
+  gloss: only used in "de facto"
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="facto")
+
+
+    w1 = next(wordlist.get_words("facto", "particle"))
+    w2 = next(wordlist.get_words("de facto", "adv"))
+
+    assert freq.word_is_lemma(w1) == False
+    assert freq.word_is_lemma(w2) == True
+
+#    assert freq.get_resolved_lemmas(w1, "facto") == [w2]
+    assert freq.get_preferred_lemmas("facto") == [w2]
