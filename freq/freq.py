@@ -330,7 +330,7 @@ class FrequencyList():
 
         return any(l.pos != "v" and l.word != form for l in lemmas)
 
-    def word_is_lemma(self, w):
+    def is_lemma(self, w):
         """
         This is a very strict definition of a lemma, the first word declared on a page:
            + " form" not in meta
@@ -381,7 +381,7 @@ class FrequencyList():
 
         lemmas = []
 
-        if self.word_is_lemma(word):
+        if self.is_lemma(word):
             #print("****" , word.word, "is lemma")
             return [word]
 
@@ -398,7 +398,7 @@ class FrequencyList():
  #               print("******** skipping undeclared feminine")
 #                continue
 
-            if self.word_is_lemma(w):
+            if self.is_lemma(w):
                 # Ignore lemmas that are listed below forms
                 if primary_lemma:
                     lemmas.append(w)
@@ -452,13 +452,13 @@ class FrequencyList():
             lemmas = self.filter_lemmas(lemmas, filter_word, filter_pos)
 
         filtered_lemmas = self.filter_rare_lemmas(lemmas)
-        if len(lemmas) != len(filtered_lemmas):
-            print("filter_rare", form, len(lemmas), len(filtered_lemmas))
+        if form == self.DEBUG_WORD and len(lemmas) != len(filtered_lemmas):
+            print("filter_rare", form, len(lemmas), [(l.word, l.pos) for l in lemmas], len(filtered_lemmas), [(l.word, l.pos) for l in filtered_lemmas])
         lemmas = filtered_lemmas if filtered_lemmas else lemmas
 
         filtered_lemmas = self.filter_secondary_lemmas(lemmas)
-        if len(lemmas) != len(filtered_lemmas):
-            print("filter_rare", form, len(lemmas), len(filtered_lemmas))
+        if form == self.DEBUG_WORD and len(lemmas) != len(filtered_lemmas):
+            print("filter_secondary", form, len(lemmas),  len(filtered_lemmas))
         lemmas = filtered_lemmas if filtered_lemmas else lemmas
 
         if not filter_pos or filter_pos == "v":
@@ -473,7 +473,7 @@ class FrequencyList():
         items = []
 
         for word in self.wordlist.get_words(form, pos):
-            if self.word_is_lemma(word):
+            if self.is_lemma(word):
                 if word not in seen:
                     items.append((word, None))
                     seen.add(word)
@@ -487,6 +487,14 @@ class FrequencyList():
 #                    else:
 #                        print("dup", form, pos, lemma_obj.word)
         return items
+
+    def filter_verified_claims(self, form, items):
+        """ items is a list of (lemma_obj, [formtypes])
+        Returns a list in the same format of the items whose claims
+        are validated by a similar declaration in the lemma """
+
+        # TODO: allow formtypes that can't be verified "alternative spelling of", etc
+        return [x for x in items if self.is_lemma(x[0]) or x[0].has_form(form)]
 
     def get_unresolved_items(self, form, pos):
         items = []
@@ -506,6 +514,10 @@ class FrequencyList():
         # of generated verbs
 
         items = self.get_claimed_lemmas(form, pos)
+        filtered = self.filter_verified_claims(form, items)
+        if form == self.DEBUG_WORD and filtered != items:
+            print("filtered claims", form, pos, len(items), len(filtered))
+        items = filtered if filtered else items
         seen = { lemma for lemma, formtypes in items }
 
         for lemma in self.get_declaring_lemmas(form, pos):
@@ -524,7 +536,7 @@ class FrequencyList():
             for poslemma in self.allforms.get_lemmas(form, pos):
                 lemma_pos, lemma = poslemma.split("|")
                 all_words = list(self.wordlist.get_words(lemma, lemma_pos))
-                lemmas = [w for w in all_words if self.word_is_lemma(w)]
+                lemmas = [w for w in all_words if self.is_lemma(w)]
                 new_items = lemmas if lemmas else all_words
                 for item in new_items:
                     if item not in seen:
@@ -543,8 +555,8 @@ class FrequencyList():
             lemma_pos, lemma = poslemma.split("|")
 #            print(form, "poslemma", lemma_pos, lemma)
             for word in self.wordlist.get_words(lemma, lemma_pos):
-#                print(word.word, word.pos, self.word_is_lemma(word), word.has_form(form))
-                if self.word_is_lemma(word) and word.has_form(form):
+#                print(word.word, word.pos, self.is_lemma(word), word.has_form(form))
+                if self.is_lemma(word) and word.has_form(form):
                     # TODO: get formtypes?
                     items.append(word)
 
@@ -867,7 +879,7 @@ class FrequencyList():
 
     def is_primary_lemma(self, word_obj):
         for w in self.wordlist.get_words(word_obj.word, word_obj.pos):
-            if not self.word_is_lemma(w):
+            if not self.is_lemma(w):
                 return False
             if w == word_obj:
                 return True

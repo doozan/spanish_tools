@@ -818,10 +818,10 @@ ratos,n,rato\
     rato1 = list(wordlist.get_words("rato", "n"))[0]
     rato2 = list(wordlist.get_words("rato", "n"))[1]
 
-    assert freq.word_is_lemma(rata) == True
-    assert freq.word_is_lemma(rato1) == True
+    assert freq.is_lemma(rata) == True
+    assert freq.is_lemma(rato1) == True
     # Archaic words aren't lemmas
-    assert freq.word_is_lemma(rato2) == False
+    assert freq.is_lemma(rato2) == False
 
     assert freq.get_preferred_lemmas("ratas") == [rata]
 
@@ -889,10 +889,10 @@ ratos,n,rato\
     rato1 = list(wordlist.get_words("rato", "n"))[0]
     rato2 = list(wordlist.get_words("rato", "n"))[1]
 
-    assert freq.word_is_lemma(rata) == True
-    assert freq.word_is_lemma(rato1) == True
+    assert freq.is_lemma(rata) == True
+    assert freq.is_lemma(rato1) == True
     # Archaic words aren't lemmas
-    assert freq.word_is_lemma(rato2) == False
+    assert freq.is_lemma(rato2) == False
 
     assert freq.get_preferred_lemmas("ratas") == [rata]
 
@@ -946,12 +946,9 @@ pos: pron
     w2 = next(wordlist.get_words("esto", "pron"))
     w3 = next(wordlist.get_words("éste", "pron"))
 
-    assert freq.get_resolved_lemmas(w3) == [w3]
-    assert freq.get_resolved_lemmas(w2) == [w3]
-    assert freq.get_resolved_lemmas(w1) == [w3]
-
-    assert freq.get_resolved_poslemmas("ésto", "pron") == ["pron|éste"]
-    assert freq.get_resolved_poslemmas("ésto", "pron") == ["pron|éste"]
+    assert freq.get_resolved_lemmas(w3, None, None) == [w3]
+    assert freq.get_resolved_lemmas(w2, None, None) == [w3]
+    assert freq.get_resolved_lemmas(w1, None, None) == [w3]
 
 
 def test_roses(sentences):
@@ -990,14 +987,20 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="roses")
 
-    w1 = next(wordlist.get_words("ros", "n"))
-    w2 = next(wordlist.get_words("roses", "n"))
+    ro = next(wordlist.get_words("ro", "n"))
+    ros1 = list(wordlist.get_words("ros", "n"))[0]
+    ros2 = list(wordlist.get_words("ros", "n"))[1]
+    roses = next(wordlist.get_words("roses", "n"))
 
-    for lemma in freq.get_resolved_lemmas(w2):
-        print(lemma.word, lemma.pos)
-    assert freq.get_resolved_lemmas(w2) == [w1]
+    claims = freq.get_claimed_lemmas("roses", "n")
+    assert claims == [(ros1, ['pl']), (ros2, ['pl'])]
+    filtered = freq.filter_verified_claims("roses", claims)
+    assert filtered == [ (ros1, ['pl']) ]
 
-    assert freq.get_preferred_lemmas("roses") == [w1]
+    assert freq.get_declaring_lemmas("roses", "n") == [ros1]
+
+    assert freq.get_preferred_lemmas("roses") == [ros1]
+    assert freq.get_resolved_lemmas(roses, None, None) == [ros1]
 
 
 def test_nos(sentences):
@@ -1053,7 +1056,7 @@ pos: pron
     w2 = list(wordlist.get_words("no", "n"))
     w3 = list(wordlist.get_words("nosotros", "pron"))
 
-    assert freq.word_is_lemma(w3[0]) == True
+    assert freq.is_lemma(w3[0]) == True
 
 #    for lemma in freq.get_resolved_lemmas(w2):
 #        print(lemma.word, lemma.pos)
@@ -1068,8 +1071,7 @@ pos: pron
 
 def test_paises(sentences):
 
-    # roses should resolve to ros and not (ros, ro)
-    # even though ro -> ros, ros -> roses (double plural)
+    # paises -> países -> país
 
     wordlist_data = """\
 _____
@@ -1103,89 +1105,46 @@ pos: n
     w2 = next(wordlist.get_words("país", "n"))
     w3 = next(wordlist.get_words("países", "n"))
 
-    assert freq.word_is_lemma(w1) == False
-    assert freq.word_is_lemma(w2) == True
-    assert freq.word_is_lemma(w3) == False
+    assert freq.is_lemma(w1) == False
+    assert freq.is_lemma(w2) == True
+    assert freq.is_lemma(w3) == False
 
-    assert freq.get_resolved_lemmas(w1) == [w2]
     assert freq.get_preferred_lemmas("paises") == [w2]
 
-def test_resolution3(sentences):
+def test_paises2(sentences):
+
+    # paises -> países -> país
+    # even when países is not included in dictionary
 
     wordlist_data = """\
 _____
-estan
-pos: v
+paises
+pos: n
   meta: {{head|es|misspelling}}
-  gloss: misspelling of "están"
+  gloss: misspelling of "países"
 _____
-estar
-pos: v
-  meta: {{es-verb}} {{es-conj}} {{es-conj|estarse|nocomb=1}}
-  usage: See ser.
-  etymology: From Latin "stāre" (“stand”), present active infinitive of stō (“stand”), from Proto-Indo-European "*steh₂-" (compare English "stand"). Cognate with English "state", F
-  gloss: to be (have a temporary or permanent location in space). Compare ser, quedar
+país
+pos: n
+  meta: {{es-noun|m|países}}
+  g: m
+  etymology: Borrowed from French "pays", from Old French "païs", from Malayalam "pagensis", from Latin "pāgus" (“country”). Compare Sicilian "pajisi", Italian "paese".
+  gloss: country (the territory of a nation)
+  gloss: country, land (a set region of land having particular human occupation or agreed limits)
 """
 
-    #wordlist = Wordlist(wordlist_data.splitlines())
-    #allforms = AllForms.from_wordlist(wordlist)
-    wordlist = Wordlist.from_file("/home/jeff/Downloads/spanish/spanish_data/es-en.data")
-    allforms = AllForms.from_file("/home/jeff/Downloads/spanish/spanish_data/es_allforms.csv")
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="ésto")
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="nos")
 
-    old = freq.get_preferred_poslemmas("diamantes")
-    new = freq.get_preferred_lemmas("diamantes")
-    new_poslemmas = []
-    for lemma in new:
-        poslemma = f"{lemma.pos}|{lemma.word}"
-        if poslemma not in new_poslemmas:
-            new_poslemmas.append(poslemma)
+    assert allforms.get_lemmas("paises") == ['n|países']
 
-    all_poslemmas = sorted(set(freq.get_resolved_poslemmas("diamantes")))
-    print("old, unfiltered", all_poslemmas)
-    assert old == new_poslemmas
+    w1 = next(wordlist.get_words("paises", "n"))
+    w2 = next(wordlist.get_words("país", "n"))
 
-    word = "efemérides"
-    pos = "n"
-    possible_lemmas = freq.get_possible_lemmas(word, None, pos)
-    preferred_lemmas = freq.get_preferred_lemmas_new(word, pos, possible_lemmas)
-    if not preferred_lemmas:
-        preferred_lemmas = possible_lemmas
-    best_lemmas = freq.get_best_lemma_obj(entries, word, pos, preferred_lemmas)
-    if not best_lemmas:
-        best_lemmas = preferred_lemmas
+    assert freq.is_lemma(w1) == False
+    assert freq.is_lemma(w2) == True
 
-
-    lemmas = []
-    for l in best_lemmas:
-        if l.pos != pos:
-            continue
-        if l.word not in lemmas:
-            lemmas.append(l.word)
-
-    old_lemmas = freq.get_preferred_lemmas(word, pos)
-    assert old_lemmas == lemmas
-
-    return
-
-
-
-
-    w1 = next(wordlist.get_words("estan", "v"))
-    #w2 = next(wordlist.get_words("están", "v"))
-    w3 = next(wordlist.get_words("estar", "v"))
-
-    possible_lemmas = freq.get_possible_lemmas("estan", None, '')
-    assert possible_lemmas == [w3]
-
-    assert freq.get_resolved_lemmas(w3) == [w3]
-    assert freq.get_resolved_lemmas(w2) == [w3]
-    assert freq.get_resolved_lemmas(w1) == [w3]
-
-    assert freq.get_resolved_poslemmas("estan", "v") == ["v|estar"]
-    assert freq.get_resolved_poslemmas("están", "v") == ["v|estar"]
-
-
+    assert freq.get_preferred_lemmas("paises") == [w2]
 
 def test_facto(sentences):
 
@@ -1220,8 +1179,8 @@ pos: particle
     w1 = next(wordlist.get_words("facto", "particle"))
     w2 = next(wordlist.get_words("de facto", "adv"))
 
-    assert freq.word_is_lemma(w1) == False
-    assert freq.word_is_lemma(w2) == True
+    assert freq.is_lemma(w1) == False
+    assert freq.is_lemma(w2) == True
 
 #    assert freq.get_resolved_lemmas(w1, "facto") == [w2]
     assert freq.get_preferred_lemmas("facto") == [w2]
@@ -1266,8 +1225,8 @@ form lla
     w1 = next(wordlist.get_words("llantas", "n"))
     w2 = next(wordlist.get_words("llanta", "n"))
 
-    assert freq.word_is_lemma(w1) == False
-    assert freq.word_is_lemma(w2) == True
+    assert freq.is_lemma(w1) == False
+    assert freq.is_lemma(w2) == True
 
 #    assert freq.get_preferred_lemmas("llanta") == [w2]
     assert freq.get_preferred_lemmas("llantas") == [w2]
