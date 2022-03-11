@@ -233,7 +233,7 @@ class FrequencyList():
             if lemma_count and word == self.DEBUG_WORD:
                 print(word, "found feminine singular", lemma_pos, lemma_count, count)
 
-            if lemma_count > count:
+            if lemma_count >= count:
                 return (lemma_pos, count, lemma_lemma)
 
         # If any possible singular lemmas has more uses than the plural, use it
@@ -308,14 +308,12 @@ class FrequencyList():
         # If the singular is more popular than the plural, use it
         # sometimes the form is a lemma (gracias, iterj) so the count
         # will be equal
-        if count > best_count:
-            return
+        if best_count > count:
+            if word == self.DEBUG_WORD:
+                print(word, "following singular", best)
 
-        if word == self.DEBUG_WORD:
-            print(word, "following singular", best)
-
-        pos, _, lemma = best
-        return (pos, count, lemma)
+            pos, _, lemma = best
+            return (pos, count, lemma)
 
 
     def maybe_plural(self, form, lemmas):

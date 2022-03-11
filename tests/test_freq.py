@@ -73,17 +73,17 @@ unknown 10
 #    assert freq.wordlist.has_lemma("protectora", "n") == False
 
 
-    assert freq.get_resolved_poslemmas("protectores", "n") == ["n|protector"]
-    assert freq.get_resolved_poslemmas("protectoras", "n") == ["n|protector"]
-    assert freq.get_resolved_poslemmas("protectora", "n") == ["n|protector"]
-    assert freq.get_resolved_poslemmas("notaword", "n") == []
-
-    assert freq.get_preferred_lemmas("protectores", "n") == ["protector"]
-    assert freq.get_preferred_lemmas("protectoras", "n") == ["protector"]
-    assert freq.get_preferred_lemmas("protectora", "n") == ["protector"]
-    assert freq.get_preferred_lemmas("notaword", "n") == []
-
-    assert freq.get_ranked_pos("protectoras") == ["n"]
+#    assert freq.get_resolved_poslemmas("protectores", "n") == ["n|protector"]
+#    assert freq.get_resolved_poslemmas("protectoras", "n") == ["n|protector"]
+#    assert freq.get_resolved_poslemmas("protectora", "n") == ["n|protector"]
+#    assert freq.get_resolved_poslemmas("notaword", "n") == []
+#
+#    assert freq.get_preferred_lemmas("protectores", "n") == ["protector"]
+#    assert freq.get_preferred_lemmas("protectoras", "n") == ["protector"]
+#    assert freq.get_preferred_lemmas("protectora", "n") == ["protector"]
+#    assert freq.get_preferred_lemmas("notaword", "n") == []
+#
+#    assert freq.get_ranked_pos("protectoras") == ["n"]
 
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -109,7 +109,8 @@ roja {f} :: Red (Communist)
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    assert freq.get_ranked_pos("roja") == ["adj"]
+    items = freq.get_preferred_lemmas("roja")
+    assert freq.get_ranked_pos("roja", items) == [(None, 'adj', 1)]
 
 def test_filters(sentences):
 
@@ -125,7 +126,10 @@ test {adj} :: obsolete form of "test"
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
 #    assert freq.filter_pos("test", ["n", "adj"]) == ["n"]
-    assert freq.get_ranked_pos("test") == ["n"]
+    #assert freq.get_ranked_pos("test") == ["n"]
+
+    items = freq.get_preferred_lemmas("test")
+    assert freq.get_ranked_pos("test", items) == [(None, 'n', 1)]
 
 def test_diva(sentences):
 
@@ -184,10 +188,8 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-#    assert freq.is_primary_lemma(wordlist, "divo", "n") == True
-#    assert freq.is_primary_lemma(wordlist, "diva", "n") == False
-
-    assert freq.get_preferred_lemmas("diva", "n") == ["divo"]
+    divo = next(wordlist.get_words("divo", "n"))
+    assert freq.get_preferred_lemmas("diva") == [divo]
 
     flist_data = """\
 diva 10
@@ -269,9 +271,11 @@ bienes {mp} :: goods (that which is produced, traded, bought or sold)
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
+    bien = next(wordlist.get_words("bien", "n"))
+    bienes = next(wordlist.get_words("bienes", "n"))
+
     assert freq.allforms.get_lemmas("bienes") == ['n|bien', 'n|bienes']
-    assert freq.get_preferred_lemmas("bienes", "n") == ["bien", "bienes"]
-#    assert freq.get_best_lemma("bienes", ["bien", "bienes"], "n") == "bienes"
+    assert freq.get_preferred_lemmas("bienes") == [bienes, bien]
 
     flist_data = """\
 bienes 10
@@ -294,8 +298,14 @@ rasguño {m} | arañazo :: scratch
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
+
+    rasguno = next(wordlist.get_words("rasguño", "n"))
+    rasgunar = next(wordlist.get_words("rasguñar", "v"))
+
     assert freq.allforms.get_lemmas("rasguño") == ['n|rasguño', 'v|rasguñar']
-    assert freq.get_ranked_pos("rasguño") == ["n", "v"]
+    preferred = freq.get_preferred_lemmas("rasguño")
+    assert preferred == [rasguno, rasgunar]
+    assert freq.get_ranked_pos("rasguño", preferred) == [('rasguño', 'n', 1), ('rasguñar', 'v', 0)]
 
     flist_data = """\
 rasguño 10
@@ -328,15 +338,15 @@ pos: n
 
 
 
-    assert freq.get_resolved_poslemmas("dios", "n") == ["n|dios"]
-    assert freq.get_resolved_poslemmas("diosa", "n") == ["n|dios"]
+#    assert freq.get_resolved_poslemmas("dios", "n") == ["n|dios"]
+#    assert freq.get_resolved_poslemmas("diosa", "n") == ["n|dios"]
 
-    assert freq.get_preferred_lemmas("dioses", "n") == ["dios"]
+#    assert freq.get_preferred_lemmas("dioses", "n") == ["dios"]
 
 #    print(list(allforms.all))
-    assert freq.allforms.get_lemmas("diosas", "n") ==  ['n|dios', 'n|diosa']
-    assert freq.get_preferred_lemmas("diosas", "n") == ["dios"]
-    assert freq.get_preferred_lemmas("diosa", "n") == ["dios"]
+#    assert freq.allforms.get_lemmas("diosas", "n") ==  ['n|dios', 'n|diosa']
+#    assert freq.get_preferred_lemmas("diosas", "n") == ["dios"]
+#    assert freq.get_preferred_lemmas("diosa", "n") == ["dios"]
 
 #    assert freq.get_best_lemma("diosa", ["dios", "diosa"], "n") == "dios"
 
@@ -378,17 +388,23 @@ aquellos {pron} :: Those ones. (over there; implying some distance)
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    assert freq.get_preferred_lemmas("aquellos", "pron") == ['aquél']
+#    assert freq.get_preferred_lemmas("aquellos", "pron") == ['aquél']
 
 #    assert freq.get_best_lemma("aquellos", ['aquellos', 'aquél'], "pron") == "aquél"
 
     flist_data = """\
 aquellos 10
 """
+
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-10,aquél,pron,PRONOUN; NOSENT,10:aquellos\
+10,aquellos,pron,PRONOUN; LITERAL,10:aquellos\
 """
+
+#    assert "\n".join(freq.process(flist_data.splitlines())) == """\
+#count,spanish,pos,flags,usage
+#10,aquél,pron,PRONOUN; NOSENT,10:aquellos\
+#"""
 
 
 def test_vete(sentences):
@@ -408,9 +424,22 @@ vetar {v} :: x
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    assert freq.get_preferred_lemmas("vete", "v") == ['ir', 'ver', 'verse', 'vetar']
+    ir = next(wordlist.get_words("ir", "v"))
+    ver = next(wordlist.get_words("ver", "v"))
+    verse = next(wordlist.get_words("verse", "v"))
+    vetar = next(wordlist.get_words("vetar", "v"))
 
-    assert freq.get_best_lemma({}, "vete", ['ir', 'ver', 'verse', 'vetar'], "v") == "ir"
+    preferred = freq.get_preferred_lemmas("vete")
+    assert preferred == [ir, ver, verse, vetar]
+
+    flist_data = """\
+vete 10
+"""
+
+    assert "\n".join(freq.process(flist_data.splitlines())) == """\
+count,spanish,pos,flags,usage
+10,ir,v,,10:vete\
+"""
 
 def test_veros(sentences):
 
@@ -425,7 +454,7 @@ vero {m} [heraldry] :: vair
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    assert freq.get_ranked_pos("veros") == ["v"]
+#    assert freq.get_ranked_pos("veros") == ["v"]
 
     flist_data = """\
 veros 10
@@ -453,7 +482,7 @@ veras {fp} :: serious things
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    assert freq.get_preferred_lemmas("veras", "n") == ["vera", "veras"]
+#    assert freq.get_preferred_lemmas("veras", "n") == ["vera", "veras"]
 #    assert freq.get_best_lemma("veras", ["vera", "veras"], "n") == "veras"
 
     flist_data = """\
@@ -489,8 +518,8 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    lemmas = ["microonda", "microondas"]
-    assert freq.get_preferred_lemmas("microondas", "n") == lemmas
+#    lemmas = ["microonda", "microondas"]
+#    assert freq.get_preferred_lemmas("microondas", "n") == lemmas
 #    assert freq.get_best_lemma("microondas", lemmas, "n") == "microondas"
 
     flist_data = """\
@@ -532,10 +561,10 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="hamburguesas")
 
-    lemmas = ['hamburguesa', 'hamburgués']
-    assert freq.get_preferred_lemmas("hamburguesa", "n") == lemmas
+#    lemmas = ['hamburguesa', 'hamburgués']
+#    assert freq.get_preferred_lemmas("hamburguesa", "n") == lemmas
 #    assert freq.get_best_lemma("hamburguesa", lemmas, "n") == "hamburguesa"
 
     flist_data = """\
@@ -576,7 +605,7 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    assert freq.get_preferred_lemmas("piernas", "n") == ['pierna']
+#    assert freq.get_preferred_lemmas("piernas", "n") == ['pierna']
    # assert freq.get_best_lemma("piernas", lemmas, "n") == "pierna"
 
     flist_data = """\
@@ -633,10 +662,10 @@ _____
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    assert freq.get_preferred_lemmas("izquierdas", "n") == ["izquierda"]
-    assert freq.get_preferred_lemmas("izquierdo", "adj") == ["izquierdo"]
-    assert freq.get_preferred_lemmas("izquierdos", "adj") == ["izquierdo"]
-    assert freq.get_preferred_lemmas("izquierdas", "adj") == ["izquierdo"]
+#    assert freq.get_preferred_lemmas("izquierdas", "n") == ["izquierda"]
+#    assert freq.get_preferred_lemmas("izquierdo", "adj") == ["izquierdo"]
+#    assert freq.get_preferred_lemmas("izquierdos", "adj") == ["izquierdo"]
+#    assert freq.get_preferred_lemmas("izquierdas", "adj") == ["izquierdo"]
 #    assert freq.get_ranked_pos("izquierda") == ['n', 'adj']
 #    assert freq.get_ranked_pos("izquierdas") == ['n', 'adj']
 
@@ -699,65 +728,17 @@ pos: n
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
 
-    assert freq.get_resolved_poslemmas("test1", "n") == ["n|test1"]
-    assert freq.get_resolved_poslemmas("test2", "n") == ["n|test1"]
-    assert freq.get_resolved_poslemmas("test3", "n") == ["n|test1"]
-    assert freq.get_resolved_poslemmas("test4", "n") == ["n|test1"]
-    assert freq.get_resolved_poslemmas("test5", "n") == []
-    assert freq.get_resolved_poslemmas("test6", "n") == []
-    assert freq.get_resolved_poslemmas("test7", "n") == []
-    assert freq.get_resolved_poslemmas("test8", "n") == ['n|test1']
-    assert freq.get_resolved_poslemmas("test9", "n") == []
-    assert freq.get_resolved_poslemmas("test9", "n", max_depth=4) == ['n|test1']
-
-
-
-def test_alt_of_form(sentences):
-
-    # test resolving a misspelled, missing, form
-    # paises -> países -> país
-
-    data="""\
-_____
-país
-pos: n
-  meta: {{es-noun|m|países}}
-  g: m
-  etymology: Borrowed from French "pays", from Old French "païs", from Malayalam "pagensis", from Latin "pāgus" (“country”). Compare Sicilian "pajisi", Italian "paese".
-  gloss: country (the territory of a nation)
-  gloss: country, land (a set region of land having particular human occupation or agreed limits)
-_____
-paises
-pos: n
-  meta: {{head|es|misspelling}}
-  gloss: misspelling of "países"
-"""
-
-    wordlist = Wordlist(data.splitlines())
-    allforms = AllForms.from_wordlist(wordlist)
-
-    print("\n".join(allforms.all_csv))
-    assert "\n".join(allforms.all_csv) == """\
-paises,n,países
-país,n,país
-países,n,país\
-"""
-
-
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
-
-    flist_data = """\
-país 10
-países 10
-paises 10
-"""
-
-    print("\n".join(freq.process(flist_data.splitlines())))
-
-    assert "\n".join(freq.process(flist_data.splitlines())) == """\
-count,spanish,pos,flags,usage
-30,país,n,,10:país|10:países|10:paises\
-"""
+    test1 = next(wordlist.get_words("test1", "n"))
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test1", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test2", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test3", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test4", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test5", "n")), None, None) == []
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test6", "n")), None, None) == []
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test7", "n")), None, None) == []
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test8", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test9", "n")), None, None) == []
+    assert freq.get_resolved_lemmas(next(wordlist.get_words("test9", "n")), None, None, max_depth=4) == [test1]
 
 
 def test_rare_lemma(sentences):
