@@ -380,16 +380,9 @@ class FrequencyList():
 
         primary_lemma = True
         for lemma, lemma_formtypes in word.form_of.items():
-
- #           print("****" , word, formtypes)
-
             w = next(self.wordlist.get_words(lemma, word.pos), None)
             if not w:
                 continue
-
-#            if "f" in formtypes and w.forms and word.word not in w.forms.get("f"):
- #               print("******** skipping undeclared feminine")
-#                continue
 
             if self.is_lemma(w):
                 # Ignore lemmas that are listed below forms
@@ -400,9 +393,7 @@ class FrequencyList():
 
             elif max_depth>0:
                 primary_lemma = False
-                for redirect in self.wordlist.get_words(lemma, word.pos):
-                    lemmas += self.get_resolved_lemmas(redirect, lemma, lemma_formtypes, max_depth-1)
-                    break # Only look at the first word
+                lemmas += self.get_resolved_lemmas(w, lemma, lemma_formtypes, max_depth-1)
 
             else:
                 print(f"Lemma recursion exceeded: {word.word} {word.pos} -> {lemma}", file=sys.stderr)
@@ -503,11 +494,11 @@ class FrequencyList():
         # conjugations of rare verbs, or because the dictionary has been stripped
         # of generated verbs
 
-        items = self.get_claimed_lemmas(form, pos)
-        filtered = self.filter_verified_claims(form, items)
+        claimed_lemmas = self.get_claimed_lemmas(form, pos)
+        filtered = self.filter_verified_claims(form, claimed_lemmas)
         if form == self.DEBUG_WORD and filtered != items:
             print("filtered claims", form, pos, len(items), len(filtered))
-        items = filtered if filtered else items
+        items = filtered if filtered else claimed_lemmas
         seen = { lemma for lemma, formtypes in items }
 
         for lemma in self.get_declaring_lemmas(form, pos):
