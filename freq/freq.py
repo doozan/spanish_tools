@@ -372,10 +372,12 @@ class FrequencyList():
         Returns a list of Word objects, may contain duplicates
         """
 
+        if max_depth<3:
+            print("resolving deep lemma", word.word, word.pos, form, formtypes, max_depth)
+
         lemmas = []
 
         if self.is_lemma(word):
-            #print("****" , word.word, "is lemma")
             return [word]
 
         primary_lemma = True
@@ -413,14 +415,16 @@ class FrequencyList():
         lemmas = []
 
         unresolved = self.get_unresolved_items(form, filter_pos)
+        if not unresolved:
+            unresolved = [(item, None) for item in self.get_all_lemmas(form, filter_pos)]
+
+        if not unresolved and self.allforms.get_lemmas(form, filter_pos):
+            print("No matching lemmas", form, filter_pos, self.allforms.get_lemmas(form, filter_pos))
 
         # Remove rare form of before resolving lemmas
         filtered = [x for x in unresolved if not self.is_rare_lemma(x[0])]
         unresolved = filtered if filtered else unresolved
 
-
-        if not unresolved and self.allforms.get_lemmas(form, filter_pos):
-            print("No matching lemmas", form, filter_pos, self.allforms.get_lemmas(form, filter_pos))
         if form == self.DEBUG_WORD:
             print(form, "unresolved items", [(l.word, l.pos, formtypes) for l, formtypes in unresolved])
         for w, formtypes in unresolved:
@@ -435,11 +439,13 @@ class FrequencyList():
         if filter_word or filter_pos:
             lemmas = self.filter_lemmas(lemmas, filter_word, filter_pos)
 
+        # Remove rare lemmas from resolved lemmas
         filtered_lemmas = self.filter_rare_lemmas(lemmas)
         if form == self.DEBUG_WORD and len(lemmas) != len(filtered_lemmas):
             print("filter_rare", form, len(lemmas), [(l.word, l.pos) for l in lemmas], len(filtered_lemmas), [(l.word, l.pos) for l in filtered_lemmas])
         lemmas = filtered_lemmas if filtered_lemmas else lemmas
 
+        # Remove lemmas that appear after a form definition (ie, non-primary lemmas)
         filtered_lemmas = self.filter_secondary_lemmas(lemmas)
         if form == self.DEBUG_WORD and len(lemmas) != len(filtered_lemmas):
             print("filter_secondary", form, len(lemmas),  len(filtered_lemmas))
@@ -475,14 +481,17 @@ class FrequencyList():
         are validated by a similar declaration in the lemma """
 
         # TODO: allow formtypes that can't be verified "alternative spelling of", etc
+        # [ "form", "alt", "old", "rare", "spell" ]
         return [x for x in items if self.is_lemma(x[0]) or x[0].has_form(form)]
 
     def get_unresolved_items(self, form, pos):
+        """ returns a list of (Word, formtypes) """
+
         items = []
 
 
         # An allforms entry will list lemmas that declare the form as well
-        # as lemmas that the form declares itself to be a form of
+        # as lemmas that the form claims to be a form of
         #
         # To get the list of claimed forms, do a dictionary lookup of the
         # given form/pos and add everything
@@ -506,24 +515,28 @@ class FrequencyList():
                 items.append((lemma, None))
                 seen.add(lemma)
 
+        return items
 
-        # If no lemmas were found to declare this form and the dictionary doesn't
-        # list it as a 'form of' anything, take whatever happens to be in allforms
-        #
-        # This assumes that everything listed by allforms has at least one useful word
-        # Try to filter the lemmas, but if there's nothing left, take all the words
-        if not items:
-            seen = set()
-            for poslemma in self.allforms.get_lemmas(form, pos):
-                lemma_pos, lemma = poslemma.split("|")
-                all_words = list(self.wordlist.get_words(lemma, lemma_pos))
-                lemmas = [w for w in all_words if self.is_lemma(w)]
-                new_items = lemmas if lemmas else all_words
-                for item in new_items:
-                    if item not in seen:
-                        seen.add(item)
-                        if item not in items:
-                            items.append((item, None))
+
+    def get_all_lemmas(self, form, pos):
+        """ Returns at least one Word for each lemma associated with the form in allforms
+        If the lemma has multiple Words, it excludes words that are non-lemmas """
+
+        items = []
+        for poslemma in self.allforms.get_lemmas(form, pos):
+            lemma_pos, lemma = poslemma.split("|")
+
+
+            # instead of get_words, this should call get_unresolved_lemmas for lemma, lemma_pos
+            all_words = list(self.wordlist.get_words(lemma, lemma_pos))
+            if not all_words:
+                all_words = [w[0] for w in self.get_unresolved_items(lemma, lemma_pos)]
+
+            lemmas = [w for w in all_words if self.is_lemma(w)]
+            new_items = lemmas if lemmas else all_words
+            for item in new_items:
+                if item not in items:
+                    items.append(item)
 
         return items
 

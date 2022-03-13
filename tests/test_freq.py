@@ -188,8 +188,19 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
+    res = "\n".join(allforms.all_csv)
+    assert res == """\
+diva,n,diva,divo
+divas,n,diva,divo
+divo,n,divo
+divos,n,divo\
+"""
+
     divo = next(wordlist.get_words("divo", "n"))
+    for lemma in freq.get_preferred_lemmas("diva"):
+        print(lemma.word, lemma.pos)
     assert freq.get_preferred_lemmas("diva") == [divo]
+
 
     flist_data = """\
 diva 10
@@ -1080,6 +1091,12 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="nos")
 
+    res = "\n".join(allforms.all_csv)
+    assert res == """\
+paises,n,países
+país,n,país
+países,n,país\
+"""
     assert allforms.get_lemmas("paises") == ['n|países']
 
     w1 = next(wordlist.get_words("paises", "n"))
@@ -1117,6 +1134,12 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="nos")
 
+    res = "\n".join(allforms.all_csv)
+    assert res == """\
+paises,n,países
+país,n,país
+países,n,país\
+"""
     assert allforms.get_lemmas("paises") == ['n|países']
 
     w1 = next(wordlist.get_words("paises", "n"))
