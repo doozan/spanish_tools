@@ -565,16 +565,6 @@ class FrequencyList():
         """
 
         all_pos = self.get_all_pos(possible_lemmas)
-        freeling_fixes = []
-        # Wiktionary considers tuyo, suyo, cuyo, vuestro, etc to be determiners,
-        # but freeling classifies them as adj or art or pron
-        # TODO: if "determiner" in all_pos and "adj" or "art" in sentence_pos,
-        # treat the adj/art as determiner
-        if not use_lemma and "determiner" in all_pos:
-            for alt in ["art", "adj", "pron"]:
-                if alt not in all_pos:
-                    all_pos.append(alt)
-                    freeling_fixes.append(alt)
 
         usage = []
         if use_lemma:
@@ -588,10 +578,6 @@ class FrequencyList():
 
         usage_count = [ (f, pos, self.sentences.get_usage_count(f, pos)) for f, pos in usage ]
         res = sorted(usage_count, key=lambda k: int(k[2]), reverse=True)
-
-        if freeling_fixes:
-            res = [ (f, pos, count) if pos not in freeling_fixes else (f, "determiner", count) for f, pos, count in res ]
-            # TODO: this may result in an extra item of both "art" and "adj" were added
 
         # If no usage found
         if res[0][2] == 0 and not use_lemma:
@@ -622,14 +608,6 @@ class FrequencyList():
 
         ranked_pos = [pos for form, pos, count in sorted_pos_by_prob]
         best_pos = ranked_pos[0]
-
-        # Sometimes wiktionary and freeling disagree about the POS for a word, in which case
-        # the sentences database will be tagged with freeling's preference and there will
-        # be no usage count for any of the wiktionary POS (example 'esas' - wikipedia says determiner/pronoun,
-        # but freeling tags it as an adjective
-
-        if best_pos not in all_pos and "determiner" in all_pos and "determiner" not in ranked_pos and best_pos in ["adj", "art"]:
-            sorted_pos_by_prob[0][1] = "determiner"
 
         return sorted_pos_by_prob
 
