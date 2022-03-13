@@ -467,12 +467,12 @@ class FrequencyList():
                 continue
 
             for lemma, formtypes in word.form_of.items():
-                for lemma_obj in self.wordlist.get_words(lemma, word.pos):
+                target_pos = None if "onlyin" in formtypes else word.pos
+                for lemma_obj in self.wordlist.get_words(lemma, target_pos):
                     if lemma_obj not in seen:
                         items.append((lemma_obj, formtypes))
                         seen.add(lemma_obj)
-#                    else:
-#                        print("dup", form, pos, lemma_obj.word)
+
         return items
 
     def filter_verified_claims(self, form, items):
