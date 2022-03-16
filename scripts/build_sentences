@@ -12,7 +12,7 @@ import sys
 
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
-from spanish_tools.freq import FrequencyList as Freq
+from spanish_tools.freq import FrequencyList
 
 parser = argparse.ArgumentParser(description="Manage tagged sentences")
 parser.add_argument(
@@ -41,9 +41,12 @@ with open(args.dictionary) as infile:
     wordlist = Wordlist(infile, cache_words=cache_words)
 
 if args.allforms:
-    all_forms = AllForms.from_file(args.allforms)
+    allforms = AllForms.from_file(args.allforms)
 else:
-    all_forms = AllForms.from_wordlist(wordlist)
+    allforms = AllForms.from_wordlist(wordlist)
+
+freq = FrequencyList(wordlist, allforms, None)
+
 
 def tag_to_pos(tag, word):
 
@@ -84,20 +87,20 @@ def tag_to_pos(tag, word):
     # Use our lemmas so they're the same when we lookup against other things we've lemmatized
     # Unless it's a phrase, then use their lemma
     if pos in ("n", "adj", "adv"):
-        lemma = get_lemmas(wordlist, word, pos)
+        lemma = get_lemmas(word, pos)
 
     # fix for freeling not generating lemmas for verbs with a pronoun suffix
     elif pos == "v":
         if not lemma.endswith("r"):
-            lemma = get_lemmas(wordlist, word, pos)
+            lemma = get_lemmas(word, pos)
 
     elif "_" in lemma:
         lemma = word
 
     # Special handling for participles, add adjective and verb lemmas
     if pos == "part":
-        adj_lemma = get_lemmas(wordlist, word, "adj")
-        verb_lemma = get_lemmas(wordlist, word, "v")
+        adj_lemma = get_lemmas(word, "adj")
+        verb_lemma = get_lemmas(word, "v")
         adj_res = f"{word}|{adj_lemma}" if adj_lemma != word else word
         verb_res = f"{word}|{verb_lemma}" if verb_lemma != word else word
 
@@ -138,15 +141,16 @@ def get_interjections(string):
     return re.findall(pattern, string, re.IGNORECASE)
 
 
-def get_lemmas(wordlist, word, pos):
+def get_lemmas(word, pos):
 
-    lemmas = [x.split("|")[1] for x in all_forms.get_lemmas(word, pos)]
-    lemmas = Freq.get_best_lemmas(wordlist, word, lemmas, pos)
+#    lemmas = [x.split("|")[1] for x in allforms.get_lemmas(word, pos)]
+#    lemmas = freq.get_best_lemmas(wordlist, word, lemmas, pos)
 
+    lemmas = sorted(set(w.word for w in freq.get_preferred_lemmas(word, None, pos)))
     if not lemmas:
         return word
 
-    return "|".join(sorted(lemmas))
+    return "|".join(lemmas)
 
 def iter_sentences():
 
