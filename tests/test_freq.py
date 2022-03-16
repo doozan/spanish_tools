@@ -196,7 +196,7 @@ divo,n,divo
 divos,n,divo\
 """
 
-    divo = next(wordlist.get_words("divo", "n"))
+    divo = next(wordlist.get_iwords("divo", "n"))
     for lemma in freq.get_preferred_lemmas("diva"):
         print(lemma.word, lemma.pos)
     assert freq.get_preferred_lemmas("diva") == [divo]
@@ -282,8 +282,8 @@ bienes {mp} :: goods (that which is produced, traded, bought or sold)
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    bien = next(wordlist.get_words("bien", "n"))
-    bienes = next(wordlist.get_words("bienes", "n"))
+    bien = next(wordlist.get_iwords("bien", "n"))
+    bienes = next(wordlist.get_iwords("bienes", "n"))
 
     assert freq.allforms.get_lemmas("bienes") == ['n|bien', 'n|bienes']
     assert freq.get_preferred_lemmas("bienes") == [bienes, bien]
@@ -310,8 +310,8 @@ rasguño {m} | arañazo :: scratch
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
 
-    rasguno = next(wordlist.get_words("rasguño", "n"))
-    rasgunar = next(wordlist.get_words("rasguñar", "v"))
+    rasguno = next(wordlist.get_iwords("rasguño", "n"))
+    rasgunar = next(wordlist.get_iwords("rasguñar", "v"))
 
     assert freq.allforms.get_lemmas("rasguño") == ['n|rasguño', 'v|rasguñar']
     preferred = freq.get_preferred_lemmas("rasguño")
@@ -435,10 +435,10 @@ vetar {v} :: x
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
-    ir = next(wordlist.get_words("ir", "v"))
-    ver = next(wordlist.get_words("ver", "v"))
-    verse = next(wordlist.get_words("verse", "v"))
-    vetar = next(wordlist.get_words("vetar", "v"))
+    ir = next(wordlist.get_iwords("ir", "v"))
+    ver = next(wordlist.get_iwords("ver", "v"))
+    verse = next(wordlist.get_iwords("verse", "v"))
+    vetar = next(wordlist.get_iwords("vetar", "v"))
 
     preferred = freq.get_preferred_lemmas("vete")
     assert preferred == [ir, ver, verse, vetar]
@@ -739,17 +739,17 @@ pos: n
     freq = FrequencyList(wordlist, allforms, sentences, [], None)
 
 
-    test1 = next(wordlist.get_words("test1", "n"))
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test1", "n")), None, None) == [test1]
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test2", "n")), None, None) == [test1]
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test3", "n")), None, None) == [test1]
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test4", "n")), None, None) == [test1]
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test5", "n")), None, None) == []
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test6", "n")), None, None) == []
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test7", "n")), None, None) == []
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test8", "n")), None, None) == [test1]
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test9", "n")), None, None) == []
-    assert freq.get_resolved_lemmas(next(wordlist.get_words("test9", "n")), None, None, max_depth=4) == [test1]
+    test1 = next(wordlist.get_iwords("test1", "n"))
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test1", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test2", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test3", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test4", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test5", "n")), None, None) == []
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test6", "n")), None, None) == []
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test7", "n")), None, None) == []
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test8", "n")), None, None) == [test1]
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test9", "n")), None, None) == []
+    assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test9", "n")), None, None, max_depth=4) == [test1]
 
 
 def test_rare_lemma(sentences):
@@ -806,9 +806,9 @@ ratos,n,rato\
 
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="ratos")
 
-    rata = next(wordlist.get_words("rata", "n"))
-    rato1 = list(wordlist.get_words("rato", "n"))[0]
-    rato2 = list(wordlist.get_words("rato", "n"))[1]
+    rata = next(wordlist.get_iwords("rata", "n"))
+    rato1 = list(wordlist.get_iwords("rato", "n"))[0]
+    rato2 = list(wordlist.get_iwords("rato", "n"))[1]
 
     assert freq.is_lemma(rata) == True
     assert freq.is_lemma(rato1) == True
@@ -877,9 +877,9 @@ ratos,n,rato\
 
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="ratas")
 
-    rata = next(wordlist.get_words("rata", "n"))
-    rato1 = list(wordlist.get_words("rato", "n"))[0]
-    rato2 = list(wordlist.get_words("rato", "n"))[1]
+    rata = next(wordlist.get_iwords("rata", "n"))
+    rato1 = list(wordlist.get_iwords("rato", "n"))[0]
+    rato2 = list(wordlist.get_iwords("rato", "n"))[1]
 
     assert freq.is_lemma(rata) == True
     assert freq.is_lemma(rato1) == True
@@ -934,9 +934,9 @@ pos: pron
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="ésto")
 
 
-    w1 = next(wordlist.get_words("ésto", "pron"))
-    w2 = next(wordlist.get_words("esto", "pron"))
-    w3 = next(wordlist.get_words("éste", "pron"))
+    w1 = next(wordlist.get_iwords("ésto", "pron"))
+    w2 = next(wordlist.get_iwords("esto", "pron"))
+    w3 = next(wordlist.get_iwords("éste", "pron"))
 
     assert freq.get_resolved_lemmas(w3, None, None) == [w3]
     assert freq.get_resolved_lemmas(w2, None, None) == [w3]
@@ -979,10 +979,10 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="roses")
 
-    ro = next(wordlist.get_words("ro", "n"))
-    ros1 = list(wordlist.get_words("ros", "n"))[0]
-    ros2 = list(wordlist.get_words("ros", "n"))[1]
-    roses = next(wordlist.get_words("roses", "n"))
+    ro = next(wordlist.get_iwords("ro", "n"))
+    ros1 = list(wordlist.get_iwords("ros", "n"))[0]
+    ros2 = list(wordlist.get_iwords("ros", "n"))[1]
+    roses = next(wordlist.get_iwords("roses", "n"))
 
     claims = freq.get_claimed_lemmas("roses", "n")
     assert claims == [(ros1, ['pl']), (ros2, ['pl'])]
@@ -1044,9 +1044,9 @@ pos: pron
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="nos")
 
-#    w1 = next(wordlist.get_words("nos", "n"))
-    w2 = list(wordlist.get_words("no", "n"))
-    w3 = list(wordlist.get_words("nosotros", "pron"))
+#    w1 = next(wordlist.get_iwords("nos", "n"))
+    w2 = list(wordlist.get_iwords("no", "n"))
+    w3 = list(wordlist.get_iwords("nosotros", "pron"))
 
     assert freq.is_lemma(w3[0]) == True
 
@@ -1099,9 +1099,9 @@ países,n,país\
 """
     assert allforms.get_lemmas("paises") == ['n|países']
 
-    w1 = next(wordlist.get_words("paises", "n"))
-    w2 = next(wordlist.get_words("país", "n"))
-    w3 = next(wordlist.get_words("países", "n"))
+    w1 = next(wordlist.get_iwords("paises", "n"))
+    w2 = next(wordlist.get_iwords("país", "n"))
+    w3 = next(wordlist.get_iwords("países", "n"))
 
     assert freq.is_lemma(w1) == False
     assert freq.is_lemma(w2) == True
@@ -1142,8 +1142,8 @@ países,n,país\
 """
     assert allforms.get_lemmas("paises") == ['n|países']
 
-    w1 = next(wordlist.get_words("paises", "n"))
-    w2 = next(wordlist.get_words("país", "n"))
+    w1 = next(wordlist.get_iwords("paises", "n"))
+    w2 = next(wordlist.get_iwords("país", "n"))
 
     assert freq.is_lemma(w1) == False
     assert freq.is_lemma(w2) == True
@@ -1180,8 +1180,8 @@ pos: particle
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="facto")
 
 
-    w1 = next(wordlist.get_words("facto", "particle"))
-    w2 = next(wordlist.get_words("de facto", "adv"))
+    w1 = next(wordlist.get_iwords("facto", "particle"))
+    w2 = next(wordlist.get_iwords("de facto", "adv"))
 
     assert freq.is_lemma(w1) == False
     assert freq.is_lemma(w2) == True
@@ -1226,8 +1226,8 @@ form lla
     allforms = AllForms.from_wordlist(wordlist)
     freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="llantas")
 
-    w1 = next(wordlist.get_words("llantas", "n"))
-    w2 = next(wordlist.get_words("llanta", "n"))
+    w1 = next(wordlist.get_iwords("llantas", "n"))
+    w2 = next(wordlist.get_iwords("llanta", "n"))
 
     assert freq.is_lemma(w1) == False
     assert freq.is_lemma(w2) == True

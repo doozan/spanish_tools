@@ -16,7 +16,7 @@ from ..sentences import SpanishSentences
 
 class FrequencyList():
 
-    def __init__(self, wordlist, allforms, sentences, ignore_data, probs, debug_word=None):
+    def __init__(self, wordlist, allforms, sentences, ignore_data=[], probs=None, debug_word=None):
         self.wordlist = wordlist
         self.allforms = allforms
         self.sentences = sentences
@@ -61,7 +61,7 @@ class FrequencyList():
             pos, count, lemma = details
 
             formtypes = set()
-            for w in self.wordlist.get_words(lemma, pos):
+            for w in self.wordlist.get_iwords(lemma, pos):
                 for formtype, forms in w.forms.items():
                     if form in forms:
                         if self.is_irregular_form(form, formtype, w):
@@ -368,7 +368,7 @@ class FrequencyList():
 
         primary_lemma = True
         for lemma, lemma_formtypes in word.form_of.items():
-            w = next(self.wordlist.get_words(lemma, word.pos), None)
+            w = next(self.wordlist.get_iwords(lemma, word.pos), None)
             if not w:
                 continue
 
@@ -443,7 +443,7 @@ class FrequencyList():
         seen = set()
         items = []
 
-        for word in self.wordlist.get_words(form, pos):
+        for word in self.wordlist.get_iwords(form, pos):
             if self.is_lemma(word):
                 if word not in seen:
                     items.append((word, None))
@@ -452,7 +452,7 @@ class FrequencyList():
 
             for lemma, formtypes in word.form_of.items():
                 target_pos = None if "onlyin" in formtypes else word.pos
-                for lemma_obj in self.wordlist.get_words(lemma, target_pos):
+                for lemma_obj in self.wordlist.get_iwords(lemma, target_pos):
                     if lemma_obj not in seen:
                         items.append((lemma_obj, formtypes))
                         seen.add(lemma_obj)
@@ -510,9 +510,8 @@ class FrequencyList():
         for poslemma in self.allforms.get_lemmas(form, pos):
             lemma_pos, lemma = poslemma.split("|")
 
-
             # instead of get_words, this should call get_unresolved_lemmas for lemma, lemma_pos
-            all_words = list(self.wordlist.get_words(lemma, lemma_pos))
+            all_words = self.wordlist.get_words(lemma, lemma_pos)
             if not all_words:
                 all_words = [w[0] for w in self.get_unresolved_items(lemma, lemma_pos)]
 
@@ -532,7 +531,7 @@ class FrequencyList():
 
             lemma_pos, lemma = poslemma.split("|")
 #            print(form, "poslemma", lemma_pos, lemma)
-            for word in self.wordlist.get_words(lemma, lemma_pos):
+            for word in self.wordlist.get_iwords(lemma, lemma_pos):
 #                print(word.word, word.pos, self.is_lemma(word), word.has_form(form))
                 if self.is_lemma(word) and word.has_form(form):
                     # TODO: get formtypes?
@@ -818,7 +817,7 @@ class FrequencyList():
         return freq
 
     def is_primary_lemma(self, word):
-        for w in self.wordlist.get_words(word.word, word.pos):
+        for w in self.wordlist.get_iwords(word.word, word.pos):
             if not self.is_lemma(w):
                 return False
             if w == word:
