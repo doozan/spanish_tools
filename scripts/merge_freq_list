@@ -13,6 +13,7 @@ import sys
 parser = argparse.ArgumentParser(description="Combine two frequency lists")
 parser.add_argument("file1")
 parser.add_argument("file2")
+parser.add_argument("--min", help="exclude words with a combined count <N", type=int, default=0)
 args = parser.parse_args()
 
 words = {}
@@ -43,5 +44,8 @@ for stat in stats:
 
 print(matches, "matching words of", len(words), "total words", file=sys.stderr)
 
-for word in sorted(words, key=words.get, reverse=True):
+for word in sorted(words, key=lambda x: (words[x]*-1, x)):
+    count = words[word]
+    if count < args.min:
+        exit()
     print(f"{word} {words[word]}")
