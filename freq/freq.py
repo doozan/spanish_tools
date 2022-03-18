@@ -96,15 +96,15 @@ class FrequencyList():
     def find_lemmas(self, freqlist):
 
         """
-        freqlist is an iterable of strings formatted as "[@]word[:pos][ N]"
-          @ - optional, word will be treated as an exact lemma, without being resolved further
-          word - the word form
+        freqlist is an iterable of strings formatted as "[form|@lemma][:pos][ N]"
+          form - the word form
+          @ - if the word is preceeded by the @ character, it will be treated as lemma
           :pos - optional - word will be treated as the given part of speech
           N - count, optional, must be preceeded by a space - the number of occurances of the word
               if N is invalid or not specified, an arbitrary value will be assigned,
               giving greater value to the words appearing earliest in the iterable
 
-        returns: { "form": (pos, count, lemma), ... }, [ multilemma1, ...], [ maybeplural1, ...]
+        returns: { "form": (pos, count, lemma), ... }
         if the pos or lemma cannot be determined yet, they will be NULL and the word will be included
         in either the multilemma or the maybeplural list
         words that are not part of the spanish database will have NULL pos and lemma but will not be
@@ -342,7 +342,7 @@ class FrequencyList():
             if sense.formtype:
                 return False
 
-            if sense.qualifier and re.match(r"(archaic|dated|obsolete|rare)", sense.qualifier):
+            if self.is_rare_qualifier(sense.qualifier):
                 return False
 
             break # Only look at the first sense
@@ -828,6 +828,9 @@ class FrequencyList():
         filtered_lemmas = [lemma for lemma in lemmas if self.is_primary_lemma(lemma)]
         return filtered_lemmas if filtered_lemmas else lemmas
 
+    def is_rare_qualifier(self, qualifier):
+        return qualifier and re.match(r"(archaic|dated|obsolete|rare|poco usad|desusad)", qualifier)
+
     def is_rare_lemma(self, word):
         """
         Returns False if word has any non-form sense not flagged rare/archaic
@@ -835,7 +838,7 @@ class FrequencyList():
 
         has_nonrare_sense = False
         for sense in word.senses:
-            if not (sense.qualifier and re.match(r"(archaic|dated|obsolete|rare)", sense.qualifier)) and \
+            if not self.is_rare_qualifier(sense.qualifier) and \
                 not (sense.gloss and re.match(r"(archaic|dated|obsolete|rare) form of", sense.gloss)):
                     return False
             else:
