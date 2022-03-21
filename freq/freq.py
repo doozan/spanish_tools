@@ -510,7 +510,6 @@ class FrequencyList():
         for poslemma in self.allforms.get_lemmas(form, pos):
             lemma_pos, lemma = poslemma.split("|")
 
-            # instead of get_words, this should call get_unresolved_lemmas for lemma, lemma_pos
             all_words = self.wordlist.get_words(lemma, lemma_pos)
             if not all_words:
                 all_words = [w[0] for w in self.get_unresolved_items(lemma, lemma_pos)]
@@ -576,7 +575,7 @@ class FrequencyList():
                 usage.append(("@" + form, pos))
 
         usage_count = [ (f, pos, self.sentences.get_usage_count(f, pos)) for f, pos in usage ]
-        res = sorted(usage_count, key=lambda k: int(k[2]), reverse=True)
+        res = sorted(usage_count, key=lambda k: (int(k[2])*-1, k[1], k[0]))
 
         # If no usage found
         if res[0][2] == 0 and not use_lemma:
