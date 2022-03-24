@@ -174,7 +174,7 @@ class FrequencyList():
         # the most popular lemmas from words with multiple lemmas
         lemma_freq = self.get_lemma_freq(lines)
 
-        print(f"resolving {len(multi_lemmas)} multi lemmas")
+        print(f"resolving {len(multi_lemmas)} multi lemmas", file=sys.stderr)
         for form, preferred_lemmas in multi_lemmas:
             item = lines[form]
             pos,count,_ = item
@@ -187,7 +187,7 @@ class FrequencyList():
 
         lemma_freq = self.get_lemma_freq(lines)
 
-        print(f"resolving {len(maybe_plurals)} maybe plurals")
+        print(f"resolving {len(maybe_plurals)} maybe plurals", file=sys.stderr)
         for form, preferred_lemmas in maybe_plurals:
             entry = self.resolve_plurals(lines, lemma_freq, form, preferred_lemmas)
             lines[form] = entry
@@ -234,8 +234,6 @@ class FrequencyList():
         lemma = self.get_most_frequent_lemma(lemma_freq, form, pos, preferred_lemmas)
 
         if not lemma:
-            for l in preferred_lemmas:
-                print(l.word, l.pos, lines.get(l.word))
             raise ValueError("No lemmas", form, pos, posrank, [(l.word,l.pos) for l in preferred_lemmas])
 
         return (pos, count, lemma)
@@ -246,7 +244,7 @@ class FrequencyList():
             return None
 
         if len(res) > 1 and res[0][2] == res[1][2]:
-            print("ambiguous best pos", form, res, "using first", res[0])
+            print("ambiguous best pos", form, res, "using first", res[0], file=sys.stderr)
         form,pos,count = res[0]
         return pos
 
@@ -359,7 +357,7 @@ class FrequencyList():
         """
 
         if max_depth<3:
-            print("resolving deep lemma", word.word, word.pos, form, formtypes, max_depth)
+            print("resolving deep lemma", word.word, word.pos, form, formtypes, max_depth, file=sys.stderr)
 
         lemmas = []
 
@@ -405,7 +403,7 @@ class FrequencyList():
             unresolved = [(item, None) for item in self.get_all_lemmas(form, filter_pos)]
 
         if not unresolved and self.allforms.get_lemmas(form, filter_pos):
-            print("No matching lemmas", form, filter_pos, self.allforms.get_lemmas(form, filter_pos))
+            print("No matching lemmas", form, filter_pos, self.allforms.get_lemmas(form, filter_pos), file=sys.stderr)
 
         # Remove rare form of before resolving lemmas
         filtered = [x for x in unresolved if not self.is_rare_lemma(x[0])]
