@@ -336,6 +336,7 @@ class DeckBuilder():
     @classmethod
     def obscure_gloss(cls, gloss, hide_word, hide_first=False, hide_all=False, english=True):
 
+
         def is_first_word(data):
             if all(w.strip().lower() in ["", "a", "an", "to", "be", "of", "in"] for w in data):
                 return True
@@ -450,9 +451,11 @@ class DeckBuilder():
             "not","now","off","one","our","out","put","say","see","set","she","sit","six","ten","the",
             "too","try","two","was","way","who","why","yet","you"]
 
-    @classmethod
-    def should_obscure(cls, word, hide_word):
+    _unstresstab = str.maketrans("áéíóú", "aeiou")
 
+    @classmethod
+    def normalize(cls, word):
+        word = word.translate(cls._unstresstab)
         word = word.replace("h", "")
         word = word.replace("ff", "f")
         word = word.replace("dd", "d")
@@ -461,6 +464,12 @@ class DeckBuilder():
         word = word.replace("ee", "e")
         word = word.replace("oo", "o")
         word = word.replace("ii", "i")
+        return word
+
+    @classmethod
+    def should_obscure(cls, word, hide_word):
+        word = cls.normalize(word)
+        hide_word = cls.normalize(hide_word)
 
         l = min(len(word), len(hide_word))
         if l<=2:
@@ -469,22 +478,30 @@ class DeckBuilder():
         if l==3 and word in cls.three_letter_english:
             return False
         distance = int(l/4) if l >= 4 else 0
-        matches = [word[:l]]
+        words = [word[:l]]
 
         # fix for matching blah to xblah (xbla doesn't match, but xblah does even though it's longer)
-        if l < len(word) and l >= len(word) - distance:
-            matches.append(word[:l+distance])
+        if l < len(word) and len(word) - distance <= l:
+            words.append(word)
 
-        for match in matches:
-            if fuzzy_distance(match, hide_word[:l]) <= distance:
-                return True
+        hide_words = [hide_word[:l]]
+
+        # fix for matching xblah to blah (xbla doesn't match, but xblah does even though it's longer)
+        if l < len(hide_word) and len(hide_word) - distance <= l:
+            hide_words.append(hide_word)
+
+
+        for w in words:
+            for hw in hide_words:
+                if fuzzy_distance(w, hw) <= distance:
+                    return True
 
         return False
 
     @staticmethod
-    def obscure_list(items, hide_word):
+    def obscure_syns(items, hide_word):
         for item in items:
-            yield DeckBuilder.obscure_gloss(item, hide_word, hide_all=True)
+            yield DeckBuilder.obscure_gloss(item, hide_word, hide_all=True, hide_first=True, english=False)
 
     @staticmethod
     def format_syns_html(deck, extra, css_class=''):
@@ -506,8 +523,8 @@ class DeckBuilder():
 
     @classmethod
     def format_syns(cls, deck, extra, hide_word=None):
-        obscured_deck = list(cls.obscure_list(deck, hide_word))
-        obscured_extra = list(cls.obscure_list(extra, hide_word))
+        obscured_deck = list(cls.obscure_syns(deck, hide_word))
+        obscured_extra = list(cls.obscure_syns(extra, hide_word))
 
         has_obscured = obscured_deck != deck or obscured_extra != extra
 

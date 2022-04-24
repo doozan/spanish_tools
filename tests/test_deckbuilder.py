@@ -413,7 +413,7 @@ pos: n
 """
 
 def test_obscured():
-    obscured = DeckBuilder.obscure_list
+    obscured = DeckBuilder.obscure_syns
     o = DeckBuilder.obscure_gloss
 
     assert o("this is a test", "test") == "this is a ..."
@@ -441,6 +441,8 @@ def test_obscured():
     assert o('similarity, similitude', "similitud") == 'similarity, ...'
     assert o('similarity, similitude', "similitud", True, True) == 'similarity, ...'
 
+    assert o('baton (in a marching band)', 'bastón', hide_first=True) == "... (in a marching band)"
+
     # < 4 characters should require an exact match
     assert list(obscured(["abc", "abz"], "abc")) == ['...', 'abz']
     assert list(obscured(["to be (essentially or identified as)"], "ser")) == ['to be (essentially or identified as)']
@@ -456,6 +458,7 @@ def test_obscured():
     assert list(obscured(["test 123", "123 test"], "test")) == ['... 123', '123 ...']
     assert list(obscured(["avarice"], "avaricia")) == ['...']
 
+    assert list(obscured(["huerto"], "huerta")) == ['...']
 
     tests = [
         ["blag", "blag"],
