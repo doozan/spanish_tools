@@ -11,7 +11,6 @@ from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.word import Word
 from enwiktionary_wordlist.all_forms import AllForms
 
-from .probability import PosProbability
 from ..sentences import SpanishSentences
 
 class FrequencyList():
@@ -80,16 +79,13 @@ class FrequencyList():
                 break
             yield(
                 ",".join(
-                    map(
-                        str,
-                        [
-                            item["count"],
-                            item["word"],
-                            item["pos"],
-                            "; ".join(item["flags"]),
-                            "|".join(sorted(item["usage"], key=lambda x: int(x.partition(":")[0]), reverse=True)),
-                        ],
-                    )
+                    [
+                        str(item["count"]),
+                        item["word"],
+                        item["pos"],
+                        "; ".join(item["flags"]),
+                        "|".join(sorted(item["usage"], key=lambda x: int(x.partition(":")[0]), reverse=True)),
+                    ]
                 )
             )
 
@@ -136,8 +132,15 @@ class FrequencyList():
             if form.startswith("@"):
                 lemma = form[1:]
                 form = form[1:]
+            elif not pos:
+                orig_form = form
+                form = self.probs.get_preferred_case(form)
 
             preferred_lemmas = self.get_preferred_lemmas(form, lemma, pos)
+            if not preferred_lemmas and orig_form != form:
+                form = orig_form
+                preferred_lemmas = self.get_preferred_lemmas(form, lemma, pos)
+
             self.debug(form, "possible lemmas", [(l.word, l.pos) for l in preferred_lemmas])
 
             if not pos:
@@ -572,7 +575,8 @@ class FrequencyList():
             for pos in all_pos:
                 usage.append(("@" + form, pos))
 
-        usage_count = [ (f, pos, self.sentences.get_usage_count(f, pos)) for f, pos in usage ]
+        #usage_count = [ (f, pos, self.sentences.get_usage_count(f, pos)) for f, pos in usage ]
+        usage_count = [ (f, pos, self.probs.get_usage_count(f, pos)) for f, pos in usage ]
         res = sorted(usage_count, key=lambda k: (int(k[2])*-1, k[1], k[0]))
 
         # If no usage found
@@ -585,7 +589,8 @@ class FrequencyList():
                 # However, if we've made it this far and haven't found anything, count it explicitly
                 # as a verb
                 if "v" in all_pos and "verb" in sentence_pos:
-                    res = [ (form, "v", self.sentences.get_usage_count(form, "verb")) ]
+                    #res = [ (form, "v", self.sentences.get_usage_count(form, "verb")) ]
+                    res = [ (form, "v", self.probs.get_usage_count(form, "verb")) ]
                     res += [ (f, pos, 0) for f, pos in usage if pos != "v" ]
                     #print(f"{form}: using 'verb' count instead of 'v'")
                     return res
@@ -890,7 +895,8 @@ class FrequencyList():
 
         if best is None and len(lemmas):
 
-            usage = [(self.sentences.get_usage_count(l.word, pos), l.word) for l in possible_lemmas]
+            #usage = [(self.sentences.get_usage_count(l.word, pos), l.word) for l in possible_lemmas]
+            usage = [(self.probs.get_usage_count(l.word, pos), l.word) for l in possible_lemmas]
             ranked = sorted(usage, key=lambda x: (x[0]*-1, x[1]))
             self.debug(form, pos, "get_best_lemma", lemmas, "no best, using sentences frequency", ranked)
 

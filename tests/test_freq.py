@@ -7,10 +7,10 @@ from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 from ..sentences import SpanishSentences
 
-from ..freq import FrequencyList
+from ..freq import FrequencyList, NgramPosProbability
 
 
-@fixture
+@fixture(scope="module")
 def sentences(request):
     filename = request.module.__file__
     test_dir, _ = os.path.split(filename)
@@ -18,9 +18,15 @@ def sentences(request):
     sentences = SpanishSentences(sentences="test_sentences.tsv", data_dir=test_dir)
     return sentences
 
+@fixture(scope="module")
+def ngprobs(request):
+    filename = request.module.__file__
+    test_dir, _ = os.path.split(filename)
+    ngfilename = os.path.join(test_dir, "es-1-1950.ngprobs")
 
+    return NgramPosProbability(ngfilename)
 
-def test_simple(sentences):
+def test_simple(sentences, ngprobs):
 
     wordlist_data = """\
 _____
@@ -68,7 +74,7 @@ unknown 10
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    assert freq.wordlist.has_lemma("protectora", "n") == False
 
@@ -92,7 +98,7 @@ count,spanish,pos,flags,usage
 """
 
 
-def test_simple2(sentences):
+def test_simple2(sentences, ngprobs):
 
     wordlist_data = """\
 rojo {adj-meta} :: {{es-adj|f=roja}}
@@ -107,12 +113,12 @@ roja {f} :: Red (Communist)
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
     items = freq.get_preferred_lemmas("roja")
     assert freq.get_ranked_pos("roja", items) == [(None, 'adj', 1)]
 
-def test_filters(sentences):
+def test_filters(sentences, ngprobs):
 
     wordlist_data = """\
 test {n-meta} :: x
@@ -123,7 +129,7 @@ test {adj} :: obsolete form of "test"
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    assert freq.filter_pos("test", ["n", "adj"]) == ["n"]
     #assert freq.get_ranked_pos("test") == ["n"]
@@ -131,7 +137,7 @@ test {adj} :: obsolete form of "test"
     items = freq.get_preferred_lemmas("test")
     assert freq.get_ranked_pos("test", items) == [(None, 'n', 1)]
 
-def test_diva(sentences):
+def test_diva(sentences, ngprobs):
 
     wordlist_data = """\
 _____
@@ -156,18 +162,18 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
     flist_data = """\
 diva 10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-10,divo,adj,NOSENT,10:diva\
+10,divo,n,NOSENT,10:diva\
 """
 
 
-def test_preferred_lemmas(sentences):
+def test_preferred_lemmas(sentences, ngprobs):
 
     wordlist_data = """\
 _____
@@ -186,7 +192,7 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
     res = "\n".join(allforms.all_csv)
     assert res == """\
@@ -211,7 +217,7 @@ count,spanish,pos,flags,usage
 """
 
 
-def test_hijo(sentences):
+def test_hijo(sentences, ngprobs):
 
     wordlist_data = """\
 hija {n-meta} :: x
@@ -225,7 +231,7 @@ hijo {m} :: child (when the gender of the child is unknown)
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    assert freq.allforms.get_lemmas("hijo") == ['n|hijo']
 #    assert freq.get_preferred_lemmas("hijo", "n") == ["hijo"]
@@ -238,7 +244,7 @@ count,spanish,pos,flags,usage
 10,hijo,n,,10:hijo\
 """
 
-def test_asco(sentences):
+def test_asco(sentences, ngprobs):
 
     wordlist_data = """\
 asca {n-meta} :: x
@@ -255,7 +261,7 @@ asco {m} :: alternative form of "asca"
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    assert freq.allforms.get_lemmas("asco") == ['n|asca', 'n|asco']
 #    assert freq.get_preferred_lemmas("asco", "n") == ["asca", "asco"]
@@ -269,7 +275,7 @@ count,spanish,pos,flags,usage
 10,asco,n,,10:asco\
 """
 
-def test_bienes(sentences):
+def test_bienes(sentences, ngprobs):
 
     wordlist_data = """\
 bien {n-meta} :: {{es-noun|m|bienes}}
@@ -280,7 +286,7 @@ bienes {mp} :: goods (that which is produced, traded, bought or sold)
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
     bien = next(wordlist.get_iwords("bien", "n"))
     bienes = next(wordlist.get_iwords("bienes", "n"))
@@ -296,7 +302,7 @@ count,spanish,pos,flags,usage
 10,bienes,n,NOSENT,10:bienes\
 """
 
-def test_rasguno(sentences):
+def test_rasguno(sentences, ngprobs):
 
     wordlist_data = """\
 rasguñar {v-meta} :: {{es-verb}} {{es-conj}}
@@ -307,7 +313,7 @@ rasguño {m} | arañazo :: scratch
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="rasguño")
 
 
     rasguno = next(wordlist.get_iwords("rasguño", "n"))
@@ -316,7 +322,7 @@ rasguño {m} | arañazo :: scratch
     assert freq.allforms.get_lemmas("rasguño") == ['n|rasguño', 'v|rasguñar']
     preferred = freq.get_preferred_lemmas("rasguño")
     assert preferred == [rasguno, rasgunar]
-    assert freq.get_ranked_pos("rasguño", preferred) == [('rasguño', 'n', 1), ('rasguñar', 'v', 0)]
+    assert freq.get_ranked_pos("rasguño", preferred) == [(None, 'n', 0.995), (None, 'v', 0.005)]
 
     flist_data = """\
 rasguño 10
@@ -326,7 +332,7 @@ count,spanish,pos,flags,usage
 10,rasguño,n,NOSENT,10:rasguño\
 """
 
-def test_dios(sentences):
+def test_dios(sentences, ngprobs):
 
     wordlist_data = """\
 _____
@@ -345,7 +351,7 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 
 
@@ -378,7 +384,7 @@ count,spanish,pos,flags,usage
 """
 
 
-def test_aquellos(sentences):
+def test_aquellos(sentences, ngprobs):
 
     wordlist_data = """\
 aquél {pron-meta} :: {{head|es|pronoun|demonstrative, feminine|aquélla|neuter|aquello|masculine plural|aquéllos|feminine plural|aquéllas|g=m}}
@@ -397,7 +403,7 @@ aquellos {pron} :: Those ones. (over there; implying some distance)
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    assert freq.get_preferred_lemmas("aquellos", "pron") == ['aquél']
 
@@ -418,7 +424,7 @@ count,spanish,pos,flags,usage
 #"""
 
 
-def test_vete(sentences):
+def test_vete(sentences, ngprobs):
 
     wordlist_data = """\
 ir {v-meta} :: {{es-verb}} {{es-conj}} {{es-conj|irse}}
@@ -433,7 +439,7 @@ vetar {v} :: x
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="vete")
 
     ir = next(wordlist.get_iwords("ir", "v"))
     ver = next(wordlist.get_iwords("ver", "v"))
@@ -447,12 +453,21 @@ vetar {v} :: x
 vete 10
 """
 
+#    assert "\n".join(freq.process(flist_data.splitlines())) == """\
+#count,spanish,pos,flags,usage
+#10,ir,v,,10:vete\
+#"""
+
+# es.ngrams:
+# ir      1156666 VERB:1155388
+# ver     1531536 VERB:1528188
+
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-10,ir,v,,10:vete\
+10,ver,v,,10:vete\
 """
 
-def test_veros(sentences):
+def test_veros(sentences, ngprobs):
 
     wordlist_data = """\
 ver {v-meta} :: {{es-verb}} {{es-conj}}
@@ -463,7 +478,7 @@ vero {m} [heraldry] :: vair
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    assert freq.get_ranked_pos("veros") == ["v"]
 
@@ -472,10 +487,10 @@ veros 10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
-10,ver,v,,10:veros\
+10,vero,n,NOSENT,10:veros\
 """
 
-def test_veras(sentences):
+def test_veras(sentences, ngprobs):
 
     wordlist_data = """\
 vera {n-meta} :: {{es-noun|f}}
@@ -491,7 +506,7 @@ veras {fp} :: serious things
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    assert freq.get_preferred_lemmas("veras", "n") == ["vera", "veras"]
 #    assert freq.get_best_lemma("veras", ["vera", "veras"], "n") == "veras"
@@ -504,7 +519,7 @@ count,spanish,pos,flags,usage
 10,veras,n,,10:veras\
 """
 
-def test_microondas(sentences):
+def test_microondas(sentences, ngprobs):
 
     wordlist_data = """\
 _____
@@ -527,7 +542,7 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    lemmas = ["microonda", "microondas"]
 #    assert freq.get_preferred_lemmas("microondas", "n") == lemmas
@@ -544,7 +559,7 @@ count,spanish,pos,flags,usage
 
 
 
-def test_hamburguesa(sentences):
+def test_hamburguesa(sentences, ngprobs):
     wordlist_data = """\
 _____
 hamburguesa
@@ -572,7 +587,7 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="hamburguesas")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="hamburguesas")
 
 #    lemmas = ['hamburguesa', 'hamburgués']
 #    assert freq.get_preferred_lemmas("hamburguesa", "n") == lemmas
@@ -586,10 +601,10 @@ hamburguesas 10
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
 20,hamburguesa,n,,10:hamburguesa|10:hamburguesas
-10,hamburgués,n,,10:hamburgués\
+10,hamburgués,adj,NOSENT,10:hamburgués\
 """
 
-def test_piernas(sentences):
+def test_piernas(sentences, ngprobs):
     wordlist_data = """\
 _____
 pierna
@@ -614,7 +629,7 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    assert freq.get_preferred_lemmas("piernas", "n") == ['pierna']
    # assert freq.get_best_lemma("piernas", lemmas, "n") == "pierna"
@@ -629,7 +644,7 @@ count,spanish,pos,flags,usage
 """
 
 
-def test_izquierdas(sentences):
+def test_izquierdas(sentences, ngprobs):
     wordlist_data = """\
 _____
 izquierda
@@ -671,7 +686,7 @@ _____
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 #    assert freq.get_preferred_lemmas("izquierdas", "n") == ["izquierda"]
 #    assert freq.get_preferred_lemmas("izquierdo", "adj") == ["izquierdo"]
@@ -693,7 +708,7 @@ count,spanish,pos,flags,usage
 """
 
 
-def test_get_resolved_poslemmas(sentences):
+def test_get_resolved_poslemmas(sentences, ngprobs):
     data="""\
 _____
 test1
@@ -736,7 +751,7 @@ pos: n
 
     wordlist = Wordlist(data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None)
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs)
 
 
     test1 = next(wordlist.get_iwords("test1", "n"))
@@ -752,7 +767,7 @@ pos: n
     assert freq.get_resolved_lemmas(next(wordlist.get_iwords("test9", "n")), None, None, max_depth=4) == [test1]
 
 
-def test_rare_lemma(sentences):
+def test_rare_lemma(sentences, ngprobs):
 
     # rare lemmas should be ignored
     # ratas -> rata not rato
@@ -804,7 +819,7 @@ rato,n,rato
 ratos,n,rato\
 """
 
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="ratos")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="ratos")
 
     rata = next(wordlist.get_iwords("rata", "n"))
     rato1 = list(wordlist.get_iwords("rato", "n"))[0]
@@ -835,7 +850,7 @@ count,spanish,pos,flags,usage
 
 
 
-def test_rare_lemma_compact_wordlist(sentences):
+def test_rare_lemma_compact_wordlist(sentences, ngprobs):
 
     # rare lemmas should be ignored
     # ratas -> rata not rato
@@ -875,7 +890,7 @@ rato,n,rato
 ratos,n,rato\
 """
 
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="ratas")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="ratas")
 
     rata = next(wordlist.get_iwords("rata", "n"))
     rato1 = list(wordlist.get_iwords("rato", "n"))[0]
@@ -906,7 +921,7 @@ count,spanish,pos,flags,usage
 
 
 
-def test_resolution(sentences):
+def test_resolution(sentences, ngprobs):
 
     wordlist_data = """\
 _____
@@ -931,7 +946,7 @@ pos: pron
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="ésto")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="ésto")
 
 
     w1 = next(wordlist.get_iwords("ésto", "pron"))
@@ -943,7 +958,7 @@ pos: pron
     assert freq.get_resolved_lemmas(w1, None, None) == [w3]
 
 
-def test_roses(sentences):
+def test_roses(sentences, ngprobs):
 
     # roses should resolve to ros and not (ros, ro)
     # even though ro -> ros, ros -> roses (double plural)
@@ -977,7 +992,7 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="roses")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="roses")
 
     ro = next(wordlist.get_iwords("ro", "n"))
     ros1 = list(wordlist.get_iwords("ros", "n"))[0]
@@ -995,7 +1010,7 @@ pos: n
     assert freq.get_resolved_lemmas(roses, None, None) == [ros1]
 
 
-def test_nos(sentences):
+def test_nos(sentences, ngprobs):
 
     # roses should resolve to ros and not (ros, ro)
     # even though ro -> ros, ros -> roses (double plural)
@@ -1042,7 +1057,7 @@ pos: pron
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="nos")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="nos")
 
 #    w1 = next(wordlist.get_iwords("nos", "n"))
     w2 = list(wordlist.get_iwords("no", "n"))
@@ -1061,7 +1076,7 @@ pos: pron
     assert res == w2 + w3
 
 
-def test_paises(sentences):
+def test_paises(sentences, ngprobs):
 
     # paises -> países -> país
 
@@ -1089,7 +1104,7 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="nos")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="nos")
 
     res = "\n".join(allforms.all_csv)
     assert res == """\
@@ -1109,7 +1124,7 @@ países,n,país\
 
     assert freq.get_preferred_lemmas("paises") == [w2]
 
-def test_paises2(sentences):
+def test_paises2(sentences, ngprobs):
 
     # paises -> países -> país
     # even when países is not included in dictionary
@@ -1132,7 +1147,7 @@ pos: n
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="nos")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="nos")
 
     res = "\n".join(allforms.all_csv)
     assert res == """\
@@ -1150,7 +1165,7 @@ países,n,país\
 
     assert freq.get_preferred_lemmas("paises") == [w2]
 
-def test_facto(sentences):
+def test_facto(sentences, ngprobs):
 
     # facto should resolve to "de facto" even though it changes from particle to adverb
 
@@ -1177,7 +1192,7 @@ pos: particle
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="facto")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="facto")
 
 
     w1 = next(wordlist.get_iwords("facto", "particle"))
@@ -1191,7 +1206,7 @@ pos: particle
 
 
 
-def test_llantas(sentences):
+def test_llantas(sentences, ngprobs):
 
     # llantas should resolve to llanta and not follow the obsolete
     # llanta to planta
@@ -1224,7 +1239,7 @@ form lla
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, sentences, [], None, debug_word="llantas")
+    freq = FrequencyList(wordlist, allforms, sentences, probs=ngprobs, debug_word="llantas")
 
     w1 = next(wordlist.get_iwords("llantas", "n"))
     w2 = next(wordlist.get_iwords("llanta", "n"))

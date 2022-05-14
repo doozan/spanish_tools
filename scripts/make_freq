@@ -6,6 +6,7 @@ import sys
 
 from spanish_tools.freq import FrequencyList
 from spanish_tools.freq import PosProbability
+from spanish_tools.freq import NgramPosProbability
 from spanish_tools.sentences import SpanishSentences
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
@@ -17,6 +18,7 @@ def init_freq(params):
     parser.add_argument("--dictionary", help="Dictionary file name", required=True)
     parser.add_argument("--allforms", help="All-forms file name")
     parser.add_argument("--probs", help="Probability data file")
+    parser.add_argument("--ngprobs", help="Ngram probability data file")
     parser.add_argument("--sentences", help="Sentences file name (DEFAULT: sentences.tsv)")
     parser.add_argument(
         "--data-dir",
@@ -35,7 +37,12 @@ def init_freq(params):
     parser.add_argument("extra", nargs="*", help="Usage list")
     args = parser.parse_args(params)
 
-    probs = PosProbability(args.probs)
+    if args.probs:
+        probs = PosProbability(args.probs)
+    elif args.ngprobs:
+        probs = NgramPosProbability(args.ngprobs)
+    else:
+        raise ValueError("--ngprobs or --probs required")
 
     # allow first positional argument to replace undeclared --infile
     if args.infile == parser.get_default("infile") and args.extra:
