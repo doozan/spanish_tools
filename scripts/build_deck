@@ -15,6 +15,7 @@ from Levenshtein import distance as fuzzy_distance
 
 from spanish_tools.sentences import SpanishSentences
 from spanish_tools.deckbuilder import DeckBuilder
+from spanish_tools.freq import NgramPosProbability
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 
@@ -63,6 +64,7 @@ def build_deck(params=None):
     parser.add_argument("--deck-desc", help="Deck Description", default="")
     parser.add_argument("--anki", help="Read/write data from specified anki profile")
     parser.add_argument("--allforms", help="Load word forms from file")
+    parser.add_argument("--ngprobs", help="NGprobs file", required=True)
     parser.add_argument(
         "--dictionary", help="Dictionary file name (DEFAULT: es-en.txt)",
         default="es-en.txt"
@@ -143,7 +145,9 @@ def build_deck(params=None):
     )
     shortdefs = DeckBuilder.load_shortdefs(args.short_defs)
 
-    deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs)
+    ngprobs = NgramPosProbability(args.ngprobs)
+
+    deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs, ngprobs)
     deck.load_wordlists(args.wordlist, args.allow_flag)
     deck.compile(args.model, args.deckfile, args.deck_name, args.deck_guid, args.deck_desc, args.mediadir, args.limit, args.anki, args.tag)
 

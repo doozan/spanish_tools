@@ -1,8 +1,21 @@
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 from ..deckbuilder import DeckBuilder
+from ..freq import NgramPosProbability
 
-def test_get_location_classes():
+from pytest import fixture
+import os
+
+@fixture(scope="module")
+def ngprobs(request):
+    filename = request.module.__file__
+    test_dir, _ = os.path.split(filename)
+    ngfilename = os.path.join(test_dir, "es-1-1950.ngprobs")
+
+    return NgramPosProbability(ngfilename)
+
+
+def test_get_location_classes(ngprobs):
     get_location_classes = DeckBuilder.get_location_classes
 
     tests = {
@@ -17,7 +30,7 @@ def test_get_location_classes():
     for tags, locations in tests.items():
         assert sorted(get_location_classes(tags)) == sorted(locations)
 
-def test_get_verb_type_and_tag():
+def test_get_verb_type_and_tag(ngprobs):
     f = DeckBuilder.get_verb_type_and_tag
     assert f('reflexive, colloquial, El Salvador') == ("r", "colloquial, El Salvador")
     assert f('colloquial, reflexive, El Salvador') == ("r", "colloquial, El Salvador")
@@ -56,7 +69,7 @@ abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed
     allforms = AllForms.from_wordlist(wordlist)
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
     assert deck.filter_gloss("abuela", "", "", "grandmother") == "grandmother"
     assert deck.filter_gloss("abuela", "", "", 'grandmother, female equivalent of "abuelo"') == "grandmother"
 
@@ -73,7 +86,7 @@ abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed
 
     # With ignore list
     ignore = DeckBuilder.load_ignore_data(ignore_data.splitlines())
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     assert deck.filter_gloss("abuela", "x", "", "grandmother") == "grandmother"
     assert deck.filter_gloss("abuela", "f", "", "grandmother") == None
@@ -90,7 +103,7 @@ abuelo {m} | tolano :: loose tufts of hair in the nape when one's hair is messed
         }}
 
 
-def test_filters2():
+def test_filters2(ngprobs):
     ignore_data = """\
 - test {f}
 """
@@ -126,7 +139,7 @@ test
     allforms = AllForms.from_wordlist(wordlist)
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("test", "n")
     print(usage)
@@ -144,7 +157,7 @@ test
 
     # With ignore list
     ignore = DeckBuilder.load_ignore_data(ignore_data.splitlines())
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("test", "n")
     print(usage)
@@ -161,7 +174,7 @@ test
 
 #[{'ety': None, 'words': [{'pos': 'n', 'senses': [{'tag': 'm', 'gloss': 'masculine', 'hint': ''}], 'noun_type': 'm-f'}]}]
 
-def test_shorten_gloss():
+def test_shorten_gloss(ngprobs):
 
     short = DeckBuilder.shorten_gloss
     assert short("A wrestler whose in-ring persona embodies heroic or virtuous traits. Contrast with rudo (Spanish) or heel (English)", 60) \
@@ -181,7 +194,7 @@ def test_shorten_gloss():
 
     assert short("def1 (blah), not here", 5) == "def1 (blah)"
 
-def test_usage():
+def test_usage(ngprobs):
 
     wordlist_data = """\
 _____
@@ -210,7 +223,7 @@ pos: v
     allforms = AllForms.from_wordlist(wordlist)
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("rendir", "v")
     print(usage)
@@ -246,7 +259,7 @@ pos: v
     assert format_def(item, hide_word='cloaca') == """<span class="pos n f"> <span class="usage">sewer, storm drain</span></span>"""
 '''
 
-def test_usage2():
+def test_usage2(ngprobs):
 
     wordlist_data = """\
 _____
@@ -276,7 +289,7 @@ pos: v
     allforms = AllForms.from_wordlist(wordlist)
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("guía", "n")
     print(usage)
@@ -311,7 +324,7 @@ pos: v
 <span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">Probably from the verb guiar. Cf. also French &quot;guide&quot; (Old French &quot;guie&quot;), Italian &quot;guida&quot;.</span></span>
 """
 
-def test_usage_reo():
+def test_usage_reo(ngprobs):
 
     wordlist_data = """\
 _____
@@ -353,7 +366,7 @@ pos: n
     allforms = AllForms.from_wordlist(wordlist)
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("reo", "n")
     print(usage)
@@ -412,7 +425,7 @@ pos: n
 <span id="footnote_c" class="footnote ety_footnote"><span class="footnote_id">c</span><span class="footnote_data">Borrowed from Catalan &quot;reu&quot;.</span></span>
 """
 
-def test_obscured():
+def test_obscured(ngprobs):
     obscured = DeckBuilder.obscure_syns
     o = DeckBuilder.obscure_gloss
 
@@ -484,7 +497,7 @@ def test_obscured():
         assert any(so(english,w) for w in DeckBuilder.get_hide_words(spanish, True))
 
 
-def test_group_ety():
+def test_group_ety(ngprobs):
 
     wordlist_data = """\
 _____
@@ -527,7 +540,7 @@ pos: n
     assert len(list(allforms.all_forms)) == 4
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     words = deck.get_word_objs("reo", "n", False)
     assert len(words) == 3
@@ -576,7 +589,7 @@ pos: n
         '    turn (in a game)'
         ]
 
-def test_process_noun_mf():
+def test_process_noun_mf(ngprobs):
 
     wordlist_data = """\
 _____
@@ -619,7 +632,7 @@ pos: n
     assert len(list(allforms.all_forms)) == 4
 
     # Full definition without ignore list
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     words = deck.get_word_objs("gringo", "n", False)
     assert len(words) == 1
@@ -659,7 +672,7 @@ pos: n
     --"""
 
 
-def test_process_noun_mf_m():
+def test_process_noun_mf_m(ngprobs):
 
     wordlist_data = """\
 _____
@@ -704,7 +717,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     words = deck.get_word_objs("miembro", "n")
     assert len(words) == 2
@@ -749,7 +762,7 @@ m
     miembro n m {'pl': ['miembros']}\
 """
 
-def test_process_noun_m_f():
+def test_process_noun_m_f(ngprobs):
 
     wordlist_data = """\
 _____
@@ -775,7 +788,7 @@ pos: v
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     words = deck.get_word_objs("cometa", "n")
     assert len(words) == 2
@@ -808,7 +821,7 @@ m-f
     cometa n f {'pl': ['cometas']}\
 """
 
-def test_process_noun_f_el():
+def test_process_noun_f_el(ngprobs):
 
     wordlist_data = """\
 _____
@@ -839,7 +852,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     words = deck.get_word_objs("ave", "n")
     assert len(words) == 3
@@ -854,7 +867,7 @@ pos: n
     assert list(nouns.keys()) == ["f-el"]
 
 
-def test_usage_verb_reflexive():
+def test_usage_verb_reflexive(ngprobs):
 
     wordlist_data = """\
 _____
@@ -884,7 +897,7 @@ pos: v
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     words = deck.get_word_objs("tornar", "v")
     assert len(words) == 1
@@ -906,7 +919,7 @@ pos: v
             }]
         }]
 
-def test_get_usage_m_f():
+def test_get_usage_m_f(ngprobs):
 
     wordlist_data = """\
 _____
@@ -928,7 +941,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     words = deck.get_word_objs("cólera", "n")
     assert len(words) == 2
@@ -945,7 +958,7 @@ pos: n
              }]
         }]
 
-def test_usage_mf():
+def test_usage_mf(ngprobs):
 
     wordlist_data = """\
 _____
@@ -1003,7 +1016,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     words = deck.get_word_objs("moreno", "n")
     assert len(words) == 2
@@ -1025,7 +1038,7 @@ pos: n
 
 
 
-def test_shortdef_venado():
+def test_shortdef_venado(ngprobs):
 
     wordlist_data = """\
 _____
@@ -1047,7 +1060,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     assert deck.get_usage("venado", "n") == [{
         'ety': 'From Latin "vēnātus" (whence English venison).',
@@ -1062,7 +1075,7 @@ pos: n
         }]
 
 
-def test_abrigar():
+def test_abrigar(ngprobs):
 
     wordlist_data = """\
 _____
@@ -1083,7 +1096,7 @@ pos: v
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     #assert deck.get_shortdef("abrigar", "v") == {'vtr': {'': ['to wrap up (to put on abundant clothing)']}, 'v': {'': ['to cover']}}
 
@@ -1124,7 +1137,7 @@ pos: v
 """
 
 
-def test_llorona():
+def test_llorona(ngprobs):
 
     wordlist_data = """\
 _____
@@ -1166,7 +1179,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("llorón", "n")
     print(usage)
@@ -1200,7 +1213,7 @@ pos: n
 """
 
 
-def test_caudal():
+def test_caudal(ngprobs):
 
     wordlist_data = """\
 _____
@@ -1232,7 +1245,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("caudal", "n")
     print(usage)
@@ -1269,7 +1282,7 @@ pos: n
 <span id="footnote_b" class="footnote ety_footnote"><span class="footnote_id">b</span><span class="footnote_data">Borrowed from Latin &quot;caudālis&quot;.</span></span>
 """
 
-def test_similtud():
+def test_similtud(ngprobs):
 
     wordlist_data = """\
 _____
@@ -1286,7 +1299,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("similitud", "n")
     print(usage)
@@ -1308,7 +1321,7 @@ pos: n
 """
 
 
-def test_demente():
+def test_demente(ngprobs):
 
     wordlist_data = """\
 _____
@@ -1325,7 +1338,7 @@ pos: adj
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("demente", "adj")
     print(usage)
@@ -1338,7 +1351,7 @@ pos: adj
                 {'gloss': 'demented', 'hint': '...'}]}]}]
 
 
-def test_partidario():
+def test_partidario(ngprobs):
 
     wordlist_data = """\
 _____
@@ -1360,7 +1373,7 @@ pos: n
     sentences = None
     ignore = []
     allforms = AllForms.from_wordlist(wordlist)
-    deck = DeckBuilder(wordlist, sentences, ignore, allforms)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
 
     usage = deck.get_usage("partidario", "n")
     print(usage)

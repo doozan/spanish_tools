@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # -*- python-mode -*-
 
-import argparse
 import csv
 import genanki
 import html
@@ -81,7 +80,7 @@ class DeckBuilder():
             'app', 'arca', 'área', 'arma', 'arpa', 'asa', 'asma', 'aspa', 'asta', 'aula',
             'ave', 'haba', 'habla', 'hacha', 'hada', 'hambre', 'haya' ]
 
-    def __init__(self, wordlist, sentences, ignore, allforms, shortdefs=None):
+    def __init__(self, wordlist, sentences, ignore, allforms, shortdefs, ngprobs):
 
         self._words = None
         self._ignore = {}
@@ -110,6 +109,7 @@ class DeckBuilder():
         self._sentences = sentences
         self._shortdefs = shortdefs
         self.all_forms = allforms
+        self.ngprobs = ngprobs
 
     def filter_gloss(self, wordobj, sense, filter_gloss=None):
         word = wordobj.word
@@ -675,11 +675,6 @@ class DeckBuilder():
         return True
 
 
-    def get_feminine_forms(self, word):
-        for word_obj in self._words.get_words(word, "n"):
-            # Return inside loop intentional, we only want to process the first word
-            return word_obj.forms.get("f")
-
     def get_noun_gender(self, word_obj):
         if not word_obj.genders:
             return "n"
@@ -1174,38 +1169,137 @@ class DeckBuilder():
         return False
 
     def get_phrase(self, word, usage):
+
+        pos = usage[0]["words"][0]["pos"]
+
+        if pos == "n":
+            return self.get_noun_phrase(word, usage)
+#            old = self.get_noun_phrase_old(word, usage)
+#            if old != new:
+#                print("XXXX", old, "->", new)
+
+        elif pos == "v":
+            return self.get_verb_phrase(word, usage)
+
+        else:
+            return { "voice": self._FEMALE1, "phrase": word, "display": word }
+
+
+    def get_verb_phrase(self, word, usage):
+        phrase = word
+        display = word
+
+        if " " not in word \
+            and word[-2:] in ["ar", "er", "ir", "ír"] \
+            and self.verb_has_reflexive(usage):
+                phrase = f"{word}. {word}se"
+                display = f"{word}/{word}se"
+
+        return { "voice": self._FEMALE1, "phrase": phrase, "display": display }
+
+    def get_feminine_forms(self, word):
+        for word_obj in self._words.get_words(word, "n"):
+            # Return inside loop intentional, we only want to process the first word
+            return word_obj.forms.get("f")
+
+    def get_plurals(self, word):
+        plurals = []
+        for word in self._words.get_words(word, "n"):
+            for pl in word.forms.get("pl", []):
+                if pl not in plurals:
+                    plurals.append(pl)
+        return plurals
+
+    def get_usually_plural(self, word):
+        for plural in self.get_plurals(word):
+            if self.ngprobs.get_usage_count(plural, "n") > self.ngprobs.get_usage_count(word, "n"):
+                return plural
+
+    def has_plural_gloss(self, usage):
+        for word in usage[0]["words"]:
+            if word["pos"] != "n":
+                continue
+            if any("plural" in sense.get("tag", "") for sense in word["senses"]):
+                return True
+
+    def has_primary_plural_gloss(self, usage):
+        return usage[0]["words"][0]["pos"] == "n" and "plural" in usage[0]["words"][0]["senses"][0].get("tag","")
+
+    def include_plural_form(self, word, gender, usage):
+        # formats a noun with an article, includes the plural form if usually plural
+
+        if gender == "f":
+            s = f"el {word}" if word in self.el_f_nouns else f"la {word}"
+            plural = self.get_usually_plural(word)
+            if plural:
+                return ["las " + plural, s]
+            if self.has_primary_plural_gloss(usage):
+                plural = self.get_plurals(word)[0]
+                print(["XXXXXX", "las " + plural, s])
+                return ["las " + plural, s]
+            if self.has_plural_gloss(usage):
+                plural = self.get_plurals(word)[0]
+                print(["HHHHHH", s, "las " + plural])
+                return [s, "las " + plural]
+
+            return [s]
+        else:
+            s = f"el {word}"
+            plural = self.get_usually_plural(word)
+            if plural:
+                return ["los " + plural, s]
+            if self.has_primary_plural_gloss(usage):
+                plural = self.get_plurals(word)[0]
+                print(["XXXXXX", "los " + plural, s])
+                return ["los " + plural, s]
+            if self.has_plural_gloss(usage):
+                plurals = self.get_plurals(word)
+                if not plurals:
+                    return [s]
+                return [s, "los " + plurals[0]]
+            return [s]
+
+    def get_noun_phrase(self, word, usage):
         voice = ""
         phrase = ""
         display = None
 
-        pos = usage[0]["words"][0]["pos"]
+        items = []
+
         noun_type = self.get_noun_type(usage)
-        femforms = self.get_feminine_forms(word) if pos == "n" else None
+
+        femforms = self.get_feminine_forms(word)
         if femforms:
             voice = self._MALE1
 
-            fems = [f"el {f}" if f in self.el_f_nouns else f"la {f}" for f in femforms]
-            fem_display = ", ".join(fems)
-            fem_phrase = ". ".join(fems)
+            items = [f"el {f}" if f in self.el_f_nouns else f"la {f}" for f in femforms]
+            items.append(f"el {word}")
+            phrase = ". ".join(items)
+            display = "/".join(items)
 
-            phrase = f"{fem_phrase}. el {word}"
-            display = f"{fem_display}/el {word}"
         elif noun_type == "f-el":
             voice = self._FEMALE2
-            phrase = f"el {word}"
+            items = self.include_plural_form(word, "f", usage)
+            phrase = ". ".join(items)
+            display = "/".join(items)
         elif noun_type == "f":
             voice = self._FEMALE2
-            phrase = f"la {word}"
+            items = self.include_plural_form(word, "f", usage)
+            phrase = ". ".join(items)
+            display = "/".join(items)
         elif noun_type == "fp":
             voice = self._FEMALE2
             phrase = f"las {word}"
+            display = phrase
         elif noun_type == "m-f":
             voice = self._FEMALE1
             phrase = f"la {word}. el {word}"
             display = f"la/el {word}"
         elif noun_type == "m":
             voice = self._MALE1
-            phrase = f"el {word}"
+            items = self.include_plural_form(word, "m", usage)
+            phrase = ". ".join(items)
+            display = "/".join(items)
         elif noun_type == "mf":
             voice = self._MALE1
             phrase = f"el {word}. la {word}"
@@ -1217,23 +1311,11 @@ class DeckBuilder():
         elif noun_type == "mp":
             voice = self._MALE1
             phrase = f"los {word}"
-        elif pos == "n":
-            raise ValueError(f"Word {word} has unknown noun type {noun_type}")
-        elif pos == "v" \
-                and " " not in word \
-                and word[-2:] in ["ar", "er", "ir", "ír"] \
-                and self.verb_has_reflexive(usage):
-                    voice = self._FEMALE1
-                    phrase = f"{word}. {word}se"
-                    display = f"{word}/{word}se"
-        else:
-            voice = self._FEMALE1
-            phrase = word
-
-        if not display:
             display = phrase
+        else:
+            raise ValueError(f"Word {word} has unknown noun type {noun_type}")
 
-        return {"voice": voice, "phrase": phrase, "display": display}
+        return { "voice": voice, "phrase": phrase, "display": display }
 
 
     _REGIONS = {
@@ -1500,9 +1582,7 @@ class DeckBuilder():
         csvreader = csv.DictReader(data)
         for reqfield in ["pos", "spanish"]:
             if reqfield not in csvreader.fieldnames:
-                raise ValueError(
-                    f"No '{reqfield}' field specified in file {wordlist}"
-                )
+                raise ValueError(f"No '{reqfield}' field specified in wordlist")
 
         count = 0
         for row in csvreader:
