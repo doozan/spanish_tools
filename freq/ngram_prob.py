@@ -91,6 +91,23 @@ class NgramPosProbability():
 
         return total, pos_count
 
+    def get_preferred_pos(self, word):
+        totalpos = self.form_probs.get(word, None)
+        if not totalpos:
+            return
+
+        total, _, all_pos = totalpos.partition("\t")
+        if not all_pos:
+            return
+
+        for tagcount in all_pos.split("; "):
+            tag, _, count = tagcount.partition(":")
+            pos = self.tag_to_pos(tag)
+
+            if not pos:
+                continue
+
+            return pos
 
     def get_pos_probs(self, word, filter_pos=None):
 
@@ -131,8 +148,12 @@ class NgramPosProbability():
     def get_preferred_case(self, word):
         if not self._preferred_case:
 
+            # Note: this assumes that the prob file is sorted from most common to least common
             for key, tagcount in self.form_probs.items():
                 lc = key.lower()
+                # always prefer lowercase of single letters
+                if len(key) == 1:
+                    key = lc
                 if lc not in self._preferred_case:
                     self._preferred_case[lc] = key
 
