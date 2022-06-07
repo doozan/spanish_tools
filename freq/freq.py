@@ -564,6 +564,9 @@ class FrequencyList():
 
         all_pos = self.get_all_pos(possible_lemmas)
 
+        if "num" in all_pos:
+            return [ (form, "num", 1) ] + [ (form, pos, 0) for pos in all_pos if pos != "num" ]
+
         usage = []
         if use_lemma:
             for lemma in possible_lemmas:
