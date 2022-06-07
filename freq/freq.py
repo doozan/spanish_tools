@@ -15,11 +15,12 @@ from ..sentences import SpanishSentences
 
 class FrequencyList():
 
-    def __init__(self, wordlist, allforms, sentences, ignore_data=[], probs=None, debug_word=None):
+    def __init__(self, wordlist, allforms, sentences, probs, ngprobs, ignore_data=[], debug_word=None):
         self.wordlist = wordlist
         self.allforms = allforms
         self.sentences = sentences
         self.probs = probs
+        self.ngprobs = ngprobs
         self.load_ignore(ignore_data)
         self.DEBUG_WORD = debug_word
         self.forced_regs = {}
@@ -113,7 +114,7 @@ class FrequencyList():
 
         # Read all the lines and do an initial lookup of lemmas
         for linenum, line in enumerate(freqlist):
-            form, _, count = line.strip().partition(" ")
+            form, _, count = line.strip().rpartition(" ")
             form, _, pos = form.partition(":")
 
             if not count or not count.isdigit():
@@ -134,7 +135,7 @@ class FrequencyList():
                 form = form[1:]
             elif not pos:
                 orig_form = form
-                form = self.probs.get_preferred_case(form)
+                form = self.ngprobs.get_preferred_case(form)
 
             preferred_lemmas = self.get_preferred_lemmas(form, lemma, pos)
             if not preferred_lemmas and orig_form != form:
@@ -177,7 +178,6 @@ class FrequencyList():
         # the most popular lemmas from words with multiple lemmas
         lemma_freq = self.get_lemma_freq(lines)
 
-        print(f"resolving {len(multi_lemmas)} multi lemmas", file=sys.stderr)
         for form, preferred_lemmas in multi_lemmas:
             item = lines[form]
             pos,count,_ = item
@@ -190,7 +190,6 @@ class FrequencyList():
 
         lemma_freq = self.get_lemma_freq(lines)
 
-        print(f"resolving {len(maybe_plurals)} maybe plurals", file=sys.stderr)
         for form, preferred_lemmas in maybe_plurals:
             entry = self.resolve_plurals(lines, lemma_freq, form, preferred_lemmas)
             lines[form] = entry
@@ -576,7 +575,7 @@ class FrequencyList():
                 usage.append(("@" + form, pos))
 
         #usage_count = [ (f, pos, self.sentences.get_usage_count(f, pos)) for f, pos in usage ]
-        usage_count = [ (f, pos, self.probs.get_usage_count(f, pos)) for f, pos in usage ]
+        usage_count = [ (f, pos, self.ngprobs.get_usage_count(f, pos)) for f, pos in usage ]
         res = sorted(usage_count, key=lambda k: (int(k[2])*-1, k[1], k[0]))
 
         # If no usage found
@@ -598,7 +597,7 @@ class FrequencyList():
         return res
 
     def get_freq_probs(self, form, all_pos):
-        pos_by_prob = self.probs.get_pos_probs(form, all_pos)
+        pos_by_prob = self.ngprobs.get_pos_probs(form, all_pos)
         if not pos_by_prob:
             return
 
@@ -630,7 +629,6 @@ class FrequencyList():
         self.debug(form, "get_ranked_pos:posrank", use_lemma, pos_rank)
 
         pos_with_usage = [ pos for form, pos, count in pos_rank if count > 0 ]
-
         if len(pos_with_usage) == 1:
             return sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)
 
@@ -643,7 +641,7 @@ class FrequencyList():
             return pos_rank
 
         # No sentence usage or equal sentence usage, check the prob table
-        if not use_lemma and self.probs:
+        if not use_lemma and self.ngprobs:
             res = self.get_freq_probs(form, all_pos)
             if res:
                 self.debug(form, "get_ranked_pos, using probs table:", res)
@@ -709,29 +707,23 @@ class FrequencyList():
         flags = []
         pos = pos.lower()
         if pos == "unknown":
-            flags.append("UNKNOWN")
+            return ["UNKNOWN"]
 
-        if pos == "none":
-            flags.append("NOUSAGE")
-
-        if pos == "pron":
-            flags.append("PRONOUN")
-
-        if pos == "letter":
-            flags.append("LETTER")
+        elif pos == "none":
+            return ["NOUSAGE"]
 
         if not self.wordlist.has_word(form, pos):
-            flags.append("NODEF")
+            return ["NODEF"]
 
         res = self.sentences.get_sentences([[form, pos]], 1)
         if not len(res["sentences"]):
-            flags.append("NOSENT")
+            return ["NOSENT"]
 
         else:
             if res["matched"] == "literal":
-                flags.append("LITERAL")
+                return ["LITERAL"]
             elif res["matched"] == "fuzzy":
-                flags.append("FUZZY")
+                return ["FUZZY"]
 
         # remove reflexive verbs if the non-reflexive verb is already on the list
        # if form.endswith("rse") and pos == "v" and (form[:-2],"v") in freq:
@@ -771,19 +763,15 @@ class FrequencyList():
         lemma_freq = self.get_lemma_freq(lines)
 
         freq = {}
-        usage = {}
+        usage = defaultdict(dict)
         count = 1
+
         for tag, item in sorted(lemma_freq.items(), key=lambda x: (x[1]["count"]*-1, x[0])):
             lemma, pos = tag
 
             flags = self.get_flags(lemma, pos)
 
-            # Check for repeat usage
-            if lemma not in usage:
-                usage[lemma] = {}
-
             usage[lemma][pos] = item["count"]
-            #usage[form].append(pos)
 
             freq[tag] = {
                 "count": item["count"],
@@ -896,7 +884,7 @@ class FrequencyList():
         if best is None and len(lemmas):
 
             #usage = [(self.sentences.get_usage_count(l.word, pos), l.word) for l in possible_lemmas]
-            usage = [(self.probs.get_usage_count(l.word, pos), l.word) for l in possible_lemmas]
+            usage = [(self.ngprobs.get_usage_count(l.word, pos), l.word) for l in possible_lemmas]
             ranked = sorted(usage, key=lambda x: (x[0]*-1, x[1]))
             self.debug(form, pos, "get_best_lemma", lemmas, "no best, using sentences frequency", ranked)
 

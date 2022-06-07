@@ -37,12 +37,8 @@ def init_freq(params):
     parser.add_argument("extra", nargs="*", help="Usage list")
     args = parser.parse_args(params)
 
-    if args.probs:
-        probs = PosProbability(args.probs)
-    elif args.ngprobs:
-        probs = NgramPosProbability(args.ngprobs)
-    else:
-        raise ValueError("--ngprobs or --probs required")
+    probs = PosProbability(args.probs)
+    ngprobs = NgramPosProbability(args.ngprobs)
 
     # allow first positional argument to replace undeclared --infile
     if args.infile == parser.get_default("infile") and args.extra:
@@ -73,7 +69,7 @@ def init_freq(params):
         sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir
     )
 
-    flist = FrequencyList(wordlist, allforms, sentences, ignore_data, probs, debug_word=args.debug)
+    flist = FrequencyList(wordlist, allforms, sentences, probs, ngprobs, ignore_data, debug_word=args.debug)
     ignore_data.close()
 
     return flist, args
