@@ -1232,21 +1232,25 @@ class DeckBuilder():
             s = f"el {word}" if word in self.el_f_nouns else f"la {word}"
             plural = self.get_usually_plural(word)
             if plural:
+#                print(["WWWWW", "las " + plural, s])
                 return ["las " + plural, s]
             if self.has_primary_plural_gloss(usage):
                 plural = self.get_plurals(word)[0]
                 print(["XXXXXX", "las " + plural, s])
                 return ["las " + plural, s]
             if self.has_plural_gloss(usage):
-                plural = self.get_plurals(word)[0]
-                print(["HHHHHH", s, "las " + plural])
-                return [s, "las " + plural]
+                plurals = self.get_plurals(word)
+                if not plurals:
+                    return [s]
+                print(["HHHHHH", s, "las " + plurals[0]])
+                return [s, "las " + plurals[0]]
 
             return [s]
         else:
             s = f"el {word}"
             plural = self.get_usually_plural(word)
             if plural:
+#                print(["WWWWW", "los " + plural, s])
                 return ["los " + plural, s]
             if self.has_primary_plural_gloss(usage):
                 plural = self.get_plurals(word)[0]
@@ -1256,6 +1260,7 @@ class DeckBuilder():
                 plurals = self.get_plurals(word)
                 if not plurals:
                     return [s]
+                print(["HHHHHH", s, "los " + plurals[0]])
                 return [s, "los " + plurals[0]]
             return [s]
 
