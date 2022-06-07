@@ -266,9 +266,10 @@ class SpanishSentences:
 
 
     def get_ids_from_phrase(self, phrase):
+        term = phrase.strip().lower()
         pattern = r"\b" + phrase.strip().lower() + r"\b"
 
-        return [i for i, item in enumerate(self.grepdb) if re.search(pattern, item)]
+        return [i for i, item in enumerate(self.grepdb) if term in item and re.search(pattern, item)]
 
     def get_ids_from_word(self, word):
         return self.get_ids_from_tag("@"+word, "")
