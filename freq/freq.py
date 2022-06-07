@@ -557,48 +557,6 @@ class FrequencyList():
     def get_all_pos(self, lemmas):
         return sorted(set(l.pos for l in lemmas))
 
-    def get_ranked_usage(self, form, possible_lemmas, use_lemma=False):
-        """
-        Returns a list of (word, pos, count), sorted by count, descending
-        """
-
-        all_pos = self.get_all_pos(possible_lemmas)
-
-        if "num" in all_pos:
-            return [ (form, "num", 1) ] + [ (form, pos, 0) for pos in all_pos if pos != "num" ]
-
-        usage = []
-        if use_lemma:
-            for lemma in possible_lemmas:
-                item = (lemma.word, lemma.pos)
-                if item not in usage:
-                    usage.append(item)
-        else:
-            for pos in all_pos:
-                usage.append(("@" + form, pos))
-
-        #usage_count = [ (f, pos, self.sentences.get_usage_count(f, pos)) for f, pos in usage ]
-        usage_count = [ (f, pos, self.ngprobs.get_usage_count(f, pos)) for f, pos in usage ]
-        res = sorted(usage_count, key=lambda k: (int(k[2])*-1, k[1], k[0]))
-
-        # If no usage found
-        if res[0][2] == 0 and not use_lemma:
-            sentence_pos = self.sentences.get_all_pos("@"+form)
-            if sentence_pos:
-
-                # In sentences the past participles are marked "verb" instead of "v"
-                # so that the summed verb forms don't overwhelm the summed adjective of noun forms
-                # However, if we've made it this far and haven't found anything, count it explicitly
-                # as a verb
-                if "v" in all_pos and "verb" in sentence_pos:
-                    #res = [ (form, "v", self.sentences.get_usage_count(form, "verb")) ]
-                    res = [ (form, "v", self.probs.get_usage_count(form, "verb")) ]
-                    res += [ (f, pos, 0) for f, pos in usage if pos != "v" ]
-                    #print(f"{form}: using 'verb' count instead of 'v'")
-                    return res
-
-        return res
-
     def get_freq_probs(self, form, all_pos):
         pos_by_prob = self.ngprobs.get_pos_probs(form, all_pos)
         if not pos_by_prob:
@@ -614,9 +572,9 @@ class FrequencyList():
 
         return sorted_pos_by_prob
 
-    def get_ranked_pos(self, form, possible_lemmas, use_lemma=False):
+    def get_ranked_pos(self, form, possible_lemmas):
         """
-        Returns a list of all possible parts of speech, sorted by frequency of use
+        Returns a list of (word, pos, count), sorted by count, descending
         """
 
         all_pos = self.get_all_pos(possible_lemmas)
@@ -627,70 +585,11 @@ class FrequencyList():
         if len(all_pos) == 1:
             return [(None,all_pos[0],1)]
 
-        pos_rank = self.get_ranked_usage(form, possible_lemmas, use_lemma)
+        if "num" in all_pos:
+            return [ (form, "num", 1) ] + [ (form, pos, 0) for pos in all_pos if pos != "num" ]
 
-        self.debug(form, "get_ranked_pos:posrank", use_lemma, pos_rank)
-
-        pos_with_usage = [ pos for form, pos, count in pos_rank if count > 0 ]
-        if len(pos_with_usage) == 1:
-            return sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)
-
-        # If there's enough usage data in the sentences, let them decide:
-        # - preferred pos has at least 10 usages and 1.3* more than the secondary
-        # - preferred pos has at least 4 usages and secondary <= 1
-        if (   (pos_rank[0][2] >= 10 and pos_rank[0][2] >= 1.3*(pos_rank[1][2]))
-            or (pos_rank[0][2] >= 4 and pos_rank[0][2] >= 3*(pos_rank[1][2]))
-            ):
-            return pos_rank
-
-        # No sentence usage or equal sentence usage, check the prob table
-        if not use_lemma and self.ngprobs:
-            res = self.get_freq_probs(form, all_pos)
-            if res:
-                self.debug(form, "get_ranked_pos, using probs table:", res)
-                return res
-
-        # If anything has more sentence usage, take it
-        if pos_rank[0][2] > pos_rank[1][2]:
-            return pos_rank
-
-        # If there's still a tie, take non-verbs over verbs
-        # If there's still a tie, use the lemam forms
-        # Still tied? prefer adj > noun > non-verb > verb
-
-        top_count = pos_rank[0][2]
-
-        # prefer non-verbs over verbs
-        if top_count > 0 or use_lemma:
-            for i, (form, pos, count) in enumerate(pos_rank):
-                if count != top_count:
-                    break
-                if pos != "v":
-                    count += 1
-                pos_rank[i] = (form, pos, count)
-
-        if pos_rank[0][2] > pos_rank[1][2]:
-            return pos_rank
-
-        # Try with lemma forms
-        if not use_lemma:
-            return self.get_ranked_pos(form, possible_lemmas, use_lemma=True)
-
-        # prefer adj > noun > anything > verb
-        top_count = pos_rank[0][2]
-        for i, (form, pos, count) in enumerate(pos_rank):
-            if count != top_count:
-                break
-            if pos == "adj":
-                count += 3
-            elif pos == "n":
-                count += 2
-            elif pos != "v":
-                count += 1
-
-            pos_rank[i] = (form, pos, count)
-
-        return sorted(pos_rank, key=lambda k: int(k[2]), reverse=True)
+        usage_count = [ (form, pos, self.ngprobs.get_usage_count(form, pos)) for pos in all_pos ]
+        return sorted(usage_count, key=lambda k: (int(k[2])*-1, k[1], k[0]))
 
     flags_defs = {
         "UNKNOWN": "Word does not appear in lemma database or dictionary",
