@@ -2,7 +2,7 @@ import os
 import pytest
 from pytest import fixture
 
-from ..ngram_prob import NgramPosProbability
+from ..freq.ngram_prob import NgramPosProbability
 
 @fixture
 def ngram_prob(request):

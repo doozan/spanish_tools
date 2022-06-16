@@ -38,8 +38,10 @@ class NgramPosProbability():
         "DET": 'determiner',
         "CONJ": 'conj',
         'NOUN': 'n',
-        "VERB": 'v',
+        "NUM": 'num',
         "PRON": 'pron',
+        "PRT": 'part',
+        "VERB": 'v',
     }
     @classmethod
     def tag_to_pos(cls, tag):

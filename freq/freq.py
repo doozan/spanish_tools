@@ -114,27 +114,29 @@ class FrequencyList():
 
         # Read all the lines and do an initial lookup of lemmas
         for linenum, line in enumerate(freqlist):
-            form, _, count = line.strip().rpartition(" ")
+            line = line.strip()
+            form, _, count = line.rpartition(" ")
+            if not count.isdigit():
+                form = line
+                count = None
             form, _, pos = form.partition(":")
-
-            if not count or not count.isdigit():
-                if count:
-                    form = form + " " + count
-                # If the list doesn't include a counter,
-                # assign a value in descending order to preserve the list order
-                count = 100000-linenum
-            else:
-                count = int(count)
+            orig_form = form
 
             if form in self.ignore:
                 continue
+
+            if count:
+                count = int(count)
+            else:
+                # If the list doesn't include a counter,
+                # assign a value in descending order to preserve the list order
+                count = 100000-linenum
 
             lemma = None
             if form.startswith("@"):
                 lemma = form[1:]
                 form = form[1:]
             elif not pos:
-                orig_form = form
                 form = self.ngprobs.get_preferred_case(form)
 
             preferred_lemmas = self.get_preferred_lemmas(form, lemma, pos)
@@ -242,6 +244,7 @@ class FrequencyList():
 
     def get_best_pos(self, form, preferred_lemmas):
         res = self.get_ranked_pos(form, preferred_lemmas)
+        self.debug(form, "ranked_pos", res)
         if not res:
             return None
 
