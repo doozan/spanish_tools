@@ -175,6 +175,8 @@ class FrequencyList():
 
             lines[form] = (pos, count, lemma)
 
+#            if form == self.DEBUG_WORD:
+#                exit()
 
         # count all forms of all lemmas so far, used to pick
         # the most popular lemmas from words with multiple lemmas
@@ -591,8 +593,17 @@ class FrequencyList():
         if "num" in all_pos:
             return [ (form, "num", 1) ] + [ (form, pos, 0) for pos in all_pos if pos != "num" ]
 
-        usage_count = [ (form, pos, self.ngprobs.get_usage_count(form, pos)) for pos in all_pos ]
-        return sorted(usage_count, key=lambda k: (int(k[2])*-1, k[1], k[0]))
+        ng_usage_count = [ (form, pos, self.ngprobs.get_usage_count(form, pos)) for pos in all_pos ]
+        ng_usage_count.sort(key=lambda k: (int(k[2])*-1, k[1], k[0]))
+
+        if form == self.DEBUG_WORD:
+            usage_count = [ (form, pos, count) for pos, count in self.probs.get_pos_probs(form, all_pos) ]
+            print("probs", usage_count)
+            print("ng_probs", ng_usage_count)
+            if usage_count and ng_usage_count and usage_count[0][1] != ng_usage_count[0][1]:
+                print("mismatch pos", form, usage_count, ng_usage_count)
+
+        return ng_usage_count
 
     flags_defs = {
         "UNKNOWN": "Word does not appear in lemma database or dictionary",
@@ -611,14 +622,15 @@ class FrequencyList():
     def get_flags(self, form, pos):
         flags = []
         pos = pos.lower()
-        if pos == "unknown":
-            return ["UNKNOWN"]
 
-        elif pos == "none":
+        if not pos:
+            raise ValueError(form, "no pos")
+
+        if pos == "none":
             return ["NOUSAGE"]
 
         if not self.wordlist.has_word(form, pos):
-            return ["NODEF"]
+            raise ValueError(form, "no def")
 
         res = self.sentences.get_sentences([[form, pos]], 1)
         if not len(res["sentences"]):
@@ -788,10 +800,10 @@ class FrequencyList():
 
         if best is None and len(lemmas):
 
-            #usage = [(self.sentences.get_usage_count(l.word, pos), l.word) for l in possible_lemmas]
-            usage = [(self.ngprobs.get_usage_count(l.word, pos), l.word) for l in possible_lemmas]
+            usage = [(self.ngprobs.get_usage_count(lemma, pos), lemma) for lemma in lemmas]
             ranked = sorted(usage, key=lambda x: (x[0]*-1, x[1]))
             self.debug(form, pos, "get_best_lemma", lemmas, "no best, using sentences frequency", ranked)
+            print("$$$$", [form, pos], "get_best_lemma", ranked)
 
             if ranked[0][0] == ranked[1][0]:
                 print("###", form, pos, "get_best_lemma", lemmas, "no best, no sentences frequency", ranked)

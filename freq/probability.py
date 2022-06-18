@@ -86,7 +86,7 @@ class PosProbability():
 
             if not word:
 #                print("no match", word)
-                return
+                return []
 
             it = iter(self.suffix_probs[word])
 
@@ -110,6 +110,7 @@ class PosProbability():
 
         if total == 0:
 #            print("failed", word, filter_pos, file=sys.stderr)
-            return
+            return []
 
-        return {k: count/total for k,count in sorted(data.items(), key=lambda x: (x[1]*-1, x[0]))}
+        return [ (form, count) for form,count in sorted(data.items(), key=lambda x: (x[1]*-1, x[0])) ]
+        #return {k: count/total for k,count in sorted(data.items(), key=lambda x: (x[1]*-1, x[0]))}
