@@ -13,6 +13,8 @@ import sys
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 from spanish_tools.freq import FrequencyList
+from spanish_tools.freq import PosProbability
+from spanish_tools.freq import NgramPosProbability
 
 parser = argparse.ArgumentParser(description="Manage tagged sentences")
 parser.add_argument(
@@ -26,9 +28,14 @@ parser.add_argument(
 parser.add_argument("--tags", nargs=1, help="Merged tagged data with original data")
 parser.add_argument("--dictionary", help="Dictionary file", required=True)
 parser.add_argument("--allforms", help="Load word forms from file")
+parser.add_argument("--probs", help="Probability data file", required=True)
+parser.add_argument("--ngprobs", help="Ngram probability data file", required=True)
 parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
 parser.add_argument('--verbose', action='store_true')
 args = parser.parse_args()
+
+probs = PosProbability(args.probs)
+ngprobs = NgramPosProbability(args.ngprobs)
 
 if not os.path.isfile(args.sentences):
     raise FileNotFoundError(f"Cannot open: {args.sentences}")
@@ -45,7 +52,7 @@ if args.allforms:
 else:
     allforms = AllForms.from_wordlist(wordlist)
 
-freq = FrequencyList(wordlist, allforms, None)
+freq = FrequencyList(wordlist, allforms, None, probs, ngprobs)
 
 
 def tag_to_pos(tag, word):
