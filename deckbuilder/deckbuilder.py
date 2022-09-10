@@ -1581,6 +1581,19 @@ class DeckBuilder():
             with open(filename, newline="") as csvfile:
                 self.load_wordlist(csvfile, all_allowed_flags, limit, metadata)
 
+
+
+    allowed_proper_nouns = { "Fulano", "Sudáfrica", "Sudamérica", "Centroamérica", "Renacimiento", "URSS",
+            "América Latina", "Mediterráneo", "Atlántico", "Caribe", "OTAN", "Pacífico", "Oriente",
+            "Estados Unidos", "Biblia", "Latinoamérica", "Norteamérica", "Navidad", "ONU", "fulana",
+            "Nochebuena", "Dios", "Mesoamérica", "Pereira"}
+
+    def is_allowed(self, word, pos):
+        if pos != "prop":
+            return True
+
+        return word in self.allowed_proper_nouns
+
     def load_wordlist(self, data, allowed_flags, limit=0, metadata=None):
         # data is an iterator that provides csv formatted data
 
@@ -1600,6 +1613,9 @@ class DeckBuilder():
             # Negative position indicates that all previous instances of this word should be removed
             if position and position.startswith("-"):
                 self.wordlist_remove(item_tag)
+                continue
+
+            if not self.is_allowed(row["spanish"], row["pos"]):
                 continue
 
             if "flags" in row and row["flags"]:
@@ -1688,7 +1704,7 @@ class DeckBuilder():
 
             item["tags"] += tags
             item["tags"].append(item["Part of Speech"])
-            item["tags"].append(str(math.ceil(position / 500) * 500))
+#            item["tags"].append(str(math.ceil(position / 500) * 500))
 
             row = []
             for field in self._fields:
