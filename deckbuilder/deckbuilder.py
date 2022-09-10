@@ -61,15 +61,6 @@ class DeckBuilder():
 
     MAX_SYNONYMS = 5
 
-    # For the sentence arrays
-    IDX_SPANISH = 0
-    IDX_ENGLISH = 1
-    IDX_SCORE = 2
-    IDX_SPAID = 3
-    IDX_ENGID = 4
-    IDX_SPAUSER = 5
-    IDX_ENGUSER = 6
-
     # _FEMALE1 = "Lupe"
     _FEMALE1 = "Penelope"
     _FEMALE2 = "Penelope"
@@ -218,8 +209,8 @@ class DeckBuilder():
     @staticmethod
     def format_sentences(sentences):
         return "\n".join(
-            f'<span class="spa">{html.escape(item[0])}</span>\n' \
-            f'<span class="eng">{html.escape(item[1])}</span>'
+            f'<span class="spa">{html.escape(item.spanish)}</span>\n' \
+            f'<span class="eng">{html.escape(item.english)}</span>'
             for item in sentences
         )
 
@@ -236,10 +227,10 @@ class DeckBuilder():
 
     def store_credits(self, results):
         for sentence in results["sentences"]:
-            spa_user = sentence[self.IDX_SPAUSER]
-            eng_user = sentence[self.IDX_ENGUSER]
-            spa_id = sentence[self.IDX_SPAID]
-            eng_id = sentence[self.IDX_ENGID]
+            spa_user = sentence.spa_user
+            eng_user = sentence.eng_user
+            spa_id = sentence.spa_id
+            eng_id = sentence.eng_id
 
             for user in [spa_user, eng_user]:
                 if user not in self.credits:
@@ -292,11 +283,8 @@ class DeckBuilder():
             if len(results["sentences"]) != 3:
                 continue
 
-            if all(sentence[self.IDX_SCORE] >= 55 for sentence in results["sentences"]):
-                ids = [
-                    f"{sentence[self.IDX_SPAID]}:{sentence[self.IDX_ENGID]}"
-                    for sentence in results["sentences"]
-                ]
+            if all(sentence.score >= 55 for sentence in results["sentences"]):
+                ids = [ f"{sentence.spa_id}:{sentence.eng_id}" for sentence in results["sentences"] ]
                 self.dumpable_sentences[tag] = ids
 
 

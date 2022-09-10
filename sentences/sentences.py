@@ -5,15 +5,9 @@ import os
 import pickle
 import re
 import sys
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
-IDX_SPANISH=0
-IDX_ENGLISH=1
-IDX_SCORE=2
-IDX_SPAID=3
-IDX_ENGID=4
-IDX_SPAUSER=5
-IDX_ENGUSER=6
+Sentence = namedtuple("Sentence", [ "spanish", "english", "score", "spa_id", "eng_id", "spa_user", "eng_user" ])
 
 def make_tag(word, pos):
     return pos.lower() + ":" + word.lower()
@@ -90,7 +84,7 @@ class SpanishSentences:
                 if eng_id in self.filter_ids or spa_id in self.filter_ids:
                     continue
 
-                self.sentencedb.append( [spanish, english, score, spa_id, eng_id, spa_user, eng_user] )
+                self.sentencedb.append( Sentence(spanish, english, score, spa_id, eng_id, spa_user, eng_user) )
                 stripped = re.sub('[^ a-záéíñóúü]+', '', spanish.lower())
                 self.grepdb.append(stripped)
 
@@ -127,7 +121,7 @@ class SpanishSentences:
                             print(f"{source} sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
                             continue
 
-                        elif source == "preferred" and any(self.sentencedb[i][IDX_SCORE] < 55 for i in ids):
+                        elif source == "preferred" and any(self.sentencedb[i].score < 55 for i in ids):
                             print(f"{source} sentences scores for {word},{pos} have dropped below 55, ignoring...", file=sys.stderr)
                             continue
 
@@ -318,15 +312,15 @@ class SpanishSentences:
             wordtag = make_tag(word, pos)
 
             forced_ids = [x for x in self.forced_ids.get(wordtag,[]) if
-                    self.sentencedb[x][IDX_SPAID] not in seen and
-                    self.sentencedb[x][IDX_ENGID] not in seen]
+                    self.sentencedb[x].spa_id not in seen and
+                    self.sentencedb[x].eng_id not in seen]
 
             if len(forced_ids):
                 source = self.forced_ids_source[wordtag]
                 item_ids = forced_ids[:count]
                 for x in item_ids:
-                    seen.add(self.sentencedb[x][IDX_SPAID])
-                    seen.add(self.sentencedb[x][IDX_ENGID])
+                    seen.add(self.sentencedb[x].spa_id)
+                    seen.add(self.sentencedb[x].eng_id)
 
             else:
                 res = self.get_all_sentence_ids(word, pos)
@@ -365,7 +359,7 @@ class SpanishSentences:
         scored = {}
         for i in all_ids:
             s = self.sentencedb[i]
-            score = s[IDX_SCORE]
+            score = s.score
             if not score in scored:
                 scored[score] = set()
             scored[score].add(i)
@@ -381,9 +375,9 @@ class SpanishSentences:
 
             for i in sorted(scored[score]):
                 s = self.sentencedb[i]
-                if s[IDX_ENGID] not in seen and s[IDX_SPAID] not in seen:
-                    seen.add(s[IDX_ENGID])
-                    seen.add(s[IDX_SPAID])
+                if s.eng_id not in seen and s.spa_id not in seen:
+                    seen.add(s.eng_id)
+                    seen.add(s.spa_id)
                     available.append(i)
 
             if len(available) >= needed:
@@ -430,13 +424,9 @@ class SpanishSentences:
 
     def get_sentences(self, items, count, forced_items=[]):
 
-        res = self.get_best_sentence_ids(items, count)
-        source = res[0]['source'] if len(res) else None
-        sentences = []
-        for item in res:
-            data = self.sentencedb[item['id']]
-            sentences.append(data + [item['pos']])
-
+        sentence_ids = self.get_best_sentence_ids(items, count)
+        source = sentence_ids[0]['source'] if sentence_ids else None
+        sentences = [ self.sentencedb[i['id']] for i in sentence_ids ]
         return { "sentences": sentences, "matched": source }
 
 
