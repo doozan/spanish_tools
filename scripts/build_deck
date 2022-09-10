@@ -77,8 +77,24 @@ def build_deck(params=None):
         default="sentences.tsv"
     )
     parser.add_argument(
-        "--data-dir",
-        help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')",
+        "--sentences-preferred"
+        help="Data file with preferred sentence ids",
+        action="append",
+    )
+    parser.add_argument(
+        "--sentences-forced"
+        help="Data file with forced sentence ids",
+        action="append",
+    )
+    parser.add_argument(
+        "--sentences-ignored"
+        help="Data file with ignored sentence ids",
+        action="append",
+    )
+    parser.add_argument(
+        "--sentences-tagfixes"
+        help="Data file with sentence tag overrides",
+        action="append",
     )
     parser.add_argument(
         "--custom-dir",
@@ -94,12 +110,6 @@ def build_deck(params=None):
                 exit(1)
     else:
         args.tag = []
-
-    if not args.data_dir:
-        args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
-
-    if not args.custom_dir:
-        args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
 
     if not args.mediadir:
         args.mediadir = args.deckfile + ".media"
@@ -141,7 +151,11 @@ def build_deck(params=None):
     ignore = DeckBuilder.load_ignore(args.dictionary_custom)
 
     sentences = SpanishSentences(
-        sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir
+        sentences=args.sentences,
+        preferred=args.sentences_preferred,
+        forced=args.sentences_forced,
+        ignored=args.sentences_ignored,
+        tagfixes=args.sentences_tagfixes
     )
     shortdefs = DeckBuilder.load_shortdefs(args.short_defs)
 

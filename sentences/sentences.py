@@ -14,9 +14,9 @@ def make_tag(word, pos):
 
 class SpanishSentences:
 
-    def __init__(self, sentences="sentences.tsv", data_dir=None, custom_dir=None):
+    def __init__(self, sentences="sentences.tsv", preferred=[], forced=[], ignored=[], tagfixes=[]):
 
-        if self.load_cache(sentences, data_dir, custom_dir):
+        if self.load_cache(sentences, preferred, forced, ignored, tagfixes):
             return
 
         self.sentencedb = []
@@ -31,14 +31,7 @@ class SpanishSentences:
 
         tagfix_count = defaultdict(int)
 
-        if not data_dir:
-            data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
-
-        if not custom_dir:
-            custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
-
-
-        for datafile in self.get_modfiles(sentences, [data_dir, custom_dir], ".tagfixes"):
+        for datafile in tagfixes:
             with open(datafile) as infile:
                 for line in infile:
                     line = line.strip()
@@ -57,16 +50,12 @@ class SpanishSentences:
                         self.tagfixes[f"{oldword}:{oldpos}"] = [newword, newpos]
 
         # Ignore list must be loaded before the main file
-        for datafile in self.get_modfiles(sentences, [data_dir, custom_dir], ".ignore"):
+        for datafile in ignored:
             with open(datafile) as infile:
                 self.filter_ids = set( int(line.strip().split(" ",1)[0]) for line in infile if not line.startswith("#") )
 
-        datafile = os.path.join(data_dir, sentences)
-        if not os.path.isfile(datafile):
-            raise FileNotFoundError(f"Cannot open file: '{datafile}'")
-
         index=0
-        with open(datafile) as infile:
+        with open(sentences) as infile:
             for line in infile:
                 res = re.match(r"([^\t]*)\t([^\t]*)\tCC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)\t([0-6])\t([0-6])\t([^\t]*)\n", line)
                 if not res:
@@ -76,13 +65,13 @@ class SpanishSentences:
                 spa_id = int(spa_id)
                 score = int(spa_score)*10 + int(eng_score)
 
+                if eng_id in self.filter_ids or spa_id in self.filter_ids:
+                    continue
+
                 tags = { }
                 for tag_items in tag_str[1:].split(":"):
                     tag,*items = tag_items.strip().split(",")
                     tags[tag] = items
-
-                if eng_id in self.filter_ids or spa_id in self.filter_ids:
-                    continue
 
                 self.sentencedb.append( Sentence(spanish, english, score, spa_id, eng_id, spa_user, eng_user) )
                 stripped = re.sub('[^ a-záéíñóúü]+', '', spanish.lower())
@@ -104,50 +93,46 @@ class SpanishSentences:
                     print(f"Tagfix: {fixid} {new} does not match any sentences", file=sys.stderr)
 
         # Forced/preferred items must be processed last
-        for source in [ "preferred", "forced" ]:
-            for datafile in self.get_modfiles(sentences, [data_dir, custom_dir], "."+source):
-                if not os.path.isfile(datafile):
+        for datafile in preferred:
+            load_overrides(datafile, "preferred")
+
+        for datafile in preferred:
+            load_overrides(datafile, "forced")
+
+        self.save_cache(sentences, preferred, forced, ignored, tagfixes)
+
+
+    def load_overrides(datafile, source):
+        with open(datafile) as infile:
+
+            for line in infile:
+                line = line.strip()
+                if line.startswith("#"):
                     continue
-                with open(datafile) as infile:
+                word,pos,*forced_itemtags = line.split(",")
+                wordtag = make_tag(word, pos)
+                ids = self.itemtags_to_ids(forced_itemtags)
+                if None in ids:
+                    print(f"{source} sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
+                    continue
 
-                    for line in infile:
-                        line = line.strip()
-                        if line.startswith("#"):
-                            continue
-                        word,pos,*forced_itemtags = line.split(",")
-                        wordtag = make_tag(word, pos)
-                        ids = self.itemtags_to_ids(forced_itemtags)
-                        if None in ids:
-                            print(f"{source} sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
-                            continue
+                elif source == "preferred" and any(self.sentencedb[i].score < 55 for i in ids):
+                    print(f"{source} sentences scores for {word},{pos} have dropped below 55, ignoring...", file=sys.stderr)
+                    continue
 
-                        elif source == "preferred" and any(self.sentencedb[i].score < 55 for i in ids):
-                            print(f"{source} sentences scores for {word},{pos} have dropped below 55, ignoring...", file=sys.stderr)
-                            continue
-
-                        else:
-                            self.forced_ids[wordtag] = ids
-                            self.forced_ids_source[wordtag] = source
-
-        self.save_cache(sentences, data_dir, custom_dir)
-
-    @staticmethod
-    def get_modfiles(srcfile, paths, suffix):
-        dataprefix = os.path.splitext(srcfile)[0]
-        modfiles = []
-        for dirname in paths:
-            if not dirname:
-                continue
-            modfile = os.path.join(dirname, dataprefix + suffix)
-            if os.path.isfile(modfile) and modfile not in modfiles:
-                modfiles.append(modfile)
-
-        return modfiles
+                else:
+                    self.forced_ids[wordtag] = ids
+                    self.forced_ids_source[wordtag] = source
 
 
-    def save_cache(self, sentences, data_dir, custom_dir):
-        cached = self.get_cache_filename(sentences, data_dir, custom_dir)
+
+    def save_cache(self, sentences, preferred, forced, ignored, tagfixes):
+
+        modfiles = preferred + forced + ignored + tagfixes
+        cached = self.get_cache_filename(sentences, modfiles)
+
         print("saving cache", cached)
+
         with open(cached, "wb") as outfile:
             pickle.dump([
                 self.sentencedb,
@@ -163,37 +148,22 @@ class SpanishSentences:
 
 
     @classmethod
-    def get_datafiles_list(cls, sentences, data_dir, custom_dir):
-        datafile = os.path.join(data_dir, sentences) if data_dir else sentences
-        files = [datafile]
-        files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".tagfixes")
-        files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".ignore")
-        files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".preferred")
-        files += cls.get_modfiles(sentences, [data_dir, custom_dir], ".forced")
-
-        return files
-
-    @classmethod
-    def get_cache_filename(cls, sentences, data_dir, custom_dir):
-        files = "::".join(sorted(cls.get_datafiles_list(sentences, data_dir, custom_dir)))
+    def get_cache_filename(cls, sentences, modfiles):
+        files = sentences + "::" + "::".join(sorted(modfiles))
         hash_obj = hashlib.sha1(bytes(files, "utf-8"))
         cid = str(base64.b32encode(hash_obj.digest()), "utf-8")
 
-        datafile = os.path.join(data_dir, sentences) if data_dir else sentences
-        return datafile + ".~" + cid
+        return sentences + ".~" + cid
 
-    def load_cache(self, sentences, data_dir, custom_dir):
+    def load_cache(self, sentences, preferred, forced, ignored, tagfixes):
 
-        print("load_cache", [sentences, data_dir, custom_dir])
+        modfiles = preferred + forced + ignored + tagfixes
+        cached = self.get_cache_filename(sentences, modfiles)
 
-        datafile = os.path.join(data_dir, sentences) if data_dir else sentences
-        files = self.get_datafiles_list(sentences, data_dir, custom_dir)
-
-        cached = self.get_cache_filename(sentences, data_dir, custom_dir)
         if not os.path.exists(cached):
             return
 
-        if any(os.path.getctime(f) > os.path.getctime(cached) for f in files):
+        if any(os.path.getctime(f) > os.path.getctime(cached) for f in modfiles):
             return
 
         # check for cached version
