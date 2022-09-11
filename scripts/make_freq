@@ -5,7 +5,6 @@ import os
 import sys
 
 from spanish_tools.freq import FrequencyList
-from spanish_tools.freq import PosProbability
 from spanish_tools.freq import NgramPosProbability
 from spanish_tools.sentences import SpanishSentences
 from enwiktionary_wordlist.wordlist import Wordlist
@@ -17,7 +16,6 @@ def init_freq(params):
     parser.add_argument("--ignore", help="List of words to ignore")
     parser.add_argument("--dictionary", help="Dictionary file name", required=True)
     parser.add_argument("--allforms", help="All-forms file name")
-    parser.add_argument("--probs", help="Probability data file")
     parser.add_argument("--ngprobs", help="Ngram probability data file")
     parser.add_argument("--sentences", help="Sentences file name (DEFAULT: sentences.tsv)")
     parser.add_argument(
@@ -37,7 +35,6 @@ def init_freq(params):
     parser.add_argument("extra", nargs="*", help="Usage list")
     args = parser.parse_args(params)
 
-    probs = PosProbability(args.probs)
     ngprobs = NgramPosProbability(args.ngprobs)
 
     # allow first positional argument to replace undeclared --infile
@@ -65,11 +62,9 @@ def init_freq(params):
     else:
         allforms = AllForms.from_wordlist(wordlist)
 
-    sentences = SpanishSentences(
-        sentences=args.sentences, data_dir=args.data_dir, custom_dir=args.custom_dir
-    )
+    sentences = SpanishSentences(args.sentences)
 
-    flist = FrequencyList(wordlist, allforms, sentences, probs, ngprobs, ignore_data, debug_word=args.debug)
+    flist = FrequencyList(wordlist, allforms, sentences, ngprobs, ignore_data, debug_word=args.debug)
     ignore_data.close()
 
     return flist, args

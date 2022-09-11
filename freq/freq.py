@@ -15,11 +15,10 @@ from ..sentences import SpanishSentences
 
 class FrequencyList():
 
-    def __init__(self, wordlist, allforms, sentences, probs, ngprobs, ignore_data=[], debug_word=None):
+    def __init__(self, wordlist, allforms, sentences, ngprobs, ignore_data=[], debug_word=None):
         self.wordlist = wordlist
         self.allforms = allforms
         self.sentences = sentences
-        self.probs = probs
         self.ngprobs = ngprobs
         self.load_ignore(ignore_data)
         self.DEBUG_WORD = debug_word
@@ -597,8 +596,8 @@ class FrequencyList():
         ng_usage_count.sort(key=lambda k: (int(k[2])*-1, k[1], k[0]))
 
         if form == self.DEBUG_WORD:
-            usage_count = [ (form, pos, count) for pos, count in self.probs.get_pos_probs(form, all_pos) ]
-            print("probs", usage_count)
+#            usage_count = [ (form, pos, count) for pos, count in self.probs.get_pos_probs(form, all_pos) ]
+#            print("probs", usage_count)
             print("ng_probs", ng_usage_count)
             if usage_count and ng_usage_count and usage_count[0][1] != ng_usage_count[0][1]:
                 print("mismatch pos", form, usage_count, ng_usage_count)
