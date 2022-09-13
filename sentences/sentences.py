@@ -16,6 +16,15 @@ class SpanishSentences:
 
     def __init__(self, sentences="sentences.tsv", preferred=[], forced=[], ignored=[], tagfixes=[]):
 
+        if not preferred:
+            preferred = []
+        if not forced:
+            forced = []
+        if not ignored:
+            ignored = []
+        if not tagfixes:
+            tagfixes = []
+
         if self.load_cache(sentences, preferred, forced, ignored, tagfixes):
             return
 
@@ -86,23 +95,23 @@ class SpanishSentences:
             if old not in tagfix_count:
                 print(f"Tagfix: {old} {new} does not match any sentences", file=sys.stderr)
 
-        for sid,tagfixes in self.tagfix_sentences.items():
-            for old,new in tagfixes.items():
+        for sid,fixes in self.tagfix_sentences.items():
+            for old,new in fixes.items():
                 fixid = f"{old}@{sid}"
                 if fixid not in tagfix_count:
                     print(f"Tagfix: {fixid} {new} does not match any sentences", file=sys.stderr)
 
         # Forced/preferred items must be processed last
         for datafile in preferred:
-            load_overrides(datafile, "preferred")
+            self.load_overrides(datafile, "preferred")
 
-        for datafile in preferred:
-            load_overrides(datafile, "forced")
+        for datafile in forced:
+            self.load_overrides(datafile, "forced")
 
         self.save_cache(sentences, preferred, forced, ignored, tagfixes)
 
 
-    def load_overrides(datafile, source):
+    def load_overrides(self, datafile, source):
         with open(datafile) as infile:
 
             for line in infile:
@@ -120,6 +129,11 @@ class SpanishSentences:
                     print(f"{source} sentences scores for {word},{pos} have dropped below 55, ignoring...", file=sys.stderr)
                     continue
 
+                elif source == "preferred" and any( i not in self.tagdb.get(word, {}).get(pos, [])
+                        and i in self.tagdb.get(word, {}).get("phrase-" + pos, []) for i in ids):
+                    print(f"! {source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
+                    continue
+
                 else:
                     self.forced_ids[wordtag] = ids
                     self.forced_ids_source[wordtag] = source
@@ -128,6 +142,7 @@ class SpanishSentences:
 
     def save_cache(self, sentences, preferred, forced, ignored, tagfixes):
 
+        print(preferred, forced, ignored, tagfixes)
         modfiles = preferred + forced + ignored + tagfixes
         cached = self.get_cache_filename(sentences, modfiles)
 
@@ -167,7 +182,6 @@ class SpanishSentences:
             return
 
         # check for cached version
-        print("loading cached", cached)
         with open(cached, "rb") as infile:
             res = pickle.load(infile)
 
@@ -376,16 +390,25 @@ class SpanishSentences:
         pos = pos.lower()
         source = "exact"
 
-        if pos in [ "phrase" ] or " " in lookup:
-            ids = self.get_ids_from_phrase(lookup)
-        else:
-            word = lookup.strip()
-            ids = self.get_ids_from_tag(word, pos)
+        if " " in lookup:
+            pos = "phrase"
 
-            if not len(ids):
+        ids = self.get_ids_from_tag(lookup, pos)
+
+        if not ids:
+            if pos != "phrase":
+                source = "phrase"
+                pos = "phrase-" + pos
+                ids = self.get_ids_from_tag(lookup, pos)
+
+            if not ids:
                 source = "literal"
-                if pos != "INTERJ":
-                    ids = self.get_ids_from_word(word)
+
+                if pos == "phrase":
+                    ids = self.get_ids_from_phrase(lookup)
+
+                elif pos != "INTERJ":
+                    ids = self.get_ids_from_word(lookup)
 
         return { "ids": ids, "source": source }
 

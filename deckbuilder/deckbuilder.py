@@ -12,7 +12,6 @@ import sqlite3
 import sys
 from Levenshtein import distance as fuzzy_distance
 
-from spanish_tools.sentences import SpanishSentences
 from .tts import get_speech
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
