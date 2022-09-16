@@ -134,6 +134,10 @@ class SpanishSentences:
                     print(f"! {source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
                     continue
 
+                elif source == "preferred" and pos == "interj" and not self.tagdb.get(word, {}).get(pos, []):
+                    print(f"! {source} sentences no longer has interj for {word}, ignoring...", file=sys.stderr)
+                    continue
+
                 else:
                     self.forced_ids[wordtag] = ids
                     self.forced_ids_source[wordtag] = source
