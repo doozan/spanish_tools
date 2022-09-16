@@ -6,7 +6,6 @@ import sys
 
 from spanish_tools.freq import FrequencyList
 from spanish_tools.freq import NgramPosProbability
-from spanish_tools.sentences import SpanishSentences
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 
@@ -17,15 +16,6 @@ def init_freq(params):
     parser.add_argument("--dictionary", help="Dictionary file name", required=True)
     parser.add_argument("--allforms", help="All-forms file name")
     parser.add_argument("--ngprobs", help="Ngram probability data file")
-    parser.add_argument("--sentences", help="Sentences file name (DEFAULT: sentences.tsv)")
-    parser.add_argument(
-        "--data-dir",
-        help="Directory contaning the dictionary (DEFAULT: SPANISH_DATA_DIR environment variable or 'spanish_data')",
-    )
-    parser.add_argument(
-        "--custom-dir",
-        help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",
-    )
     parser.add_argument("--formtypes", help="Create a formtypes list intsead of a lemma list", action='store_true')
     parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
     parser.add_argument("--minuse", help="Only print lemmas with at least N total uses", default=0, type=int)
@@ -43,15 +33,6 @@ def init_freq(params):
 
     args = parser.parse_args(params)
 
-    if not args.sentences:
-        args.sentences = "sentences.tsv"
-
-    if not args.data_dir:
-        args.data_dir = os.environ.get("SPANISH_DATA_DIR", "spanish_data")
-
-    if not args.custom_dir:
-        args.custom_dir = os.environ.get("SPANISH_CUSTOM_DIR", "spanish_custom")
-
     cache_words = not args.low_mem
     wordlist = Wordlist.from_file(args.dictionary, cache_words=cache_words)
 
@@ -62,9 +43,7 @@ def init_freq(params):
     else:
         allforms = AllForms.from_wordlist(wordlist)
 
-    sentences = SpanishSentences(args.sentences)
-
-    flist = FrequencyList(wordlist, allforms, sentences, ngprobs, ignore_data, debug_word=args.debug)
+    flist = FrequencyList(wordlist, allforms, ngprobs, ignore_data, debug_word=args.debug)
     ignore_data.close()
 
     return flist, args

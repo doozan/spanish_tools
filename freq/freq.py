@@ -11,14 +11,11 @@ from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.word import Word
 from enwiktionary_wordlist.all_forms import AllForms
 
-from ..sentences import SpanishSentences
-
 class FrequencyList():
 
-    def __init__(self, wordlist, allforms, sentences, ngprobs, ignore_data=[], debug_word=None):
+    def __init__(self, wordlist, allforms, ngprobs, ignore_data=[], debug_word=None):
         self.wordlist = wordlist
         self.allforms = allforms
-        self.sentences = sentences
         self.ngprobs = ngprobs
         self.load_ignore(ignore_data)
         self.DEBUG_WORD = debug_word
@@ -596,21 +593,15 @@ class FrequencyList():
         ng_usage_count.sort(key=lambda k: (int(k[2])*-1, k[1], k[0]))
 
         if form == self.DEBUG_WORD:
-#            usage_count = [ (form, pos, count) for pos, count in self.probs.get_pos_probs(form, all_pos) ]
-#            print("probs", usage_count)
             print("ng_probs", ng_usage_count)
-            if usage_count and ng_usage_count and usage_count[0][1] != ng_usage_count[0][1]:
-                print("mismatch pos", form, usage_count, ng_usage_count)
 
         return ng_usage_count
 
     flags_defs = {
         "UNKNOWN": "Word does not appear in lemma database or dictionary",
-        "NOUSAGE": "Multiple POS, but no sentences for any usage",
         "PRONOUN": "Ignoring pronouns",
         "LETTER": "Letter",
         "NODEF": "No definition",
-        "NOSENT": "No sentences",
         "FUZZY": "Only has fuzzy sentance matches",
         "DUPLICATE": "Duplicate usage of word with different POS",
         "DUPLICATE-ADJ-ADV": "Adverb duplicates existing adjective",
@@ -630,16 +621,6 @@ class FrequencyList():
 
         if not self.wordlist.has_word(form, pos):
             raise ValueError(form, "no def")
-
-        res = self.sentences.get_sentences([[form, pos]], 1)
-        if not len(res["sentences"]):
-            return ["NOSENT"]
-
-        else:
-            if res["matched"] == "literal":
-                return ["LITERAL"]
-            elif res["matched"] == "fuzzy":
-                return ["FUZZY"]
 
         # remove reflexive verbs if the non-reflexive verb is already on the list
        # if form.endswith("rse") and pos == "v" and (form[:-2],"v") in freq:
@@ -801,11 +782,11 @@ class FrequencyList():
 
             usage = [(self.ngprobs.get_usage_count(lemma, pos), lemma) for lemma in lemmas]
             ranked = sorted(usage, key=lambda x: (x[0]*-1, x[1]))
-            self.debug(form, pos, "get_best_lemma", lemmas, "no best, using sentences frequency", ranked)
+            self.debug(form, pos, "get_best_lemma", lemmas, "no best, using ngprobs frequency", ranked)
             print("$$$$", [form, pos], "get_best_lemma", ranked)
 
             if ranked[0][0] == ranked[1][0]:
-                print("###", form, pos, "get_best_lemma", lemmas, "no best, no sentences frequency", ranked)
+                print("###", form, pos, "get_best_lemma", lemmas, "no best, using first item", ranked)
 
             return ranked[0][1]
 

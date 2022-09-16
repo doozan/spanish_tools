@@ -45,7 +45,7 @@ def ngprobs(request):
 
 @fixture(scope="module")
 def freq(wordlist, allforms, ngprobs):
-    return FrequencyList(wordlist, allforms, None, ngprobs)
+    return FrequencyList(wordlist, allforms, ngprobs)
 
 
 @fixture(scope="module")

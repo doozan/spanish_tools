@@ -76,26 +76,10 @@ def build_deck(params=None):
         "--sentences", help="Sentences file name (DEFAULT: sentences.tsv)",
         default="sentences.tsv"
     )
-    parser.add_argument(
-        "--sentences-preferred"
-        help="Data file with preferred sentence ids",
-        action="append",
-    )
-    parser.add_argument(
-        "--sentences-forced"
-        help="Data file with forced sentence ids",
-        action="append",
-    )
-    parser.add_argument(
-        "--sentences-ignored"
-        help="Data file with ignored sentence ids",
-        action="append",
-    )
-    parser.add_argument(
-        "--sentences-tagfixes"
-        help="Data file with sentence tag overrides",
-        action="append",
-    )
+    parser.add_argument("--sentences-preferred", action="append")
+    parser.add_argument("--sentences-forced", action="append")
+    parser.add_argument("--sentences-ignored", action="append")
+    parser.add_argument("--sentences-tagfixes", action="append")
     parser.add_argument(
         "--custom-dir",
         help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",

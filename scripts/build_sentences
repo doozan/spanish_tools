@@ -45,7 +45,7 @@ def main():
     else:
         allforms = AllForms.from_wordlist(wordlist)
 
-    freq = FrequencyList(wordlist, allforms, None, ngprobs)
+    freq = FrequencyList(wordlist, allforms, ngprobs)
 
     ngramdb = NgramDB(args.ngramdb)
 
