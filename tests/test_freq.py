@@ -678,7 +678,7 @@ _____
 
     wordlist = Wordlist(wordlist_data.splitlines())
     allforms = AllForms.from_wordlist(wordlist)
-    freq = FrequencyList(wordlist, allforms, ngprobs)
+    freq = FrequencyList(wordlist, allforms, ngprobs, debug_word="izquierdos")
 
 #    assert freq.get_preferred_lemmas("izquierdas", "n") == ["izquierda"]
 #    assert freq.get_preferred_lemmas("izquierdo", "adj") == ["izquierdo"]

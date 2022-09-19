@@ -1589,9 +1589,14 @@ class DeckBuilder():
             if reqfield not in csvreader.fieldnames:
                 raise ValueError(f"No '{reqfield}' field specified in wordlist")
 
+        print("loading", allowed_flags, limit)
+
         count = 0
         for row in csvreader:
             if not row:
+                continue
+
+            if row["pos"] == "none":
                 continue
 
             item_tag = make_tag(row["spanish"], row["pos"])
@@ -1605,8 +1610,23 @@ class DeckBuilder():
             if not self.is_allowed(row["spanish"], row["pos"]):
                 continue
 
+            # Unless items without sentences are explicitly allowed, make sure word has sentences
+            if "NOSENT" not in allowed_flags and not self._sentences.get_sentences([(row["spanish"], row["pos"])], 1).get("sentences"):
+                #                print("skipping", row["spanish"], row["pos"])
+                continue
+
+#            if row["spanish"] == "huelga general":
+#                print(bool("NOSENT" not in allowed_flags), (not self._sentences.get_sentences([(row["spanish"], row["pos"])], 1)))
+#                print(row)
+#                print("flags", allowed_flags)
+#                print("sent", self._sentences.get_sentences([(row["spanish"], row["pos"])], 1))
+#
+#                exit(1)
+
+
             if "flags" in row and row["flags"]:
                 flags = set(row["flags"].split("; "))
+
                 if flags.difference(allowed_flags):
                     continue
 
@@ -1669,6 +1689,11 @@ class DeckBuilder():
 
         self.build_synonyms()
         self.rows = []
+
+#        print("##"*30)
+#        print("loaded", len(self.allwords_index), filename)
+#        print("##"*30)
+#        exit(1)
 
         counter = {}
         for wordtag in self.allwords_index:
