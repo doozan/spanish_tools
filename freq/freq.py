@@ -104,11 +104,11 @@ class FrequencyList():
         included in the multilemma or maybeplural lists
         """
 
-        lines = {}
+        entries = {}
         multi_lemmas = []
         maybe_plurals = []
 
-        # Read all the lines and do an initial lookup of lemmas
+        # Read all the entries and do an initial lookup of lemmas
         for linenum, line in enumerate(freqlist):
             line = line.strip()
             form, _, count = line.rpartition(" ")
@@ -179,35 +179,35 @@ class FrequencyList():
                 else:
                     lemma = lemmas[0]
 
-            lines[orig_case] = (pos, count, lemma)
+            entries[orig_case] = (pos, count, lemma)
 
 #            if form == self.DEBUG_WORD:
 #                exit()
 
         # count all forms of all lemmas so far, used to pick
         # the most popular lemmas from words with multiple lemmas
-        lemma_freq = self.get_lemma_freq(lines)
+        lemma_freq = self.get_lemma_freq(entries)
 
         for form, preferred_lemmas in multi_lemmas:
-            item = lines[form]
+            item = entries[form]
             pos,count,_ = item
 
             lemma = self.get_most_frequent_lemma(lemma_freq, form, pos, preferred_lemmas)
 
-            lines[form] = (pos, count, lemma)
+            entries[form] = (pos, count, lemma)
 
             self.debug(form, "resolving lemmas", item, "to", lemma)
 
-        lemma_freq = self.get_lemma_freq(lines)
+        lemma_freq = self.get_lemma_freq(entries)
 
         for form, preferred_lemmas in maybe_plurals:
-            entry = self.resolve_plurals(lines, lemma_freq, form, preferred_lemmas)
-            lines[form] = entry
+            entry = self.resolve_plurals(entries, lemma_freq, form, preferred_lemmas)
+            entries[form] = entry
 
-        return lines
+        return entries
 
 
-    def resolve_plurals(self, lines, lemma_freq, form, preferred_lemmas):
+    def resolve_plurals(self, entries, lemma_freq, form, preferred_lemmas):
 
         # process plurals after all other lemmas have been processed
         # if a plural has non-verb lemmas, take the non-verb lemma with the greatest usage
@@ -220,21 +220,21 @@ class FrequencyList():
         # soltero,n,,9181:soltero|8614:soltera
         # soltero,adj,DUPLICATE,3076:solteros|2356:solteras
         #
-        _,count,_ = lines[form]
+        _,count,_ = entries[form]
 
         self.debug(form, "resolving plurals")
 
         # Special handling for feminine plurals, stay with the feminine
         # form instead of using the masculine lemma
         if form.endswith("as"):
-            lemma_pos, lemma_count, lemma_lemma = lines.get(form[:-1], [None,0,None])
+            lemma_pos, lemma_count, lemma_lemma = entries.get(form[:-1], [None,0,None])
             self.debug(form, "found feminine singular", lemma_pos, lemma_count, count)
 
             if lemma_count >= count:
                 return (lemma_pos, count, lemma_lemma)
 
         # If any possible singular lemmas has more uses than the plural, use it
-        entry = self.get_best_singular(lines, form, preferred_lemmas)
+        entry = self.get_best_singular(entries, form, preferred_lemmas)
         if entry:
             return entry
 
@@ -261,9 +261,9 @@ class FrequencyList():
         form,pos,count = res[0]
         return pos
 
-    def get_best_singular(self, lines, form, preferred_lemmas):
+    def get_best_singular(self, entries, form, preferred_lemmas):
 
-        _,count,_ = lines[form]
+        _,count,_ = entries[form]
 
         # Plurals should use the same POS as the singular, unless the plural usage is more common
         # in which case it should use get_best_pos
@@ -283,7 +283,7 @@ class FrequencyList():
                 continue
             checked_lemmas.append(l.word)
 
-            item = lines.get(l.word)
+            item = entries.get(l.word)
             if not item:
                 continue
 
@@ -642,10 +642,10 @@ class FrequencyList():
         return flags
 
 
-    def get_lemma_freq(self, lines):
+    def get_lemma_freq(self, entries):
 
         lemma_freq = {}
-        for form, item in lines.items():
+        for form, item in entries.items():
             pos,count,lemma = item
             if not lemma:
                 lemma = form
@@ -665,9 +665,9 @@ class FrequencyList():
 
         return lemma_freq
 
-    def build_freqlist(self, lines):
+    def build_freqlist(self, entries):
 
-        lemma_freq = self.get_lemma_freq(lines)
+        lemma_freq = self.get_lemma_freq(entries)
 
         freq = {}
         usage = defaultdict(dict)
