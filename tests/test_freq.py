@@ -1241,3 +1241,35 @@ form lla
 
 #    assert freq.get_preferred_lemmas("llanta") == [w2]
     assert freq.get_preferred_lemmas("llantas") == [w2]
+
+
+
+def test_preferred_case(ngprobs):
+
+    # llantas should resolve to llanta and not follow the obsolete
+    # llanta to planta
+
+    wordlist_data = """\
+_____
+Lorenzo
+pos: prop
+  meta: {{es-proper noun|m}}
+  g: m
+  gloss: given name
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    allforms = AllForms.from_wordlist(wordlist)
+    freq = FrequencyList(wordlist, allforms, ngprobs, debug_word="lorenzo")
+
+    flist_data = """\
+lorenzo 10
+"""
+
+    res = list(freq.process(flist_data.splitlines()))
+    print("\n".join(res))
+
+    assert "\n".join(res) == """\
+count,spanish,pos,flags,usage
+10,Lorenzo,prop,,10:lorenzo\
+"""

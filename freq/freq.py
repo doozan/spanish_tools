@@ -127,13 +127,23 @@ class FrequencyList():
                 # If the list doesn't include a counter,
                 # assign a value in descending order to preserve the list order
                 count = 100000-linenum
+                assert count > 0
 
             lemma = None
             if form.startswith("@"):
                 lemma = form[1:]
                 form = form[1:]
-            elif not pos:
-                form = self.ngprobs.get_preferred_case(form)
+
+
+            orig_case = form
+            if not pos and not any(self.allforms.get_form_pos(form)) and form == form.lower():
+                #alt_case = self.ngprobs.get_preferred_case(form.lower())
+
+                alt_case = self.ngprobs.get_preferred_case(form)
+                if alt_case != form:
+   #                 print("using alt case", form, alt_case)
+                    self.debug(alt_case, "preferred_case", form)
+                    form = alt_case
 
             preferred_lemmas = self.get_preferred_lemmas(form, lemma, pos)
             if not preferred_lemmas and orig_form != form:
@@ -145,7 +155,7 @@ class FrequencyList():
             if not pos:
 
                 if self.maybe_plural(form, preferred_lemmas):
-                    maybe_plurals.append((form, preferred_lemmas))
+                    maybe_plurals.append((orig_case, preferred_lemmas))
                     self.debug(form, "maybe_plural")
                 else:
                     pos = self.get_best_pos(form, preferred_lemmas)
@@ -163,13 +173,13 @@ class FrequencyList():
                     raise ValueError("couldn't find lemma", form, pos)
 
                 if len(lemmas) > 1:
-                    multi_lemmas.append((form, preferred_lemmas))
+                    multi_lemmas.append((orig_case, preferred_lemmas))
                     lemma = None
                     self.debug(form, "multi_lemma")
                 else:
                     lemma = lemmas[0]
 
-            lines[form] = (pos, count, lemma)
+            lines[orig_case] = (pos, count, lemma)
 
 #            if form == self.DEBUG_WORD:
 #                exit()
