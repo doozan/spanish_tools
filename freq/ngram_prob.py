@@ -149,14 +149,18 @@ class NgramPosProbability():
 
     def get_preferred_case(self, word):
         if not self._preferred_case:
-
-            # Note: this assumes that the prob file is sorted from most common to least common
-            for key, tagcount in self.form_probs.items():
-                lc = key.lower()
-                # always prefer lowercase of single letters
-                if len(key) == 1:
-                    key = lc
-                if lc not in self._preferred_case:
-                    self._preferred_case[lc] = key
-
+            self._build_preferred_case()
         return self._preferred_case.get(word, word)
+
+    def _build_preferred_case(self):
+        if self._preferred_case:
+            raise ValueError("already initialized")
+
+        # Note: this assumes that the prob file is sorted from most common to least common
+        for key, tagcount in self.form_probs.items():
+            lc = key.lower()
+            # always prefer lowercase of single letters
+            if len(key) == 1:
+                key = lc
+            if lc not in self._preferred_case:
+                self._preferred_case[lc] = key
