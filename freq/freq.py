@@ -135,9 +135,9 @@ class FrequencyList():
                 lemma = form[1:]
                 form = form[1:]
 
-
             orig_case = form
-            if not pos and not any(self.allforms.get_form_pos(form)) and form == form.lower():
+            if not pos and form == form.lower():
+                #and not any(self.allforms.get_form_pos(form)) and form == form.lower():
                 #alt_case = self.ngprobs.get_preferred_case(form.lower())
 
                 alt_case = self.ngprobs.get_preferred_case(form)
@@ -408,8 +408,10 @@ class FrequencyList():
         lemmas = []
 
         unresolved = self.get_unresolved_items(form, filter_pos)
+        self.debug(form, [filter_pos], "unresolved items", len(unresolved))
         if not unresolved:
             unresolved = [(item, None) for item in self.get_all_lemmas(form, filter_pos)]
+        self.debug(form, "unresolved items", unresolved)
 
         if not unresolved and self.allforms.get_lemmas(form, filter_pos):
             print("No matching lemmas", form, filter_pos, self.allforms.get_lemmas(form, filter_pos), file=sys.stderr)
@@ -451,6 +453,7 @@ class FrequencyList():
         items = []
 
         for word in self.wordlist.get_iwords(form, pos):
+            self.debug(form, "claimed", word.word, word.pos, [form, pos])
             if self.is_lemma(word):
                 if word not in seen:
                     items.append((word, None))
@@ -515,9 +518,18 @@ class FrequencyList():
 
         items = []
         for poslemma in self.allforms.get_lemmas(form, pos):
-            lemma_pos, lemma = poslemma.split("|")
 
-            all_words = self.wordlist.get_words(lemma, lemma_pos)
+            lemma_pos, lemma = poslemma.split("|")
+            self.debug(form, "get all lemmas", poslemma)
+
+            # for compatability with wiktionary, participles are stored as pos "part"
+            # with the lemma being the verb
+            # change "part" to "v" so that lookups will successfully find the verb
+            if lemma_pos == "part":
+                all_words = self.wordlist.get_words(lemma, "v")
+            else:
+                all_words = self.wordlist.get_words(lemma, lemma_pos)
+
             if not all_words:
                 all_words = [w[0] for w in self.get_unresolved_items(lemma, lemma_pos)]
 
@@ -536,9 +548,15 @@ class FrequencyList():
         for poslemma in self.allforms.get_lemmas(form, pos):
 
             lemma_pos, lemma = poslemma.split("|")
-#            print(form, "poslemma", lemma_pos, lemma)
+
+            # for compatability with wiktionary, participles are stored as pos "part"
+            # with the lemma being the verb
+            # change "part" to "v" so that lookups will successfully find the verb 
+            if lemma_pos == "part":
+                lemma_pos = "v"
+            self.debug(form, "declaring poslemma", lemma_pos, lemma)
             for word in self.wordlist.get_iwords(lemma, lemma_pos):
-#                print(word.word, word.pos, self.is_lemma(word), word.has_form(form))
+                self.debug(form, "declaring", word.word, word.pos, self.is_lemma(word), word.has_form(form))
                 if self.is_lemma(word) and word.has_form(form):
                     # TODO: get formtypes?
                     items.append(word)
