@@ -438,6 +438,11 @@ class SentenceBuilder():
                 # Get phrase offsets
                 phrases = self.get_phrases(spanish)
 
+                # Discard interjection phrases that don't look like interjections
+                phrases = [p for p in phrases if
+                    any(pos != "interj" for pos in self.allforms.get_form_pos(p.lemma))
+                    or self.has_interjection(p.form, spanish)]
+
                 all_tags = []
                 first = True
                 for s in v:

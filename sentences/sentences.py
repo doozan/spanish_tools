@@ -131,10 +131,12 @@ class SpanishSentences:
 
                 elif source == "preferred" and any( i not in self.tagdb.get(word, {}).get(pos, [])
                         and i in self.tagdb.get(word, {}).get("phrase-" + pos, []) for i in ids):
-                    print(f"! {source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
+                    print(f"{source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
                     continue
 
-                elif source == "preferred" and pos == "interj" and not self.tagdb.get(word, {}).get(pos, []):
+
+                elif source == "preferred" and pos == "interj" \
+                        and any( i not in self.tagdb.get(word, {}).get(pos, []) for i in ids):
                     print(f"! {source} sentences no longer has interj for {word}, ignoring...", file=sys.stderr)
                     continue
 
