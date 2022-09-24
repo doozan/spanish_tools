@@ -8,7 +8,7 @@ from ..freq.ngram_prob import NgramPosProbability
 def ngram_prob(request):
     filename = request.module.__file__
     test_dir, _ = os.path.split(filename)
-    return NgramPosProbability(os.path.join(test_dir, "test_ngram_prob.wordlist"))
+    return NgramPosProbability(os.path.join(test_dir, "test_ngram_prob.wordlist"), None)
 
 def test_simple(ngram_prob):
     assert ngram_prob.get_pos_probs("de") == {'prep': 0.8683, 'n': 0.1259, 'adv': 0.0046, 'determiner': 0.0006, 'conj': 0.0004, 'v': 0.0002, 'adj': 0.0}

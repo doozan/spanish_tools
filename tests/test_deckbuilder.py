@@ -11,8 +11,9 @@ def ngprobs(request):
     filename = request.module.__file__
     test_dir, _ = os.path.split(filename)
     ngfilename = os.path.join(test_dir, "es-1-1950.ngprobs")
+    ngcase = os.path.join(test_dir, "es-1-1950.ngcase")
 
-    return NgramPosProbability(ngfilename)
+    return NgramPosProbability(ngfilename, ngcase)
 
 
 def test_get_location_classes(ngprobs):

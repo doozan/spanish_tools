@@ -65,6 +65,7 @@ def build_deck(params=None):
     parser.add_argument("--anki", help="Read/write data from specified anki profile")
     parser.add_argument("--allforms", help="Load word forms from file")
     parser.add_argument("--ngprobs", help="NGprobs file", required=True)
+    parser.add_argument("--ngcase", help="Ngram case probability data file", required=True)
     parser.add_argument(
         "--dictionary", help="Dictionary file name (DEFAULT: es-en.txt)",
         default="es-en.txt"
@@ -143,7 +144,7 @@ def build_deck(params=None):
     )
     shortdefs = DeckBuilder.load_shortdefs(args.short_defs)
 
-    ngprobs = NgramPosProbability(args.ngprobs)
+    ngprobs = NgramPosProbability(args.ngprobs, args.ngcase)
 
     deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs, ngprobs)
     deck.load_wordlists(args.wordlist, args.allow_flag)

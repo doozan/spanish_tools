@@ -40,7 +40,8 @@ def ngprobs(request):
     test_dir, _ = os.path.split(filename)
 
     ngprobs_filename = os.path.join(test_dir, "../../../ngram/es-1-1950.ngprobs")
-    return NgramPosProbability(ngprobs_filename)
+    ngcase_filename = os.path.join(test_dir, "../../../ngram/es-1-1950.ngcase")
+    return NgramPosProbability(ngprobs_filename, ngcase_filename)
 
 
 @fixture(scope="module")

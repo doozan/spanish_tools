@@ -14,8 +14,9 @@ def ngprobs(request):
     filename = request.module.__file__
     test_dir, _ = os.path.split(filename)
     ngfilename = os.path.join(test_dir, "es-1-1950.ngprobs")
+    ngcase = os.path.join(test_dir, "es-1-1950.ngcase")
 
-    return NgramPosProbability(ngfilename)
+    return NgramPosProbability(ngfilename, ngcase)
 
 def test_simple(ngprobs):
 
@@ -54,13 +55,13 @@ pos: n
 """
 
     flist_data = """\
-protector 10
-protectora 10
-protectoras 10
-protectores 10
-protectriz 10
-protectrices 10
-unknown 10
+protector\t10
+protectora\t10
+protectoras\t10
+protectores\t10
+protectriz\t10
+protectrices\t10
+unknown\t10
 """
 
     wordlist = Wordlist(wordlist_data.splitlines())
@@ -156,7 +157,7 @@ pos: n
     freq = FrequencyList(wordlist, allforms, ngprobs)
 
     flist_data = """\
-diva 10
+diva\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -200,7 +201,7 @@ divos,n,divo\
 
 
     flist_data = """\
-diva 10
+diva\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -228,7 +229,7 @@ hijo {m} :: child (when the gender of the child is unknown)
 #    assert freq.get_preferred_lemmas("hijo", "n") == ["hijo"]
 
     flist_data = """\
-hijo 10
+hijo\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -259,7 +260,7 @@ asco {m} :: alternative form of "asca"
 #    assert freq.get_best_lemma("asco", ["asca", "asco"], "n") == "asco"
 
     flist_data = """\
-asco 10
+asco\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -286,7 +287,7 @@ bienes {mp} :: goods (that which is produced, traded, bought or sold)
     assert freq.get_preferred_lemmas("bienes") == [bienes, bien]
 
     flist_data = """\
-bienes 10
+bienes\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -317,7 +318,7 @@ rasguño {m} | arañazo :: scratch
     assert freq.get_ranked_pos("rasguño", preferred) == [('rasguño', 'n', 41237), ('rasguño', 'v', 207)]
 
     flist_data = """\
-rasguño 10
+rasguño\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -365,10 +366,10 @@ pos: n
 #    assert list(freq.allforms.get_lemmas("diosas", {})) == ["n:diosa:pl"]
 
     flist_data = """\
-dios 10
-dioses 10
-diosa 10
-diosas 10
+dios\t10
+dioses\t10
+diosa\t10
+diosas\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -402,7 +403,7 @@ aquellos {pron} :: Those ones. (over there; implying some distance)
 #    assert freq.get_best_lemma("aquellos", ['aquellos', 'aquél'], "pron") == "aquél"
 
     flist_data = """\
-aquellos 10
+aquellos\t10
 """
 
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
@@ -442,7 +443,7 @@ vetar {v} :: x
     assert preferred == [ir, ver, verse, vetar]
 
     flist_data = """\
-vete 10
+vete\t10
 """
 
 #    assert "\n".join(freq.process(flist_data.splitlines())) == """\
@@ -475,7 +476,7 @@ vero {m} [heraldry] :: vair
 #    assert freq.get_ranked_pos("veros") == ["v"]
 
     flist_data = """\
-veros 10
+veros\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -504,7 +505,7 @@ veras {fp} :: serious things
 #    assert freq.get_best_lemma("veras", ["vera", "veras"], "n") == "veras"
 
     flist_data = """\
-veras 10
+veras\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -541,7 +542,7 @@ pos: n
 #    assert freq.get_best_lemma("microondas", lemmas, "n") == "microondas"
 
     flist_data = """\
-microondas 10
+microondas\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -586,9 +587,9 @@ pos: n
 #    assert freq.get_best_lemma("hamburguesa", lemmas, "n") == "hamburguesa"
 
     flist_data = """\
-hamburgués 10
-hamburguesa 10
-hamburguesas 10
+hamburgués\t10
+hamburguesa\t10
+hamburguesas\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -627,8 +628,8 @@ pos: n
    # assert freq.get_best_lemma("piernas", lemmas, "n") == "pierna"
 
     flist_data = """\
-pierna 10
-piernas 10
+pierna\t10
+piernas\t10
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -688,10 +689,10 @@ _____
 #    assert freq.get_ranked_pos("izquierdas") == ['n', 'adj']
 
     flist_data = """\
-izquierda 34629
-izquierdo 8150
-izquierdas 436
-izquierdos 234
+izquierda\t34629
+izquierdo\t8150
+izquierdas\t436
+izquierdos\t234
 """
     assert "\n".join(freq.process(flist_data.splitlines())) == """\
 count,spanish,pos,flags,usage
@@ -825,10 +826,10 @@ ratos,n,rato\
     assert freq.get_preferred_lemmas("ratas") == [rata]
 
     flist_data = """\
-rata 10
-ratas 15
-rato 20
-ratos 20
+rata\t10
+ratas\t15
+rato\t20
+ratos\t20
 """
 
     res = list(freq.process(flist_data.splitlines()))
@@ -896,10 +897,10 @@ ratos,n,rato\
     assert freq.get_preferred_lemmas("ratas") == [rata]
 
     flist_data = """\
-rata 10
-ratas 15
-rato 20
-ratos 20
+rata\t10
+ratas\t15
+rato\t20
+ratos\t20
 """
 
     res = list(freq.process(flist_data.splitlines()))
@@ -1263,7 +1264,7 @@ pos: prop
     freq = FrequencyList(wordlist, allforms, ngprobs, debug_word="lorenzo")
 
     flist_data = """\
-lorenzo 10
+lorenzo\t10
 """
 
     res = list(freq.process(flist_data.splitlines()))

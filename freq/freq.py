@@ -140,15 +140,15 @@ class FrequencyList():
                 form = form[1:]
 
             orig_case = form
-            if not pos and form == form.lower():
-                #and not any(self.allforms.get_form_pos(form)) and form == form.lower():
-                #alt_case = self.ngprobs.get_preferred_case(form.lower())
+            if not pos:
 
-                alt_case = self.ngprobs.get_preferred_case(form)
-                if alt_case != form:
-   #                 print("using alt case", form, alt_case)
-                    self.debug(alt_case, "preferred_case", form)
-                    form = alt_case
+                # Get alternate case forms
+                if form == form.lower() or self.ngprobs.get_case_prob(form) < 10:
+                    alt_case = self.ngprobs.get_preferred_case(form.lower())
+                    if alt_case != form:
+   #                     print("using alt case", form, alt_case)
+                        self.debug(alt_case, "preferred_case", form)
+                        form = alt_case
 
             preferred_lemmas = self.get_preferred_lemmas(form, lemma, pos)
             if not preferred_lemmas and orig_form != form:

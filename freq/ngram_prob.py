@@ -19,9 +19,11 @@ import sys
 
 class NgramPosProbability():
 
-    def __init__(self, probfile):
+    def __init__(self, probfile, caseprobfile):
         self.form_probs = {}
         self._preferred_case = {} # lazy loaded
+        self._caseprobfile = caseprobfile
+        self._case_prob = {} # lazy loaded
 
         with open(probfile) as infile:
             for line in infile:
@@ -145,12 +147,22 @@ class NgramPosProbability():
 
         return {k: round(count/pos_total, 4) for k, count in sorted(pos_count.items(), key=lambda x: (x[1]*-1, x[0]))}
 
-
-
     def get_preferred_case(self, word):
         if not self._preferred_case:
             self._build_preferred_case()
         return self._preferred_case.get(word, word)
+
+    def get_case_prob(self, word):
+        if not self._preferred_case:
+            self._load_case_prob()
+        return self._case_prob.get(word, 0)
+
+    def _load_case_prob(self):
+        if self._case_prob:
+            raise ValueError("already initialized")
+
+        with open(self._caseprobfile) as infile:
+            self._case_prob = {k:int(v) for line in infile for k,v in line.strip().split("\t")}
 
     def _build_preferred_case(self):
         if self._preferred_case:
