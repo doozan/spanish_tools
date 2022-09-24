@@ -666,7 +666,7 @@ class DeckBuilder():
         if not word_obj.genders:
             return "n"
 
-        noun_type = re.sub("-p", "p", word_obj.genders)
+        noun_type = word_obj.genders.replace("-p", "p").replace("-f", "f")
         if noun_type == "mfbysense":
             noun_type = "mf"
         elif noun_type == "m; f":
@@ -1545,7 +1545,7 @@ class DeckBuilder():
         # read through all the files to populate the synonyms and excludes lists
         for wordlist in wordlists:
 
-            all_allowed_flags = allowed_flags
+            all_allowed_flags = allowed_flags.copy()
             limit = 0
             metadata = {}
 
