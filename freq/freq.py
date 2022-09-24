@@ -90,7 +90,7 @@ class FrequencyList():
     def find_lemmas(self, freqlist):
 
         """
-        freqlist is an iterable of strings formatted as "[form|@lemma][:pos][ N]"
+        freqlist is an iterable of strings formatted as "[form|@lemma][:pos][\tN][\tcomponents]"
           form - the word form
           @ - if the word is preceeded by the @ character, it will be treated as lemma
           :pos - optional - word will be treated as the given part of speech
@@ -112,10 +112,14 @@ class FrequencyList():
         # Read all the entries and do an initial lookup of lemmas
         for linenum, line in enumerate(freqlist):
             line = line.strip()
-            form, _, count = line.rpartition(" ")
-            if not count.isdigit():
-                form = line
-                count = None
+            modifiers = None
+            count = None
+            form, *splits = line.split("\t")
+            if len(splits) > 1:
+                modifiers = splits[1]
+            if splits:
+                count = splits[0]
+
             form, _, pos = form.partition(":")
             orig_form = form
 
