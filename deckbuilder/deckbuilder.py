@@ -684,14 +684,30 @@ class DeckBuilder():
         if len(short_senses) == 1 and len(pos_data["senses"]) > 1:
             short_senses.append(pos_data["senses"][1])
 
-        hide_all=False
-        for sense in pos_data["senses"]:
-            if sense in short_senses:
-                hint = self.shorten_gloss(Hider.obscure_gloss(sense["gloss"], hide_word, hide_all=hide_all), max_length)
-                if hint == sense["gloss"]:
-                    hint = ""
-                sense["hint"] = hint
-                hide_all=True
+        self.add_sense_hints(short_senses, hide_word, max_length)
+
+    @classmethod
+    def add_sense_hints(cls, senses, hide_word, max_length):
+        hints = []
+        skip_hiding = False
+        for x, sense in enumerate(senses):
+
+            if skip_hiding:
+                hint = sense["gloss"]
+            else:
+                hint = Hider.obscure_gloss(sense["gloss"], hide_word, hide_all=True)
+                if hint == "...":
+                    if x == 0:
+                        hint = sense["gloss"]
+                        skip_hiding = True
+
+            hint = cls.shorten_gloss(hint, max_length)
+            if hint == sense["gloss"]:
+                hint = ""
+            hints.append(hint)
+
+        for x, sense in enumerate(senses):
+            sense["hint"] = hints[x]
 
     @staticmethod
     def get_verb_type_and_tag(qualifier):

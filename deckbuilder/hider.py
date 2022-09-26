@@ -15,10 +15,7 @@ class Hider():
 
 
     @classmethod
-    def obscure_gloss(cls, gloss, hide_word, hide_first=False, hide_all=False):
-
-        if hide_all:
-            hide_first = True
+    def obscure_gloss(cls, gloss, hide_word, hide_all=False):
 
         res = []
         hidden = []
@@ -34,17 +31,11 @@ class Hider():
                 all_hidden = False
             res.append(chunk)
 
-        if hidden and hidden[0] == 0 and not hide_first:
-            # If the first word would be hidden if it were allowed,
-            # don't hide any of the following words either
-            hidden = []
-            all_hidden = False
-
         # Undo hiding if it hides everything, unless allowed
         if all_hidden:
             if hide_all:
                 return "..."
-            hidden = []
+            return gloss
 
         for x in hidden:
             res[x] = "..."
@@ -182,4 +173,4 @@ class Hider():
     @classmethod
     def obscure_syns(cls, items, hide_word):
         for item in items:
-            yield cls.obscure_gloss(item, hide_word, hide_all=True, hide_first=True)
+            yield cls.obscure_gloss(item, hide_word, hide_all=True)
