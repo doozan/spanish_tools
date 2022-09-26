@@ -13,35 +13,38 @@ class Hider():
             else:
                 separator = chunk
 
+
     @classmethod
-    def obscure_gloss(cls, gloss, hide_word, hide_first=False, hide_all=False, english=True):
+    def obscure_gloss(cls, gloss, hide_word, hide_first=False, hide_all=False):
 
         if hide_all:
             hide_first = True
 
         res = []
         hidden = []
-        first = True
-        all_hidden = hide_first
+        all_hidden = True
         for separator, chunk in cls.get_chunks(gloss):
             if separator:
                 res.append(separator)
             if not chunk:
                 continue
-            if not first or hide_first:
-                if any(cls.should_obscure(word, hide_word) for word in chunk.split()):
-                    hidden.append(len(res))
-                else:
-                    all_hidden = False
+            if any(cls.should_obscure(word, hide_word) for word in chunk.split()):
+                hidden.append(len(res))
+            else:
+                all_hidden = False
             res.append(chunk)
-            first = False
 
-        # If we shouldn't hide everything, don't hide the first item
-        print(hidden, all_hidden, hide_all)
+        if hidden and hidden[0] == 0 and not hide_first:
+            # If the first word would be hidden if it were allowed,
+            # don't hide any of the following words either
+            hidden = []
+            all_hidden = False
+
+        # Undo hiding if it hides everything, unless allowed
         if all_hidden:
             if hide_all:
                 return "..."
-            del hidden[0]
+            hidden = []
 
         for x in hidden:
             res[x] = "..."
@@ -57,7 +60,6 @@ class Hider():
             text = group("word")
 
         hide_words = set(cls.get_hide_words(hide_word))
-        print(text, hide_words)
         for text_word in text.split():
             if any(cls.words_match(text_word, word) for word in hide_words):
                 return True
@@ -136,21 +138,14 @@ class Hider():
         word = word.translate(cls._unstresstab)
         word = re.sub(r"\W", "", word)
         word = word.replace("h", "")
-        word = word.replace("ff", "f")
-        word = word.replace("dd", "d")
-        word = word.replace("ss", "s")
-        word = word.replace("aa", "a")
-        word = word.replace("ee", "e")
-        word = word.replace("oo", "o")
-        word = word.replace("ii", "i")
+
+        # Condense double letters to single letters
+        word = re.sub(r"(.)\1", r"\1", word)
         return word
 
     @classmethod
     def words_match(cls, word, hide_word):
-        print("XX", word, hide_word)
         word = cls.normalize(word)
-
-        print(word, hide_word)
 
         l = min(len(word), len(hide_word))
         if l<=2:
@@ -162,24 +157,22 @@ class Hider():
         words = [word[:l]]
 
         # fix for matching blah to xblah (xbla doesn't match, but xblah does even though it's longer)
-        if l < len(word) and len(word) - distance <= l:
+        if l < len(word) and len(word) - l <= int(len(word)/4):
             words.append(word)
 
         hide_words = [hide_word[:l]]
 
         # fix for matching xblah to blah (xbla doesn't match, but xblah does even though it's longer)
-        if l < len(hide_word) and len(hide_word) - distance <= l:
+        if l < len(hide_word) and len(hide_word) - l <= int(len(hide_word)/4):
             hide_words.append(hide_word)
 
         for w in words:
             for hw in hide_words:
-
-                print(w, hw, l)
-
                 # If the stem matches, let it count as a match
                 if l > 5 and w[:5] == hw[:5]:
                     return True
 
+                distance = int(max(len(w), len(hw))/4)
                 if fuzzy_distance(w, hw) <= distance:
                     return True
 
@@ -189,4 +182,4 @@ class Hider():
     @classmethod
     def obscure_syns(cls, items, hide_word):
         for item in items:
-            yield cls.obscure_gloss(item, hide_word, hide_all=True, hide_first=True, english=False)
+            yield cls.obscure_gloss(item, hide_word, hide_all=True, hide_first=True)
