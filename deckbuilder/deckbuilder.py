@@ -340,8 +340,8 @@ class DeckBuilder():
 
     @classmethod
     def format_syns(cls, deck, extra, hide_word=None):
-        obscured_deck = list(Hider.obscure_syns(deck, hide_word))
-        obscured_extra = list(Hider.obscure_syns(extra, hide_word))
+        obscured_deck = [Hider.obscure(syn, hide_word) for syn in deck]
+        obscured_extra = [Hider.obscure(syn, hide_word) for syn in extra]
 
         has_obscured = obscured_deck != deck or obscured_extra != extra
 
@@ -688,26 +688,22 @@ class DeckBuilder():
 
     @classmethod
     def add_sense_hints(cls, senses, hide_word, max_length):
-        hints = []
+        first = True
         skip_hiding = False
-        for x, sense in enumerate(senses):
+        for sense in senses:
 
             if skip_hiding:
                 hint = sense["gloss"]
             else:
-                hint = Hider.obscure_gloss(sense["gloss"], hide_word, hide_all=True)
+                hint = Hider.obscure(sense["gloss"], hide_word)
                 if hint == "...":
-                    if x == 0:
+                    if first:
                         hint = sense["gloss"]
                         skip_hiding = True
 
             hint = cls.shorten_gloss(hint, max_length)
-            if hint == sense["gloss"]:
-                hint = ""
-            hints.append(hint)
-
-        for x, sense in enumerate(senses):
-            sense["hint"] = hints[x]
+            sense["hint"] = hint if hint != sense["gloss"] else ""
+            first=False
 
     @staticmethod
     def get_verb_type_and_tag(qualifier):

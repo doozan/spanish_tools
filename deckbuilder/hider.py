@@ -3,19 +3,8 @@ from Levenshtein import distance as fuzzy_distance
 
 class Hider():
 
-    @staticmethod
-    def get_chunks(text):
-        # Yields separator, chunk
-        separator = ""
-        for x, chunk in enumerate(re.split(r"(\s*[,;:()/]\s*)", text)):
-            if x % 2 == 0:
-                yield separator, chunk
-            else:
-                separator = chunk
-
-
     @classmethod
-    def obscure_gloss(cls, gloss, hide_word, hide_all=False):
+    def obscure(cls, gloss, hide_word):
 
         res = []
         hidden = []
@@ -33,14 +22,22 @@ class Hider():
 
         # Undo hiding if it hides everything, unless allowed
         if all_hidden:
-            if hide_all:
-                return "..."
-            return gloss
+            return "..."
 
         for x in hidden:
             res[x] = "..."
 
         return "".join(res)
+
+    @staticmethod
+    def get_chunks(text):
+        # Yields separator, chunk
+        separator = ""
+        for x, chunk in enumerate(re.split(r"(\s*[,;:()/]\s*)", text)):
+            if x % 2 == 0:
+                yield separator, chunk
+            else:
+                separator = chunk
 
     @classmethod
     def should_obscure(cls, text, hide_word):
@@ -168,9 +165,3 @@ class Hider():
                     return True
 
         return False
-
-
-    @classmethod
-    def obscure_syns(cls, items, hide_word):
-        for item in items:
-            yield cls.obscure_gloss(item, hide_word, hide_all=True)
