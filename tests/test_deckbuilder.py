@@ -262,6 +262,8 @@ pos: v
 
 def test_usage2(ngprobs):
 
+    # This is a failing of the current hiding system, but should be fixed with better senses in Wiktionary
+
     wordlist_data = """\
 _____
 guía
@@ -301,7 +303,7 @@ pos: v
             'noun_type': 'mf',
             'note': 'The noun guía is like several other Spanish nouns with a human referent and ending in a.\\nThe masculine articles and adjectives are used when the referent is male or unknown.',
             'senses': [
-                {'gloss': 'guide (person)', 'hint': ''}],
+                {'gloss': 'guide (person)', 'hint': '... (person)'}],
             }, {
             'pos': 'n',
             'noun_type': 'f',
@@ -316,7 +318,7 @@ pos: v
     assert deck.format_usage(usage) == """\
 <div class="etymology etymology_0 solo_etymology">
 <span class="pos n mf"><span class="pos_tag pos_tag_primary">mf</span><span class="gloss">guide (person)</span><span class="footnote_link usage_link">1</span></span>
-<span class="pos n hint mf"><span class="pos_tag pos_tag_primary">mf</span><span class="gloss">guide (person)</span><span class="footnote_link usage_link">1</span></span>
+<span class="pos n hint mf"><span class="pos_tag pos_tag_primary">mf</span><span class="gloss">... (person)</span><span class="footnote_link usage_link">1</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">guidebook</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">directory</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">cocket</span></span>
@@ -1119,7 +1121,7 @@ pos: n
             'noun_type': 'm/f',
             'senses': [
                 {'type': 'm', 'gloss': 'crybaby, whiner', 'hint': ''},
-                {'type': 'f', 'tag': 'folklore', 'gloss': 'weeping woman (from the Latin American folkloric legend La Llorona)', 'hint': 'weeping woman'},
+                {'type': 'f', 'tag': 'folklore', 'gloss': 'weeping woman (from the Latin American folkloric legend La Llorona)', 'hint': 'weeping woman (...)'},
                 {'type': 'f', 'tag': 'informal', 'gloss': 'banshee (in general, by extension of the legend)'}],
             }, {
             'pos': 'adj',
@@ -1134,7 +1136,7 @@ pos: n
 <span class="pos n m"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">m</span><span class="gloss">crybaby, whiner</span></span>
 <span class="pos n hint m"><span class="pos_tag pos_tag_primary">m/f</span><span class="gloss">crybaby, whiner</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">f, folklore</span><span class="gloss">weeping woman (from the Latin American folkloric legend La Llorona)</span></span>
-<span class="pos n hint f"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">folklore</span><span class="gloss">weeping woman</span></span>
+<span class="pos n hint f"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">folklore</span><span class="gloss">weeping woman (...)</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">f, informal</span><span class="gloss">banshee (in general, by extension of the legend)</span></span>
 <span class="pos adj"><span class="pos_tag">adj</span><span class="gloss">sniveling, weeping, whiny</span></span>
 </div>
@@ -1236,7 +1238,7 @@ pos: n
         'ety': 'From Latin "similitūdō" (“likeness, similarity”).',
         'words': [{
             'pos': 'n', 'senses': [
-                {'gloss': 'similarity, similitude', 'hint': 'similarity, ...', 'syns': ['test1', 'Thesaurus:test2']}],
+                {'gloss': 'similarity, similitude', 'hint': '', 'syns': ['test1', 'Thesaurus:test2']}],
             'noun_type': 'f'}]}]
 
     print("\n\n")
@@ -1244,7 +1246,7 @@ pos: n
     assert deck.format_usage(usage) == """\
 <div class="etymology etymology_0 solo_etymology">
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">similarity, similitude</span><span class="synonyms">test1, test2</span></span>
-<span class="pos n hint f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">similarity, ...</span><span class="synonyms">test1, test2</span></span>
+<span class="pos n hint f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">similarity, similitude</span><span class="synonyms">test1, test2</span></span>
 </div>
 <span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">From Latin &quot;similitūdō&quot; (“likeness, similarity”).</span></span>
 """
