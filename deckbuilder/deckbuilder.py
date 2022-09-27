@@ -343,7 +343,15 @@ class DeckBuilder():
         obscured_deck = [Hider.obscure(syn, hide_word) for syn in deck]
         obscured_extra = [Hider.obscure(syn, hide_word) for syn in extra]
 
-        has_obscured = obscured_deck != deck or obscured_extra != extra
+        has_obscured = False
+
+        if obscured_deck != deck:
+            has_obscured = True
+            obscured_deck = [x for x in obscured_deck if x != "..."] + ["..."]
+
+        if obscured_extra != extra:
+            has_obscured = True
+            obscured_extra = [x for x in obscured_extra if x != "..."] + ["..."]
 
         if has_obscured:
             return cls.format_syns_html(deck,extra, 'unobscured') \
