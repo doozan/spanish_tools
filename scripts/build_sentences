@@ -23,12 +23,13 @@ def main():
     parser.add_argument("--dictionary", help="Dictionary file", required=True)
     parser.add_argument("--allforms", help="Load word forms from file")
     parser.add_argument("--ngprobs", help="Ngram probability data file", required=True)
+    parser.add_argument("--ngcase", help="Ngram case probability data file", required=True)
     parser.add_argument("--ngramdb", help="Ngram database", required=True)
     parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
 
-    ngprobs = NgramPosProbability(args.ngprobs)
+    ngprobs = NgramPosProbability(args.ngprobs, args.ngcase)
 
     if not os.path.isfile(args.sentences):
         raise FileNotFoundError(f"Cannot open: {args.sentences}")
