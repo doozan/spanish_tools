@@ -48,4 +48,4 @@ for word in sorted(words, key=lambda x: (words[x]*-1, x)):
     count = words[word]
     if count < args.min:
         exit()
-    print(f"{word} {words[word]}")
+    print(f"{word}\t{words[word]}")
