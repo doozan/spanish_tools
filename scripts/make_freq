@@ -45,7 +45,9 @@ def init_freq(params):
         allforms = AllForms.from_wordlist(wordlist)
 
     flist = FrequencyList(wordlist, allforms, ngprobs, ignore_data, debug_word=args.debug)
-    ignore_data.close()
+
+    if args.ignore:
+        ignore_data.close()
 
     return flist, args
 
