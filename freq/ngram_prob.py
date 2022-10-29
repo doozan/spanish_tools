@@ -19,7 +19,7 @@ import sys
 
 class NgramPosProbability():
 
-    def __init__(self, probfile, caseprobfile):
+    def __init__(self, probfile, caseprobfile=None):
         self.form_probs = {}
         self._preferred_case = {} # lazy loaded
         self._caseprobfile = caseprobfile
@@ -160,6 +160,9 @@ class NgramPosProbability():
     def _load_case_prob(self):
         if self._case_prob:
             raise ValueError("already initialized")
+
+        if not self._caseprobfile:
+            raise ValueError("caseprobfile not specified when creating NgramPosProbability()")
 
         with open(self._caseprobfile) as infile:
             self._case_prob = {k:int(v) for line in infile for k,v in line.strip().split("\t")}
