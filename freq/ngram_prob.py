@@ -150,7 +150,7 @@ class NgramPosProbability():
     def get_preferred_case(self, word):
         if not self._preferred_case:
             self._build_preferred_case()
-        return self._preferred_case.get(word, word)
+        return self._preferred_case.get(word.lower(), word.lower())
 
     def get_case_prob(self, word):
         if not self._preferred_case:
