@@ -198,6 +198,11 @@ class SentenceBuilder():
         if not pos:
             return []
 
+        # let nouns be proper nouns if they start with an uppercase and most commonly occurr with the uppercase
+        if pos == "n" and word[0].isupper() and self.freq.ngprobs.get_preferred_case(word.lower()) == word:
+            pos = "prop"
+            lemma = word
+
         if pos != "prop":
             word = word.lower()
 
