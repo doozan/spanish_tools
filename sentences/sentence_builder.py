@@ -9,6 +9,7 @@ import sys
 from collections import defaultdict, namedtuple
 
 Phrase = namedtuple("Phrase", [ "form", "lemma", "start", "end" ])
+Sentence = namedtuple("Sentence", [ "english", "spanish", "credits", "eng_id", "eng_user", "eng_score", "spa_id", "spa_user", "spa_score" ])
 
 class SentenceBuilder():
 
@@ -35,6 +36,8 @@ class SentenceBuilder():
 
         scores = []
         for lemma in lemmas:
+            if " " not in lemma:
+                print("unhandled", lemma, lemmas, file=sys.stderr)
             count = self.ngramdb.get_count(lemma)
             scores.append((count,lemma))
 
@@ -229,10 +232,8 @@ class SentenceBuilder():
 
         return[(pos, word)]
 
-
     @staticmethod
     def group_tags(pos_tags):
-
         res = {}
         for item in pos_tags:
             if not item:
@@ -248,8 +249,8 @@ class SentenceBuilder():
 
         return res
 
-
-    def get_tags(self, phrase, all_pos):
+    @staticmethod
+    def get_tags(phrase, all_pos):
         tags = []
         for pos in all_pos:
             if phrase.lemma == phrase.form:
@@ -309,61 +310,74 @@ class SentenceBuilder():
 
         return "|".join(lemmas)
 
-    def iter_sentences(self, filename):
+
+    @classmethod
+    def get_sentence(cls, text):
+        english, spanish, credits, eng_score, spa_score = text.split("\t")
+
+        # de-prioritize meta sentences
+        if "atoeba" in english:
+            eng_score = spa_score = 0
+
+        eng_id, eng_user, spa_id, spa_user = cls.parse_credits(credits)
+        return Sentence(english, spanish, credits, int(eng_id), eng_user, int(eng_score), int(spa_id), spa_user, int(spa_score))
+
+    @classmethod
+    def iter_sentences(cls, filename):
 
         seen = set()
         with open(filename) as infile:
             for line in infile:
+                sentence = cls.get_sentence(line.strip())
 
-                line = line.strip()
-                english, spanish, credits, english_score, spanish_score = line.split("\t")
-
-                wordcount = spanish.count(" ") + 1
+                wordcount = len(sentence.spanish.split())
 
                 # ignore sentences with less than 6 or more than 15 spanish words
                 if wordcount < 5 or wordcount > 15:
                     continue
 
                 # ignore duplicates
-                # if english in seen or spanish in seen:
-                uniqueid = hash(spanish)
+                uniqueid = hash(sentence.spanish)
                 if uniqueid in seen:
                     continue
                 else:
                     seen.add(uniqueid)
 
-                # de-prioritize meta sentences
-                if "atoeba" in english:
-                    english_score = spanish_score = 0
+                yield sentence
 
-                sid = re.search("& #([0-9]+)", credits).group(1)
-                yield [sid, english, spanish, credits, english_score, spanish_score]
+    @staticmethod
+    def iter_tags(filename):
+        with open(filename, "r", encoding="utf-8") as infile:
+            items = ijson.kvitems(infile, "item")
+
+            for k,v in items:
+                if k == "sentences":
+                    yield v
 
 
     def print_untagged_sentences(self, filename):
 
-        first = True
-        for sid, english, spanish, credits, english_score, spanish_score in self.iter_sentences(filename):
-            if not first:
+        for x, sentence in enumerate(self.iter_sentences(filename)):
+            if x==0:
                 print("")
-            print(spanish)
-            first = False
+            print(sentence.spanish)
+
+    @staticmethod
+    def parse_credits(text):
+        """ returns eng_id, eng_user, spa_id, spa_user """
+        res = re.match(
+            r"CC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)",
+            text
+        )
+        return res.groups()
 
     def print_credits(self, filename):
 
-        users = {}
+        users = defaultdict(list)
 
-        for sid, english, spanish, credits, english_score, spanish_score in self.iter_sentences(filename):
-            res = re.match(
-                r"CC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)",
-                credits,
-            )
-            eng_id, eng_user, spa_id, spa_user = res.groups()
-            for user in [eng_user, spa_user]:
-                if not user in users:
-                    users[user] = []
-            users[eng_user].append(eng_id)
-            users[spa_user].append(spa_id)
+        for s in self.iter_sentences(filename):
+            users[s.eng_user].append(s.eng_id)
+            users[s.spa_user].append(s.spa_id)
 
         print(f"CC-BY 2.0 (France) Attribution: tatoeba.org")
         for user, sentences in sorted(
@@ -412,104 +426,113 @@ class SentenceBuilder():
         word = sentence[start:end+1]
         return word
 
-
     def print_tagged_data(self, sentence_filename, tag_filename, verbose=False):
+        tags_iter = self.iter_tags(tag_filename)
+        sentence_iter = self.iter_sentences(sentence_filename)
 
         tagdata = {}
+        seen = set()
 
         count = 0
-        with open(tag_filename, "r", encoding="utf-8") as infile:
+        for sentence, tag_data in zip(sentence_iter, tags_iter):
+            count += 1
+            if not count % 1000 and verbose:
+                print(count, end="\r", file=sys.stderr)
 
-            seen = set()
+            sentence_tags = self.get_sentence_tags(sentence, tag_data)
+            uniqueid = self.get_fingerprint(sentence_tags)
+            if uniqueid in seen:
+                continue
+            seen.add(uniqueid)
 
-            items = ijson.kvitems(infile, "item")
+            tag_str = " ".join(
+                [f":{tag}," + ",".join(items) for tag, items in sentence_tags.items()]
+            )
 
-            for sid, english, spanish, credits, english_score, spanish_score in self.iter_sentences(sentence_filename):
-
-                for k,v in items:
-                    if k == "sentences":
-                        break
-
-                count += 1
-                if not count % 1000 and verbose:
-                    print(count, end="\r", file=sys.stderr)
-
-                # Get phrases in sentences
-                # Get phrase offsets
-                phrases = self.get_phrases(spanish)
-
-                # Discard interjection phrases that don't look like interjections
-                phrases = [p for p in phrases if
-                    any(pos != "interj" for pos in self.allforms.get_form_pos(p.lemma))
-                    or self.has_interjection(p.form, spanish)]
-
-                all_tags = []
-                first = True
-                for s in v:
-                    for t in s["tokens"]:
-                        if first:
-                            offset = int(t["begin"])
-                            first = False
-
-                        start = int(t["begin"])-offset
-                        end = int(t["end"])-offset
-
-                        is_phrase = any(p.start <= start and p.end >= end for p in phrases)
-
-                        form = self.get_original_form(t, spanish, offset)
-                        pos_tags = []
-                        for word in sorted(set([form, t["form"]])):
-                            pos_tags += self.tag_to_pos(t, word, is_phrase)
-                        if not pos_tags:
-                            continue
-                        pos_tags = sorted(list(set(pos_tags)))
-                        all_tags += pos_tags
-                        for pos_tag in pos_tags:
-                            pword, _, plemma = pos_tag[1].partition("|")
-                            if not plemma:
-                                plemma = pword
-                            if "_" in plemma:
-                                for word, lemma in zip(pword.split("_"), plemma.split("_")):
-                                    if word != lemma:
-                                        all_tags.append(["split", f"{word}|{lemma}"])
-                                    else:
-                                        all_tags.append(["split", f"{word}"])
-
-                all_tags += self.get_phrase_tags(all_tags, spanish, phrases)
-                all_tags = self.tag_interjections(all_tags, spanish)
-
-                grouped_tags = self.group_tags(all_tags)
+            print("\t".join(map(str, [
+                sentence.english,
+                sentence.spanish,
+                sentence.credits,
+                sentence.eng_score,
+                sentence.spa_score,
+                tag_str
+                ])))
 
 
-                # ignore sentences with the same adj/adv/noun/verb lemma combination
-                unique_tags = set()
-                for pos, tags in grouped_tags.items():
-                    pos = pos.removeprefix("phrase-")
-                    if pos not in ["adj", "adv", "n", "v", "part-adj", "part-verb"]:
-                        continue
-                    for t in tags:
-                        word, _, lemma = t.partition("|")
-                        if not lemma:
-                            lemma = word
-                        unique_tags.add(lemma)
+    @staticmethod
+    def get_fingerprint(sentence_tags):
+        # ignore sentences with the same adj/adv/noun/verb lemma combination
+        unique_lemmas = set()
+        for pos, tags in sentence_tags.items():
+            pos = pos.removeprefix("phrase-")
+            if pos not in ["adj", "adv", "n", "v", "part-adj", "part-verb"]:
+                continue
+            for t in tags:
+                word, _, lemma = t.partition("|")
+                if not lemma:
+                    lemma = word
+                unique_lemmas.add(lemma)
 
-                uniqueid = hash(":".join(sorted(unique_tags)))
+        return hash(tuple(sorted(unique_lemmas)))
 
-                if uniqueid in seen:
+    def get_sentence_tags(self, sentence, tags):
+
+        # Get phrases in sentences
+        # Get phrase offsets
+        phrases = self.get_phrases(sentence.spanish)
+
+        # Discard interjection phrases that don't look like interjections
+        phrases = [p for p in phrases if
+            any(pos != "interj" for pos in self.allforms.get_form_pos(p.lemma))
+            or self.has_interjection(p.form, sentence.spanish)]
+
+        all_tags = self.get_all_tags(sentence.spanish, tags, phrases)
+        all_tags += self.get_phrase_tags(all_tags, sentence.spanish, phrases)
+        all_tags = self.tag_interjections(all_tags, sentence.spanish)
+
+        grouped_tags = self.group_tags(all_tags)
+#        interj = self.get_interjections(sentence.spanish)
+#        if interj:
+#            grouped_tags["interj"] = list(map(str.lower, interj))
+
+        return grouped_tags
+
+    def get_all_tags(self, spanish, tags, phrases):
+        all_tags = []
+        first = True
+        for s in tags:
+            for t in s["tokens"]:
+                if first:
+                    offset = int(t["begin"])
+                    first = False
+
+                start = int(t["begin"])-offset
+                end = int(t["end"])-offset
+
+                is_phrase = any(p.start <= start and p.end >= end for p in phrases)
+
+                form = self.get_original_form(t, spanish, offset)
+                pos_tags = []
+                for word in sorted(set([form, t["form"]])):
+                    pos_tags += self.tag_to_pos(t, word, is_phrase)
+                if not pos_tags:
                     continue
-                seen.add(uniqueid)
+                pos_tags = sorted(list(set(pos_tags)))
+                all_tags += pos_tags
+                for pos_tag in pos_tags:
+                    pword, _, plemma = pos_tag[1].partition("|")
+                    if not plemma:
+                        plemma = pword
+                    if "_" in plemma:
+                        for word, lemma in zip(pword.split("_"), plemma.split("_")):
+                            if word != lemma:
+                                all_tags.append(["split", f"{word}|{lemma}"])
+                            else:
+                                all_tags.append(["split", f"{word}"])
 
-#                interj = self.get_interjections(spanish)
-#                if interj:
-#                    grouped_tags["interj"] = list(map(str.lower, interj))
+        return all_tags
 
-                tag_str = " ".join(
-                    [f":{tag}," + ",".join(items) for tag, items in grouped_tags.items()]
-                )
-
-                print(f"{english}\t{spanish}\t{credits}\t{english_score}\t{spanish_score}\t{tag_str}")
-
+    def print_detected_phrases():
         for lemma, count in sorted(self.detected_phrases.items(), key=lambda x: x[1]):
             if count > 20:
                 print(lemma, count, file=sys.stderr)
-
