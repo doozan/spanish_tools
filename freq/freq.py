@@ -67,9 +67,31 @@ class FrequencyList():
 
             yield f"{form}, {entry.lemma}, {entry.count}, {', '.join(sorted(formtypes))}"
 
+    def filter_names(self, freq):
+
+        for k, item in freq.items():
+            usage = item["usage"]
+            word = item["word"]
+            if not word[0].islower():
+                continue
+
+            usage.sort(key=lambda x: int(x.partition(":")[0]), reverse=True)
+            while usage:
+                count, _, form = usage[0].partition(":")
+                if form[0].islower():
+                    break
+                item["count"] -= int(count)
+
+                self.debug(word, "removing likely name", form, count)
+
+#                print("Removing name: ", word, [form, usage[0]], file=sys.stderr)
+                del usage[0]
+
+
     def process(self, freqlist, minuse=0):
         entries = self.find_lemmas(freqlist)
         freq = self.build_freqlist(entries)
+        self.filter_names(freq)
 
         yield("count,spanish,pos,flags,usage")
         for k, item in sorted(freq.items(), key=lambda item: (item[1]["count"]*-1, item[1]["word"])):
