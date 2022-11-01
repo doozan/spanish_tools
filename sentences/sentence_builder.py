@@ -201,31 +201,38 @@ class SentenceBuilder():
         # let nouns be proper nouns if they start with an uppercase and most commonly occurr with the uppercase
         if pos == "n" and word[0].isupper() and self.freq.ngprobs.get_preferred_case(word.lower()) == word:
             pos = "prop"
-            lemma = word
 
-        if pos != "prop":
+        if pos == "prop":
+            lemma = self.freq.ngprobs.get_preferred_case(word.lower())
+        else:
             word = word.lower()
 
+
         # Use our lemmas so they're the same when we lookup against other things we've lemmatized
-        # Unless it's a phrase, then use their lemma
         if pos in ("n", "adj", "adv"):
             lemma = self.get_lemmas(word, pos)
+
+        # Unless it's a phrase, then use their lemma
+        elif "_" in lemma:
+            lemma = word
 
         # fix for freeling not generating lemmas for verbs with a pronoun suffix
         elif pos == "v":
             if not lemma.endswith("r"):
                 lemma = self.get_lemmas(word, pos)
 
-        elif "_" in lemma:
-            lemma = word
 
         # Special handling for participles, add adjective and verb lemmas
         if pos == "part":
             adj_lemma = self.get_lemmas(word, "adj")
-            verb_lemma = self.get_lemmas(word, "v")
             adj_res = f"{word}|{adj_lemma}" if adj_lemma != word else word
-            verb_res = f"{word}|{verb_lemma}" if verb_lemma != word else word
 
+            verb_lemma = self.get_lemmas(word, "part")
+            if verb_lemma == word:
+                # no verb
+                return [("part-adj", adj_res)]
+
+            verb_res = f"{word}|{verb_lemma}"
             # NOTE: part-verb doesn't match "v", but this is intentional
             return [("part-adj", adj_res), ("part-verb", verb_res)]
 
@@ -464,19 +471,21 @@ class SentenceBuilder():
                 ])))
 
 
-    @staticmethod
-    def get_fingerprint(sentence_tags):
+    def get_fingerprint(self, sentence_tags):
         # ignore sentences with the same adj/adv/noun/verb lemma combination
         unique_lemmas = set()
         for pos, tags in sentence_tags.items():
             pos = pos.removeprefix("phrase-")
             if pos not in ["adj", "adv", "n", "v", "part-adj", "part-verb"]:
                 continue
+
             for t in tags:
                 word, _, lemma = t.partition("|")
                 if not lemma:
                     lemma = word
-                unique_lemmas.add(lemma)
+
+                if self.allforms.has_lemma(lemma, pos):
+                    unique_lemmas.add(lemma)
 
         return hash(tuple(sorted(unique_lemmas)))
 
