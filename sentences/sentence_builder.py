@@ -438,7 +438,7 @@ class SentenceBuilder():
         word = sentence[start:end+1]
         return word
 
-    def print_tagged_data(self, sentence_filename, tag_filename, verbose=False):
+    def print_tagged_data(self, sentence_filename, tag_filename, dump_verb_rating=False, verbose=False):
         tags_iter = self.iter_tags(tag_filename)
         sentence_iter = self.iter_sentences(sentence_filename)
 
@@ -461,14 +461,18 @@ class SentenceBuilder():
                 [f":{tag}," + ",".join(items) for tag, items in sentence_tags.items()]
             )
 
-            print("\t".join(map(str, [
+            items = [
                 sentence.english,
                 sentence.spanish,
                 sentence.credits,
                 sentence.eng_score,
                 sentence.spa_score,
-                tag_str
-                ])))
+                tag_str]
+
+            if dump_verb_rating:
+                items.append(self.get_verb_rating(tag_data))
+
+            print("\t".join(map(str, items)))
 
 
     def get_fingerprint(self, sentence_tags):
@@ -488,6 +492,89 @@ class SentenceBuilder():
                     unique_lemmas.add(lemma)
 
         return hash(tuple(sorted(unique_lemmas)))
+
+    # 1 Present tense
+    # 2 Preterite tense
+    # 3 Imperfect tense
+
+    # 4 Present prefect tense (haber (aux) present) + participle
+    # 5 Future tense
+    # 6 Conditional tense
+
+    # 7 Imperative tense
+    # 8 Present subjunctive tense
+    # 9 Imperfect subjunctive tense
+
+    # A - Auxiliary
+    # M - Main
+    # S - Semi-Auxiliary
+
+    # G - gerund
+    # I - indicative
+    # M - imperative
+    # N - infinitive
+    # P - participle
+    # S - subjunctive
+
+    # 0 - nothing (used by gerund, imperative, infinitive, participle)
+    # C - Conditional
+    # F - Future
+    # I - Imperfect
+    # P - Present
+    # S - Past
+
+    VERB_RATING = {
+        "VAG0": 0, # 12
+        "VAIC": 0, # 212
+        "VAIF": 0, # 145
+        "VAII": 3, # 1969
+        "VAIP": 1, # 9941
+        "VAIS": 0, # 106
+        "VAM0": 0, # 69
+        "VAN0": 0, # 1230
+        "VAP0": 0, # 119
+        "VASI": 0, # 488
+        "VASP": 0, # 434
+
+        "VSG0": 0, # 174
+        "VSIC": 0, # 313
+        "VSIF": 0, # 515
+        "VSII": 3, # 2256
+        "VSIP": 1, # 23962
+        "VSIS": 2, # 3281
+        "VSM0": 0, # 244
+        "VSN0": 0, # 1847
+        "VSP0": 0, # 461
+        "VSSF": 0, # 4
+        "VSSI": 0, # 401
+        "VSSP": 0, # 712
+
+        "VMG0": 0, # 7180
+        "VMIC": 6, # 5246
+        "VMIF": 5, # 5249
+        "VMII": 3, # 11547
+        "VMIP": 1, # 80637
+        "VMIS": 2, # 38409
+        "VMM0": 7, # 3852
+        "VMN0": 0, # 47634
+        "VMP0": 0, # 21353
+        "VMSF": 0, # 4
+        "VMSI": 9, # 3087
+        "VMSP": 8, # 8772
+    }
+
+    @classmethod
+    def get_verb_rating(cls, tags):
+        max_rating = 0
+        for s in tags:
+            for t in s["tokens"]:
+                tag = t["tag"]
+                if tag.startswith("V"):
+                    # TODO: if verb is haber, also check the following verb type
+                    rating = cls.VERB_RATING[tag[:4]]
+                    if rating > max_rating:
+                        max_rating = rating
+        return max_rating
 
     def get_sentence_tags(self, sentence, tags):
 

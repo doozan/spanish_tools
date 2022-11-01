@@ -26,6 +26,7 @@ def main():
     parser.add_argument("--ngcase", help="Ngram case probability data file", required=True)
     parser.add_argument("--ngramdb", help="Ngram database", required=True)
     parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
+    parser.add_argument('--verb-rank', action='store_true')
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
 
@@ -55,7 +56,7 @@ def main():
     if args.credits:
         builder.print_credits(args.sentences)
     elif args.tags:
-        builder.print_tagged_data(args.sentences, args.tags[0], args.verbose)
+        builder.print_tagged_data(args.sentences, args.tags[0], args.verb_rank, args.verbose)
     else:
         builder.print_untagged_sentences(args.sentences)
 
