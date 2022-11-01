@@ -452,10 +452,10 @@ class SentenceBuilder():
                 print(count, end="\r", file=sys.stderr)
 
             sentence_tags = self.get_sentence_tags(sentence, tag_data)
-            uniqueid = self.get_fingerprint(sentence_tags)
-            if uniqueid in seen:
-                continue
-            seen.add(uniqueid)
+#            uniqueid = self.get_fingerprint(sentence_tags)
+#            if uniqueid in seen:
+#                continue
+#            seen.add(uniqueid)
 
             tag_str = " ".join(
                 [f":{tag}," + ",".join(items) for tag, items in sentence_tags.items()]
