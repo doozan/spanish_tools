@@ -240,9 +240,9 @@ class SentenceBuilder():
             pos = "phrase-" + pos
 
         if word != lemma:
-            return[(pos, f"{word}|{lemma}")]
+            return [(pos, f"{word}|{lemma}")]
 
-        return[(pos, word)]
+        return [(pos, word)]
 
     @staticmethod
     def group_tags(pos_tags):
@@ -525,13 +525,18 @@ class SentenceBuilder():
 
                 is_phrase = any(p.start <= start and p.end >= end for p in phrases)
 
-                form = self.get_original_form(t, spanish, offset)
-                pos_tags = []
-                for word in sorted(set([form, t["form"]])):
-                    pos_tags += self.tag_to_pos(t, word, is_phrase)
+#                form = self.get_original_form(t, spanish, offset)
+#                pos_tags = []
+#                for word in sorted(set([form, t["form"]])):
+#                    pos_tags += self.tag_to_pos(t, word, is_phrase)
+#                if not pos_tags:
+#                    continue
+#                pos_tags = sorted(list(set(pos_tags)))
+#                all_tags += pos_tags
+                form = t["form"]
+                pos_tags = self.tag_to_pos(t, form, is_phrase)
                 if not pos_tags:
                     continue
-                pos_tags = sorted(list(set(pos_tags)))
                 all_tags += pos_tags
                 for pos_tag in pos_tags:
                     pword, _, plemma = pos_tag[1].partition("|")
