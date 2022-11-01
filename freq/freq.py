@@ -431,13 +431,18 @@ class FrequencyList():
         Return a list of lemma objects
         """
 
-        lemmas = []
-
         unresolved = self.get_unresolved_items(form, filter_pos)
-        self.debug(form, [filter_pos], "unresolved items", len(unresolved))
+        self.debug(form, "get_preferred_lemmas", filter_word, filter_pos)
+        self.debug(form, "  unresolved items", [(l.word, l.pos, formtypes) for l, formtypes in unresolved])
         if not unresolved:
+            self.debug("  no unresolved items, using get_all_lemmas instead")
             unresolved = [(item, None) for item in self.get_all_lemmas(form, filter_pos)]
-        self.debug(form, "unresolved items", unresolved)
+
+        # workaround for "part"/"v" splits
+        # "abierto" is "part", but its lemma "abrir" is "v"
+        # Use "part" above to get the list of lemmas, then use "v" below to filter the lemmas
+        if filter_pos == "part":
+            filter_pos = "v"
 
         if not unresolved and self.allforms.get_lemmas(form, filter_pos):
             print("No matching lemmas", form, filter_pos, self.allforms.get_lemmas(form, filter_pos), file=sys.stderr)
@@ -446,7 +451,8 @@ class FrequencyList():
         filtered = [x for x in unresolved if not self.is_rare_lemma(x[0])]
         unresolved = filtered if filtered else unresolved
 
-        self.debug(form, "unresolved items", [(l.word, l.pos, formtypes) for l, formtypes in unresolved])
+        self.debug(form, f"  unresolved items ({len(filtered)} passed filter)", [(l.word, l.pos, formtypes) for l, formtypes in unresolved])
+        lemmas = []
         for w, formtypes in unresolved:
             resolved_lemmas = self.get_resolved_lemmas(w, form, formtypes)
             self.debug(form, f"  resolved {w.word}:{w.pos} to", [(l.word, l.pos) for l in resolved_lemmas])
@@ -457,6 +463,7 @@ class FrequencyList():
 
         if filter_word or filter_pos:
             lemmas = self.filter_lemmas(lemmas, filter_word, filter_pos)
+            self.debug(form, f"  filtered {filter_word}/{filter_pos}, remaining", [(l.word, l.pos) for l in lemmas])
 
         # Remove rare lemmas from resolved lemmas
         filtered_lemmas = self.filter_rare_lemmas(lemmas)
