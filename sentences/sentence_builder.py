@@ -438,7 +438,7 @@ class SentenceBuilder():
         word = sentence[start:end+1]
         return word
 
-    def print_tagged_data(self, sentence_filename, tag_filename, dump_verb_rating=False, verbose=False):
+    def print_tagged_data(self, sentence_filename, tag_filename, include_verb_rank=False, verbose=False):
         tags_iter = self.iter_tags(tag_filename)
         sentence_iter = self.iter_sentences(sentence_filename)
 
@@ -469,8 +469,8 @@ class SentenceBuilder():
                 sentence.spa_score,
                 tag_str]
 
-            if dump_verb_rating:
-                items.append(self.get_verb_rating(tag_data))
+            if include_verb_rank:
+                items.append(self.get_verb_rank(tag_data))
 
             print("\t".join(map(str, items)))
 
@@ -523,7 +523,7 @@ class SentenceBuilder():
     # P - Present
     # S - Past
 
-    VERB_RATING = {
+    VERB_RANK = {
         "VAG0": 0, # 12
         "VAIC": 0, # 212
         "VAIF": 0, # 145
@@ -564,17 +564,17 @@ class SentenceBuilder():
     }
 
     @classmethod
-    def get_verb_rating(cls, tags):
-        max_rating = 0
+    def get_verb_rank(cls, tags):
+        max_rank = 0
         for s in tags:
             for t in s["tokens"]:
                 tag = t["tag"]
                 if tag.startswith("V"):
                     # TODO: if verb is haber, also check the following verb type
-                    rating = cls.VERB_RATING[tag[:4]]
-                    if rating > max_rating:
-                        max_rating = rating
-        return max_rating
+                    rank = cls.VERB_RANK[tag[:4]]
+                    if rank > max_rank:
+                        max_rank = rank
+        return max_rank
 
     def get_sentence_tags(self, sentence, tags):
 
