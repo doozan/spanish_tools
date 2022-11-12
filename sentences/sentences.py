@@ -5,6 +5,8 @@ import os
 import pickle
 import re
 import sys
+import sqlite3
+
 from collections import defaultdict, namedtuple
 from .sentence_builder import SentenceBuilder
 
@@ -43,7 +45,29 @@ def make_tag(word, pos):
 
 class SpanishSentences:
 
-    def __init__(self, sentences="sentences.tsv", preferred=[], forced=[], ignored=[], tagfixes=[]):
+    def __init__(self, sentences="sentences.tsv", preferred=[], forced=[], ignored=[], tagfixes=[], dbfilename=None):
+
+#        if dbfilename:
+#            existing = os.path.exists(dbfilename)
+#
+#            self.dbcon = sqlite3.connect(dbfilename)
+#            self.dbcon.execute('PRAGMA synchronous=OFF;')
+#
+#            if existing:
+#                return
+#
+#        else:
+#            self.dbcon = sqlite3.connect(":memory:")
+#
+        self.dbcon = sqlite3.connect(":memory:")
+        self.dbcon.execute('''CREATE TABLE english(id UNIQUE, sentence, user_id INT, user_score)''')
+        self.dbcon.execute('''CREATE TABLE spanish(id UNIQUE, sentence, user_id INT, user_score, tag_str, verb_score INT)''')
+        self.dbcon.execute('''CREATE TABLE spanish_grep(id UNIQUE, text)''')
+        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
+        self.dbcon.execute('''CREATE TABLE words(word, pos, spa_id INT, UNIQUE(word, pos, spa_id))''')
+
+
+        self.add_counter = 0
 
         if not preferred:
             preferred = []
@@ -54,8 +78,8 @@ class SpanishSentences:
         if not tagfixes:
             tagfixes = []
 
-        if self.load_cache(sentences, preferred, forced, ignored, tagfixes):
-            return
+#        if self.load_cache(sentences, preferred, forced, ignored, tagfixes):
+#            return
 
         self.sentencedb = []
         self.grepdb = []
@@ -67,7 +91,7 @@ class SpanishSentences:
         self.forced_ids = {}
         self.forced_ids_source = {}
 
-        tagfix_count = defaultdict(int)
+        self.tagfix_count = defaultdict(int)
 
         for datafile in tagfixes:
             with open(datafile) as infile:
@@ -100,28 +124,17 @@ class SpanishSentences:
                 if len(row) < 6:
                     continue
 
-                sentence = Sentence(*row)
-
-                if sentence.eng_id in self.filter_ids or sentence.spa_id in self.filter_ids:
-                    continue
-
-                self.sentencedb.append(sentence)
-                stripped = re.sub('[^ a-záéíñóúü]+', '', sentence.spanish.lower())
-                self.grepdb.append(stripped)
-
-                self.id_index[f"{sentence.spa_id}:{sentence.eng_id}"] = index
-
-                self.add_tags_to_db(sentence.tags, index, sentence.spa_id, tagfix_count)
-                index+=1
+                if self.process_line(index, *row):
+                    index+=1
 
         for old,new in self.tagfixes.items():
-            if old not in tagfix_count:
+            if old not in self.tagfix_count:
                 print(f"Tagfix: {old} {new} does not match any sentences", file=sys.stderr)
 
         for sid,fixes in self.tagfix_sentences.items():
             for old,new in fixes.items():
                 fixid = f"{old}@{sid}"
-                if fixid not in tagfix_count:
+                if fixid not in self.tagfix_count:
                     print(f"Tagfix: {fixid} {new} does not match any sentences", file=sys.stderr)
 
         # Forced/preferred items must be processed last
@@ -131,7 +144,31 @@ class SpanishSentences:
         for datafile in forced:
             self.load_overrides(datafile, "forced")
 
-        self.save_cache(sentences, preferred, forced, ignored, tagfixes)
+#        self.save_cache(sentences, preferred, forced, ignored, tagfixes)
+
+        print("sentences loaded")
+
+    def process_line(self, index, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
+
+        eng_id, eng_user, spa_id, spa_user = SentenceBuilder.parse_credits(credits)
+        return self.add_sentence(index, english, spanish, credits, eng_score, spa_score, tag_str)
+
+
+    def add_sentence(self, index, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
+        sentence = Sentence(english, spanish, credits, eng_score, spa_score, tag_str, verb_score)
+
+        if sentence.eng_id in self.filter_ids or sentence.spa_id in self.filter_ids:
+            return
+
+        self.sentencedb.append(sentence)
+        stripped = re.sub('[^ a-záéíñóúü]+', '', sentence.spanish.lower())
+        self.grepdb.append(stripped)
+
+        self.id_index[f"{sentence.spa_id}:{sentence.eng_id}"] = index
+
+        self.add_tags_to_db(sentence.tags, index, sentence.spa_id)
+
+        return True
 
 
     def load_overrides(self, datafile, source):
@@ -228,7 +265,7 @@ class SpanishSentences:
 
     # tags are in the form:
     # { pos: [word1, word2] }
-    def add_tags_to_db(self, tags, index, sid, tagfix_count):
+    def add_tags_to_db(self, tags, index, sid):
         for tagpos,words in tags.items():
 
             # Each past participle has both a part-verb and a part-adj tag
@@ -248,7 +285,7 @@ class SpanishSentences:
                     newword,newpos = self.tagfixes.get(fixid,[None,None])
 
                 if newword:
-                    tagfix_count[fixid] += 1
+                    self.tagfix_count[fixid] += 1
 
                     word = newword
                     pos = newpos
@@ -260,8 +297,9 @@ class SpanishSentences:
                 for xword in [f'@{xword}'] + xlemmas:
                     self.add_tag(xword, pos, index)
 
-    def add_tag(word, pos, index):
-        self.tagdb[xword][pos].append(index)
+    def add_tag(self, word, pos, index):
+        # TODO: index should be spa_id
+        self.dbcon.execute("INSERT OR IGNORE INTO words VALUES (?, ?, ?)", (word, pos, index))
 
     def get_ids_from_phrase(self, phrase):
         term = phrase.strip().lower()
@@ -277,19 +315,12 @@ class SpanishSentences:
     # if it's not set, return all results matching the keyword
     def get_ids_from_tag(self, word, pos):
 
-        if word not in self.tagdb:
-            return []
-
-        results = set()
         if not pos:
-            for item in self.tagdb[word]:
-                results.update(self.tagdb[word][item])
-        elif pos in self.tagdb[word]:
-            results = self.tagdb[word][pos]
+            rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM words WHERE word=?", (word,))
         else:
-            return []
+            rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM words WHERE word=? AND POS=?", (word,pos))
 
-        return list(results)
+        return sorted([x[0] for x in rows])
 
 
     def get_sentences_from_ids(self, ids):
