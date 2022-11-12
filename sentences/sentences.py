@@ -59,7 +59,7 @@ class SpanishSentences:
 
         self.sentencedb = []
         self.grepdb = []
-        self.tagdb = {}
+        self.tagdb = defaultdict(lambda: defaultdict(list))
         self.id_index = {}
         self.tagfixes = {}
         self.tagfix_sentences = {}
@@ -152,14 +152,14 @@ class SpanishSentences:
                     print(f"{source} sentences scores for {word},{pos} have dropped below 55, ignoring...", file=sys.stderr)
                     continue
 
-                elif source == "preferred" and any( i not in self.tagdb.get(word, {}).get(pos, [])
-                        and i in self.tagdb.get(word, {}).get("phrase-" + pos, []) for i in ids):
+                elif source == "preferred" and any( i not in self.get_ids_from_tag(word, pos)
+                        and i in self.get_ids_from_tag(word, "phrase-" + pos) for i in ids):
                     print(f"{source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
                     continue
 
 
                 elif source == "preferred" and pos == "interj" \
-                        and any( i not in self.tagdb.get(word, {}).get(pos, []) for i in ids):
+                        and any( i not in self.get_ids_from_tag(word, pos) for i in ids):
                     print(f"! {source} sentences no longer has interj for {word}, ignoring...", file=sys.stderr)
                     continue
 
@@ -258,19 +258,10 @@ class SpanishSentences:
                     xlemmas = [xword]
 
                 for xword in [f'@{xword}'] + xlemmas:
+                    self.add_tag(xword, pos, index)
 
-                    tags = self.tagdb.get(xword)
-                    if not tags:
-                        tags = { pos: [index] }
-                        self.tagdb[xword] = { pos: [index] }
-                    else:
-                        items = tags.get(pos)
-                        if not items:
-                            tags[pos] = [index]
-                        else:
-                            items.append(index)
-
-
+    def add_tag(word, pos, index):
+        self.tagdb[xword][pos].append(index)
 
     def get_ids_from_phrase(self, phrase):
         term = phrase.strip().lower()
@@ -450,16 +441,3 @@ class SpanishSentences:
         source = sentence_ids[0]['source'] if sentence_ids else None
         sentences = [ self.sentencedb[i['id']] for i in sentence_ids ]
         return { "sentences": sentences, "matched": source }
-
-
-    def get_all_pos(self, word):
-        word = word.lower()
-        if word in self.tagdb:
-            return list(self.tagdb[word].keys())
-        return []
-
-    def get_usage_count(self, word, pos):
-        if word in self.tagdb and pos in self.tagdb[word]:
-            return len(self.tagdb[word][pos])
-        else:
-            return 0
