@@ -6,8 +6,37 @@ import pickle
 import re
 import sys
 from collections import defaultdict, namedtuple
+from .sentence_builder import SentenceBuilder
 
-Sentence = namedtuple("Sentence", [ "spanish", "english", "score", "spa_id", "eng_id", "spa_user", "eng_user" ])
+class Sentence():
+    def __init__(self, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
+        self.english = english
+        self.spanish = spanish
+        self.eng_id, self.eng_user, self.spa_id, self.spa_user = SentenceBuilder.parse_credits(credits)
+        self.eng_score = int(eng_score)
+        self.spa_score = int(spa_score)
+        self.tag_str = tag_str
+        self.verb_score = 0 if verb_score is None else verb_score
+
+    @property
+    def score(self):
+        return self.spa_score*10 + self.eng_score
+
+    @property
+    def credits(self):
+        return f"CC-BY 2.0 (France) Attribution: tatoeba.org #{self.eng_id} ({self.eng_user}) & #{self.spa_id} ({self.spa_user})"
+
+    @property
+    def tags(self):
+        tags = {}
+        for tag_items in self.tag_str[1:].split(":"):
+            tag,*items = tag_items.strip().split(",")
+            tags[tag] = items
+        return tags
+
+
+
+#Sentence = namedtuple("Sentence", [ "spanish", "english", "score", "spa_id", "eng_id", "spa_user", "eng_user", "verb_score" ])
 
 def make_tag(word, pos):
     return pos.lower() + ":" + word.lower()
@@ -66,29 +95,23 @@ class SpanishSentences:
         index=0
         with open(sentences) as infile:
             for line in infile:
-                res = re.match(r"([^\t]*)\t([^\t]*)\tCC-BY 2.0 \(France\) Attribution: tatoeba.org #([0-9]+) \(([^)]+)\) & #([0-9]+) \(([^)]+)\)\t([0-6])\t([0-6])\t([^\t]*)\n", line)
-                if not res:
-                    continue
-                english,spanish,eng_id,eng_user,spa_id,spa_user,eng_score,spa_score,tag_str = res.groups()
-                eng_id = int(eng_id)
-                spa_id = int(spa_id)
-                score = int(spa_score)*10 + int(eng_score)
+                row = line.rstrip().split("\t")
 
-                if eng_id in self.filter_ids or spa_id in self.filter_ids:
+                if len(row) < 6:
                     continue
 
-                tags = { }
-                for tag_items in tag_str[1:].split(":"):
-                    tag,*items = tag_items.strip().split(",")
-                    tags[tag] = items
+                sentence = Sentence(*row)
 
-                self.sentencedb.append( Sentence(spanish, english, score, spa_id, eng_id, spa_user, eng_user) )
-                stripped = re.sub('[^ a-záéíñóúü]+', '', spanish.lower())
+                if sentence.eng_id in self.filter_ids or sentence.spa_id in self.filter_ids:
+                    continue
+
+                self.sentencedb.append(sentence)
+                stripped = re.sub('[^ a-záéíñóúü]+', '', sentence.spanish.lower())
                 self.grepdb.append(stripped)
 
-                self.id_index[f"{spa_id}:{eng_id}"] = index
+                self.id_index[f"{sentence.spa_id}:{sentence.eng_id}"] = index
 
-                self.add_tags_to_db(tags,index,spa_id, tagfix_count)
+                self.add_tags_to_db(sentence.tags, index, sentence.spa_id, tagfix_count)
                 index+=1
 
         for old,new in self.tagfixes.items():
@@ -148,11 +171,11 @@ class SpanishSentences:
 
     def save_cache(self, sentences, preferred, forced, ignored, tagfixes):
 
-        print(preferred, forced, ignored, tagfixes)
+        print(preferred, forced, ignored, tagfixes, file=sys.stderr)
         modfiles = preferred + forced + ignored + tagfixes
         cached = self.get_cache_filename(sentences, modfiles)
 
-        print("saving cache", cached)
+        print("saving cache", cached, file=sys.stderr)
 
         with open(cached, "wb") as outfile:
             pickle.dump([
