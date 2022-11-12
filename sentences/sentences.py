@@ -62,7 +62,7 @@ class SpanishSentences:
         self.dbcon = sqlite3.connect(":memory:")
         self.dbcon.execute('''CREATE TABLE english(id UNIQUE, sentence, user_id INT, user_score)''')
         self.dbcon.execute('''CREATE TABLE spanish(id UNIQUE, sentence, user_id INT, user_score, tag_str, verb_score INT)''')
-        self.dbcon.execute('''CREATE TABLE spanish_grep(id UNIQUE, text)''')
+        self.dbcon.execute('''CREATE TABLE spanish_grep(id UNIQUE, text TEXT)''')
         self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
         self.dbcon.execute('''CREATE TABLE words(word, pos, spa_id INT, UNIQUE(word, pos, spa_id))''')
 
@@ -82,8 +82,8 @@ class SpanishSentences:
 #            return
 
         self.sentencedb = []
-        self.grepdb = []
-        self.tagdb = defaultdict(lambda: defaultdict(list))
+#        self.grepdb = []
+#        self.tagdb = defaultdict(lambda: defaultdict(list))
         self.id_index = {}
         self.tagfixes = {}
         self.tagfix_sentences = {}
@@ -161,8 +161,8 @@ class SpanishSentences:
             return
 
         self.sentencedb.append(sentence)
-        stripped = re.sub('[^ a-záéíñóúü]+', '', sentence.spanish.lower())
-        self.grepdb.append(stripped)
+        #self.add_spanish_grep(sentence.spa_id, spanish)
+        self.add_spanish_grep(index, spanish)
 
         self.id_index[f"{sentence.spa_id}:{sentence.eng_id}"] = index
 
@@ -170,6 +170,10 @@ class SpanishSentences:
 
         return True
 
+    def add_spanish_grep(self, spa_id, sentence):
+        stripped = re.sub('[^ a-záéíñóúü]+', '', sentence.strip().lower())
+#        self.grepdb.append(stripped)
+        self.dbcon.execute("INSERT OR IGNORE INTO spanish_grep VALUES (?, ?)", (spa_id, stripped))
 
     def load_overrides(self, datafile, source):
         with open(datafile) as infile:
@@ -302,10 +306,16 @@ class SpanishSentences:
         self.dbcon.execute("INSERT OR IGNORE INTO words VALUES (?, ?, ?)", (word, pos, index))
 
     def get_ids_from_phrase(self, phrase):
-        term = phrase.strip().lower()
-        pattern = r"\b" + phrase.strip().lower() + r"\b"
+        term = re.sub('[^ a-záéíñóúü]+', '', phrase.strip().lower())
 
-        return [i for i, item in enumerate(self.grepdb) if term in item and re.search(pattern, item)]
+        rows = self.dbcon.execute("SELECT id, text FROM spanish_grep WHERE text LIKE ?", (f"%{phrase}%",))
+        pattern = r"\b" + phrase.strip().lower() + r"\b"
+        return [i for i, item in rows if re.search(pattern, item)]
+
+#        return [i for i, item in enumerate(self.grepdb) if term in item and re.search(pattern, item)]
+
+
+
 
     def get_ids_from_word(self, word):
         return self.get_ids_from_tag("@"+word, "")
