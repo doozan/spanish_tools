@@ -28,13 +28,6 @@ class Sentence():
     def credits(self):
         return f"CC-BY 2.0 (France) Attribution: tatoeba.org #{self.eng_id} ({self.eng_user}) & #{self.spa_id} ({self.spa_user})"
 
-    @property
-    def tags(self):
-        tags = {}
-        for tag_items in self.tag_str[1:].split(":"):
-            tag,*items = tag_items.strip().split(",")
-            tags[tag] = items
-        return tags
 
 
 
@@ -62,9 +55,12 @@ class SpanishSentences:
         self.dbcon = sqlite3.connect(":memory:")
         self.dbcon.execute('''CREATE TABLE english(id UNIQUE, sentence, user_id INT, user_score)''')
         self.dbcon.execute('''CREATE TABLE spanish(id UNIQUE, sentence, user_id INT, user_score, tag_str, verb_score INT)''')
-        self.dbcon.execute('''CREATE TABLE spanish_grep(id UNIQUE, text TEXT)''')
         self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
+
+        self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, english, spanish, credits, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT)''')
+        self.dbcon.execute('''CREATE TABLE spanish_grep(id UNIQUE, text TEXT)''')
         self.dbcon.execute('''CREATE TABLE words(word, pos, spa_id INT, UNIQUE(word, pos, spa_id))''')
+
 
 
         self.add_counter = 0
@@ -81,7 +77,7 @@ class SpanishSentences:
 #        if self.load_cache(sentences, preferred, forced, ignored, tagfixes):
 #            return
 
-        self.sentencedb = []
+#        self.sentencedb = []
 #        self.grepdb = []
 #        self.tagdb = defaultdict(lambda: defaultdict(list))
         self.id_index = {}
@@ -151,28 +147,32 @@ class SpanishSentences:
     def process_line(self, index, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
 
         eng_id, eng_user, spa_id, spa_user = SentenceBuilder.parse_credits(credits)
-        return self.add_sentence(index, english, spanish, credits, eng_score, spa_score, tag_str)
-
-
-    def add_sentence(self, index, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
-        sentence = Sentence(english, spanish, credits, eng_score, spa_score, tag_str, verb_score)
-
-        if sentence.eng_id in self.filter_ids or sentence.spa_id in self.filter_ids:
+        if eng_id in self.filter_ids or spa_id in self.filter_ids:
             return
 
-        self.sentencedb.append(sentence)
-        #self.add_spanish_grep(sentence.spa_id, spanish)
+        self.add_sentence(index, english, spanish, credits, eng_score, spa_score, tag_str)
         self.add_spanish_grep(index, spanish)
-
-        self.id_index[f"{sentence.spa_id}:{sentence.eng_id}"] = index
-
-        self.add_tags_to_db(sentence.tags, index, sentence.spa_id)
+        self.id_index[f"{spa_id}:{eng_id}"] = index
+        self.add_tags_to_db(tag_str, index, spa_id)
 
         return True
 
+
+    def add_sentence(self, index, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
+
+        if verb_score is None:
+            verb_score = 0
+
+        eng_id, eng_user, spa_id, spa_user = SentenceBuilder.parse_credits(credits)
+
+        self.dbcon.execute("INSERT INTO sentences VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", \
+            (index, english, spanish, credits, eng_score, spa_score, tag_str, eng_id, eng_user, spa_id, spa_user, verb_score))
+
+        sentence = Sentence(english, spanish, credits, eng_score, spa_score, tag_str, verb_score)
+
+
     def add_spanish_grep(self, spa_id, sentence):
         stripped = re.sub('[^ a-záéíñóúü]+', '', sentence.strip().lower())
-#        self.grepdb.append(stripped)
         self.dbcon.execute("INSERT OR IGNORE INTO spanish_grep VALUES (?, ?)", (spa_id, stripped))
 
     def load_overrides(self, datafile, source):
@@ -189,7 +189,7 @@ class SpanishSentences:
                     print(f"{source} sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
                     continue
 
-                elif source == "preferred" and any(self.sentencedb[i].score < 55 for i in ids):
+                elif source == "preferred" and any(self.get_score(i) < 55 for i in ids):
                     print(f"{source} sentences scores for {word},{pos} have dropped below 55, ignoring...", file=sys.stderr)
                     continue
 
@@ -267,10 +267,20 @@ class SpanishSentences:
 
         return True
 
+
+    @staticmethod
+    def str_to_tags(tag_str):
+        tags = {}
+        for tag_items in tag_str[1:].split(":"):
+            tag,*items = tag_items.strip().split(",")
+            tags[tag] = items
+        return tags
+
     # tags are in the form:
     # { pos: [word1, word2] }
-    def add_tags_to_db(self, tags, index, sid):
-        for tagpos,words in tags.items():
+    def add_tags_to_db(self, tag_str, index, sid):
+
+        for tagpos,words in self.str_to_tags(tag_str).items():
 
             # Each past participle has both a part-verb and a part-adj tag
             # NOTE: part-verb will be tagged as "verb", while normal verbs are "v"
@@ -333,11 +343,15 @@ class SpanishSentences:
         return sorted([x[0] for x in rows])
 
 
-    def get_sentences_from_ids(self, ids):
-        sentences = []
-        sentences = [ self.sentencedb[idx] for idx in ids ]
-        return sentences
+    def get_score(self, idx):
+        row = next(self.dbcon.execute("SELECT spa_score, eng_score FROM sentences WHERE id = ?", (idx,)))
+        return row[0]*10 + row[1]
 
+    def get_eng_id(self, idx):
+        return next(self.dbcon.execute("SELECT eng_id FROM sentences WHERE id = ?", (idx,)))[0]
+
+    def get_spa_id(self, idx):
+        return next(self.dbcon.execute("SELECT spa_id FROM sentences WHERE id = ?", (idx,)))[0]
 
     def get_best_sentence_ids(self, items, count):
 
@@ -357,15 +371,15 @@ class SpanishSentences:
             wordtag = make_tag(word, pos)
 
             forced_ids = [x for x in self.forced_ids.get(wordtag,[]) if
-                    self.sentencedb[x].spa_id not in seen and
-                    self.sentencedb[x].eng_id not in seen]
+                    self.get_spa_id(x) not in seen and
+                    self.get_eng_id(x) not in seen]
 
             if len(forced_ids):
                 source = self.forced_ids_source[wordtag]
                 item_ids = forced_ids[:count]
                 for x in item_ids:
-                    seen.add(self.sentencedb[x].spa_id)
-                    seen.add(self.sentencedb[x].eng_id)
+                    seen.add(self.get_spa_id(x))
+                    seen.add(self.get_eng_id(x))
 
             else:
                 res = self.get_all_sentence_ids(word, pos)
@@ -401,12 +415,9 @@ class SpanishSentences:
 
         # Find the highest scoring sentences without repeating the english or spanish ids
         # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
-        scored = {}
+        scored = defaultdict(set)
         for i in all_ids:
-            s = self.sentencedb[i]
-            score = s.score
-            if not score in scored:
-                scored[score] = set()
+            score = self.get_score(i)
             scored[score].add(i)
 
         available = []
@@ -419,10 +430,11 @@ class SpanishSentences:
         for score in sorted( scored.keys(), reverse=True ):
 
             for i in sorted(scored[score]):
-                s = self.sentencedb[i]
-                if s.eng_id not in seen and s.spa_id not in seen:
-                    seen.add(s.eng_id)
-                    seen.add(s.spa_id)
+                eng_id = self.get_eng_id(i)
+                spa_id = self.get_spa_id(i)
+                if eng_id not in seen and spa_id not in seen:
+                    seen.add(eng_id)
+                    seen.add(spa_id)
                     available.append(i)
 
             if len(available) >= needed:
@@ -480,5 +492,12 @@ class SpanishSentences:
 
         sentence_ids = self.get_best_sentence_ids(items, count)
         source = sentence_ids[0]['source'] if sentence_ids else None
-        sentences = [ self.sentencedb[i['id']] for i in sentence_ids ]
+
+        sentences = []
+        for i in sentence_ids:
+            idx, english, spanish, credits, eng_score, spa_score, tag_str, eng_id, eng_user, spa_id, spa_user, verb_score = \
+                next(self.dbcon.execute(f"SELECT * from sentences WHERE id = ?", (i['id'],)))
+            sentence = Sentence(english, spanish, credits, eng_score, spa_score, tag_str, verb_score)
+            sentences.append(sentence)
+
         return { "sentences": sentences, "matched": source }
