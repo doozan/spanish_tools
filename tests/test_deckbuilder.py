@@ -303,7 +303,7 @@ pos: v
             'noun_type': 'mf',
             'note': 'The noun guía is like several other Spanish nouns with a human referent and ending in a.\\nThe masculine articles and adjectives are used when the referent is male or unknown.',
             'senses': [
-                {'gloss': 'guide (person)', 'hint': '... (person)'}],
+                {'gloss': 'guide (person)', 'hint': ''}],
             }, {
             'pos': 'n',
             'noun_type': 'f',
@@ -318,7 +318,7 @@ pos: v
     assert deck.format_usage(usage) == """\
 <div class="etymology etymology_0 solo_etymology">
 <span class="pos n mf"><span class="pos_tag pos_tag_primary">mf</span><span class="gloss">guide (person)</span><span class="footnote_link usage_link">1</span></span>
-<span class="pos n hint mf"><span class="pos_tag pos_tag_primary">mf</span><span class="gloss">... (person)</span><span class="footnote_link usage_link">1</span></span>
+<span class="pos n hint mf"><span class="pos_tag pos_tag_primary">mf</span><span class="gloss">guide (person)</span><span class="footnote_link usage_link">1</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">guidebook</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">directory</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">f</span><span class="gloss">cocket</span></span>

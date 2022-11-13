@@ -1416,7 +1416,9 @@ class DeckBuilder():
                     raise ValueError(f'Unknown option "{option}" specified in wordlist {wordlist}')
 
             with open(filename, newline="") as csvfile:
+                print("loading", filename, all_allowed_flags, limit, metadata)
                 self.load_wordlist(csvfile, all_allowed_flags, limit, metadata)
+
 
 
 
@@ -1438,8 +1440,6 @@ class DeckBuilder():
         for reqfield in ["pos", "spanish"]:
             if reqfield not in csvreader.fieldnames:
                 raise ValueError(f"No '{reqfield}' field specified in wordlist")
-
-        print("loading", allowed_flags, limit)
 
         count = 0
         for row in csvreader:
@@ -1509,6 +1509,7 @@ class DeckBuilder():
             count += 1
             if limit and count>limit:
                 break
+        print(f"  loaded {count} items")
 
 
     def compile(self, modelfile, filename, deck_name, deck_guid, deck_desc, mediadir, limit, ankideck=None, tags=[]):

@@ -20,14 +20,39 @@ class Hider():
                 all_hidden = False
             res.append(chunk)
 
-        # Undo hiding if it hides everything, unless allowed
         if all_hidden:
             return "..."
 
         for x in hidden:
             res[x] = "..."
 
-        return "".join(res)
+        obscured = "".join(res)
+
+        if cls.only_qualifiers(obscured, gloss):
+            return "..."
+
+        return obscured
+
+    qualifiers = {"US", "UK", "Australia", "person", "place"}
+
+    @classmethod
+    def only_qualifiers(cls, text, gloss):
+        # Returns True if text consists of only obscured items, separating characters,
+        # and qualifiers within parenthesis
+
+        stripped = re.sub(r"([,;:/])", " ", text).replace("...", "").strip()
+
+        m = re.match("\([^)]*\)+$", stripped)
+        if not m:
+            return False
+
+        #print("checking", stripped, ":", gloss)
+
+        text_only = re.sub(r"[,;:()/]", "", stripped)
+        for word in text_only.split():
+            if word not in cls.qualifiers:
+                return False
+        return True
 
     @staticmethod
     def get_chunks(text):
