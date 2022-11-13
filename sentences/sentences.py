@@ -35,7 +35,7 @@ class SpanishSentences:
 #        self.dbcon.execute('''CREATE TABLE spanish(id UNIQUE, sentence, user_id INT, user_score, tag_str, verb_score INT)''')
 #        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
 
-        self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, english, spanish, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT)''')
+        self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, english, spanish, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT, UNIQUE(spa_id, eng_id))''')
         self.dbcon.execute('''CREATE TABLE spanish_grep(id UNIQUE, text TEXT)''')
         self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, UNIQUE(lemma, pos, spa_id))''')
         self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, UNIQUE(form, pos, spa_id))''')
@@ -57,7 +57,7 @@ class SpanishSentences:
 #        self.sentencedb = []
 #        self.grepdb = []
 #        self.tagdb = defaultdict(lambda: defaultdict(list))
-        self.id_index = {}
+#        self.id_index = {}
         self.tagfixes = {}
         self.tagfix_sentences = {}
         self.filter_ids = {}
@@ -129,7 +129,6 @@ class SpanishSentences:
 
         self.add_sentence(index, english, spanish, credits, eng_score, spa_score, tag_str)
         self.add_spanish_grep(index, spanish)
-        self.id_index[f"{spa_id}:{eng_id}"] = index
         self.add_tags_to_db(tag_str, index, spa_id)
 
         return True
@@ -154,35 +153,49 @@ class SpanishSentences:
         with open(datafile) as infile:
 
             for line in infile:
+
                 line = line.strip()
                 if line.startswith("#"):
                     continue
-                word,pos,*forced_itemtags = line.split(",")
-                wordtag = make_tag(word, pos)
-                ids = self.itemtags_to_ids(forced_itemtags)
-                if None in ids:
-                    print(f"{source} sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
-                    continue
+                word,pos,*forced_pairs = line.split(",")
 
-                elif source == "preferred" and any(self.get_score(i) < 55 for i in ids):
-                    print(f"{source} sentences scores for {word},{pos} have dropped below 55, ignoring...", file=sys.stderr)
-                    continue
+                ids = []
+                valid = True
+                for pair in forced_pairs:
+                    spa_id, eng_id = pair.split(":")
 
-                elif source == "preferred" and any( i not in self.get_ids_from_lemma(word, pos)
-                        and i in self.get_ids_from_lemma(word, "phrase-" + pos) for i in ids):
-                    print(f"{source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
-                    continue
+                    sentence = self.get_sentence(spa_id, eng_id)
+                    if not sentence:
+                        print(f"{source} sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
+                        valid = False
+                        break
 
+                    ids.append(sentence.id)
 
-                elif source == "preferred" and pos == "interj" \
-                        and any( i not in self.get_ids_from_lemma(word, pos) for i in ids):
-                    print(f"! {source} sentences no longer has interj for {word}, ignoring...", file=sys.stderr)
-                    continue
+                    if source == "preferred":
 
-                else:
+                        if sentence.score < 55:
+                            print(f"{source} score for {word},{pos} has dropped below 55, ignoring...", file=sys.stderr)
+                            valid = False
+                            break
+
+                        if not self.has_lemma(word, pos, sentence.id):
+                            if self.has_lemma(word, "phrase-" + pos, sentence.id):
+                                print(f"{source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
+                                valid = False
+                                break
+
+                            elif pos == "interj":
+                                print(f"! {source} sentences no longer has {word},{pos}, ignoring...", file=sys.stderr)
+                                valid = False
+                                break
+
+                if valid:
+                    wordtag = make_tag(word, pos)
+
+                    # TODO: instead of sentence ids, use (spa_id, eng_id)
                     self.forced_ids[wordtag] = ids
                     self.forced_ids_source[wordtag] = source
-
 
 
     def save_cache(self, sentences, preferred, forced, ignored, tagfixes):
@@ -326,6 +339,8 @@ class SpanishSentences:
 
         return sorted([x[0] for x in rows])
 
+    def has_lemma(self, lemma, pos, spa_id):
+        return any(self.dbcon.execute("SELECT * FROM lemmas WHERE lemma=? AND POS=? and spa_id=? LIMIT 1", (lemma,pos,spa_id)))
 
     def get_score(self, idx):
         row = next(self.dbcon.execute("SELECT spa_score, eng_score FROM sentences WHERE id = ?", (idx,)))
@@ -469,9 +484,6 @@ class SpanishSentences:
 
         return { "ids": ids, "source": source }
 
-    def itemtags_to_ids(self, items):
-        return [ self.id_index.get(tag) for tag in items ]
-
     def get_sentences(self, items, count, forced_items=[]):
 
         sentence_ids = self.get_best_sentence_ids(items, count)
@@ -479,14 +491,19 @@ class SpanishSentences:
 
         sentences = []
         for i in sentence_ids:
-            sentence = self.get_sentence(i['id'])
+            sentence = self.get_sentence_by_index(i['id'])
             sentences.append(sentence)
 
         return { "sentences": sentences, "matched": source }
 
-    def get_sentence(self, idx):
+    def get_sentence_by_index(self, idx):
         row = next(self.dbcon.execute(f"SELECT * from sentences WHERE id = ?", (idx,)))
         return Sentence(row)
+
+    def get_sentence(self, spa_id, eng_id):
+        row = next(self.dbcon.execute(f"SELECT * from sentences WHERE spa_id = ? AND eng_id = ?", (spa_id,eng_id)), None)
+        if row:
+            return Sentence(row)
 
 class Sentence():
     def __init__(self, row):
