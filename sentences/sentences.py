@@ -37,7 +37,8 @@ class SpanishSentences:
 
         self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, english, spanish, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT)''')
         self.dbcon.execute('''CREATE TABLE spanish_grep(id UNIQUE, text TEXT)''')
-        self.dbcon.execute('''CREATE TABLE words(word, pos, spa_id INT, UNIQUE(word, pos, spa_id))''')
+        self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, UNIQUE(lemma, pos, spa_id))''')
+        self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, UNIQUE(form, pos, spa_id))''')
 
         self.add_counter = 0
 
@@ -71,7 +72,7 @@ class SpanishSentences:
                     line = line.strip()
                     if line.startswith("#") or not ":" in line:
                         continue
-                    line,junk,id_string = line.partition("@")
+                    line,_,id_string = line.partition("@")
                     oldword,oldpos,newword,newpos = line.split(":")
 
                     if len(id_string):
@@ -167,14 +168,14 @@ class SpanishSentences:
                     print(f"{source} sentences scores for {word},{pos} have dropped below 55, ignoring...", file=sys.stderr)
                     continue
 
-                elif source == "preferred" and any( i not in self.get_ids_from_tag(word, pos)
-                        and i in self.get_ids_from_tag(word, "phrase-" + pos) for i in ids):
+                elif source == "preferred" and any( i not in self.get_ids_from_lemma(word, pos)
+                        and i in self.get_ids_from_lemma(word, "phrase-" + pos) for i in ids):
                     print(f"{source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
                     continue
 
 
                 elif source == "preferred" and pos == "interj" \
-                        and any( i not in self.get_ids_from_tag(word, pos) for i in ids):
+                        and any( i not in self.get_ids_from_lemma(word, pos) for i in ids):
                     print(f"! {source} sentences no longer has interj for {word}, ignoring...", file=sys.stderr)
                     continue
 
@@ -282,12 +283,21 @@ class SpanishSentences:
                 if not xlemmas:
                     xlemmas = [xword]
 
-                for xword in [f'@{xword}'] + xlemmas:
-                    self.add_tag(xword, pos, index)
+                self.add_form(xword, pos, index)
+                for xlemma in xlemmas:
+                    self.add_lemma(xlemma, pos, index)
 
-    def add_tag(self, word, pos, index):
+    def add_lemma(self, lemma, pos, index):
         # TODO: index should be spa_id
-        self.dbcon.execute("INSERT OR IGNORE INTO words VALUES (?, ?, ?)", (word, pos, index))
+        self.dbcon.execute("INSERT OR IGNORE INTO lemmas VALUES (?, ?, ?)", (lemma, pos, index))
+#        self.dbcon.execute("INSERT OR IGNORE INTO words VALUES (?, ?, ?)", (word, pos, index))
+
+    def add_form(self, form, pos, index):
+        # TODO: index should be spa_id
+        self.dbcon.execute("INSERT OR IGNORE INTO forms VALUES (?, ?, ?)", (form, pos, index))
+
+#        word = "@" + word
+#        self.dbcon.execute("INSERT OR IGNORE INTO words VALUES (?, ?, ?)", (word, pos, index))
 
     def get_ids_from_phrase(self, phrase):
         term = re.sub('[^ a-záéíñóúü]+', '', phrase.strip().lower())
@@ -301,18 +311,18 @@ class SpanishSentences:
 
 
 
-    def get_ids_from_word(self, word):
-        return self.get_ids_from_tag("@"+word, "")
-
+    def get_ids_from_form(self, form):
+        rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM forms WHERE form=?", (form,))
+        return sorted([x[0] for x in rows])
 
     # if pos is set it return only results matching that word,pos
     # if it's not set, return all results matching the keyword
-    def get_ids_from_tag(self, word, pos):
+    def get_ids_from_lemma(self, lemma, pos):
 
         if not pos:
-            rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM words WHERE word=?", (word,))
+            rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM lemmas WHERE lemma=?", (lemma,))
         else:
-            rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM words WHERE word=? AND POS=?", (word,pos))
+            rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM lemmas WHERE lemma=? AND POS=?", (lemma,pos))
 
         return sorted([x[0] for x in rows])
 
@@ -440,13 +450,13 @@ class SpanishSentences:
         if " " in lookup:
             pos = "phrase"
 
-        ids = self.get_ids_from_tag(lookup, pos)
+        ids = self.get_ids_from_lemma(lookup, pos)
 
         if not ids:
             if pos != "phrase":
                 source = "phrase"
-                pos = "phrase-" + pos
-                ids = self.get_ids_from_tag(lookup, pos)
+                phrase_pos = "phrase-" + pos
+                ids = self.get_ids_from_lemma(lookup, phrase_pos)
 
             if not ids:
                 source = "literal"
@@ -455,7 +465,7 @@ class SpanishSentences:
                     ids = self.get_ids_from_phrase(lookup)
 
                 elif pos != "INTERJ":
-                    ids = self.get_ids_from_word(lookup)
+                    ids = self.get_ids_from_form(lookup)
 
         return { "ids": ids, "source": source }
 
