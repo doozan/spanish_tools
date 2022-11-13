@@ -10,29 +10,6 @@ import sqlite3
 from collections import defaultdict, namedtuple
 from .sentence_builder import SentenceBuilder
 
-class Sentence():
-    def __init__(self, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
-        self.english = english
-        self.spanish = spanish
-        self.eng_id, self.eng_user, self.spa_id, self.spa_user = SentenceBuilder.parse_credits(credits)
-        self.eng_score = int(eng_score)
-        self.spa_score = int(spa_score)
-        self.tag_str = tag_str
-        self.verb_score = 0 if verb_score is None else verb_score
-
-    @property
-    def score(self):
-        return self.spa_score*10 + self.eng_score
-
-    @property
-    def credits(self):
-        return f"CC-BY 2.0 (France) Attribution: tatoeba.org #{self.eng_id} ({self.eng_user}) & #{self.spa_id} ({self.spa_user})"
-
-
-
-
-#Sentence = namedtuple("Sentence", [ "spanish", "english", "score", "spa_id", "eng_id", "spa_user", "eng_user", "verb_score" ])
-
 def make_tag(word, pos):
     return pos.lower() + ":" + word.lower()
 
@@ -53,15 +30,14 @@ class SpanishSentences:
 #            self.dbcon = sqlite3.connect(":memory:")
 #
         self.dbcon = sqlite3.connect(":memory:")
-        self.dbcon.execute('''CREATE TABLE english(id UNIQUE, sentence, user_id INT, user_score)''')
-        self.dbcon.execute('''CREATE TABLE spanish(id UNIQUE, sentence, user_id INT, user_score, tag_str, verb_score INT)''')
-        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
+        self.dbcon.row_factory = sqlite3.Row
+#        self.dbcon.execute('''CREATE TABLE english(id UNIQUE, sentence, user_id INT, user_score)''')
+#        self.dbcon.execute('''CREATE TABLE spanish(id UNIQUE, sentence, user_id INT, user_score, tag_str, verb_score INT)''')
+#        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
 
-        self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, english, spanish, credits, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT)''')
+        self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, english, spanish, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT)''')
         self.dbcon.execute('''CREATE TABLE spanish_grep(id UNIQUE, text TEXT)''')
         self.dbcon.execute('''CREATE TABLE words(word, pos, spa_id INT, UNIQUE(word, pos, spa_id))''')
-
-
 
         self.add_counter = 0
 
@@ -165,10 +141,8 @@ class SpanishSentences:
 
         eng_id, eng_user, spa_id, spa_user = SentenceBuilder.parse_credits(credits)
 
-        self.dbcon.execute("INSERT INTO sentences VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", \
-            (index, english, spanish, credits, eng_score, spa_score, tag_str, eng_id, eng_user, spa_id, spa_user, verb_score))
-
-        sentence = Sentence(english, spanish, credits, eng_score, spa_score, tag_str, verb_score)
+        self.dbcon.execute("INSERT INTO sentences VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", \
+            (index, english, spanish, eng_score, spa_score, tag_str, eng_id, eng_user, spa_id, spa_user, verb_score))
 
 
     def add_spanish_grep(self, spa_id, sentence):
@@ -345,13 +319,13 @@ class SpanishSentences:
 
     def get_score(self, idx):
         row = next(self.dbcon.execute("SELECT spa_score, eng_score FROM sentences WHERE id = ?", (idx,)))
-        return row[0]*10 + row[1]
+        return row["spa_score"]*10 + row["eng_score"]
 
     def get_eng_id(self, idx):
-        return next(self.dbcon.execute("SELECT eng_id FROM sentences WHERE id = ?", (idx,)))[0]
+        return next(self.dbcon.execute("SELECT eng_id FROM sentences WHERE id = ?", (idx,)))["eng_id"]
 
     def get_spa_id(self, idx):
-        return next(self.dbcon.execute("SELECT spa_id FROM sentences WHERE id = ?", (idx,)))[0]
+        return next(self.dbcon.execute("SELECT spa_id FROM sentences WHERE id = ?", (idx,)))["spa_id"]
 
     def get_best_sentence_ids(self, items, count):
 
@@ -495,9 +469,26 @@ class SpanishSentences:
 
         sentences = []
         for i in sentence_ids:
-            idx, english, spanish, credits, eng_score, spa_score, tag_str, eng_id, eng_user, spa_id, spa_user, verb_score = \
-                next(self.dbcon.execute(f"SELECT * from sentences WHERE id = ?", (i['id'],)))
-            sentence = Sentence(english, spanish, credits, eng_score, spa_score, tag_str, verb_score)
+            sentence = self.get_sentence(i['id'])
             sentences.append(sentence)
 
         return { "sentences": sentences, "matched": source }
+
+    def get_sentence(self, idx):
+        row = next(self.dbcon.execute(f"SELECT * from sentences WHERE id = ?", (idx,)))
+        return Sentence(row)
+
+class Sentence():
+    def __init__(self, row):
+        self._db_values = row
+
+    def __getattr__(self, attr):
+        return self._db_values[attr]
+
+    @property
+    def score(self):
+        return self.spa_score*10 + self.eng_score
+
+    @property
+    def credits(self):
+        return f"CC-BY 2.0 (France) Attribution: tatoeba.org #{self.eng_id} ({self.eng_user}) & #{self.spa_id} ({self.spa_user})"
