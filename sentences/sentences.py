@@ -204,14 +204,14 @@ class SpanishSentences:
 
     @staticmethod
     def str_to_tags(tag_str):
+        # return { pos: [word1, word2] }
+
         tags = {}
         for tag_items in tag_str[1:].split(":"):
             tag,*items = tag_items.strip().split(",")
             tags[tag] = items
         return tags
 
-    # tags are in the form:
-    # { pos: [word1, word2] }
     def add_tags_to_db(self, tag_str, index, sid):
 
         for tagpos,words in self.str_to_tags(tag_str).items():
@@ -249,14 +249,10 @@ class SpanishSentences:
     def add_lemma(self, lemma, pos, index):
         # TODO: index should be spa_id
         self.dbcon.execute("INSERT OR IGNORE INTO lemmas VALUES (?, ?, ?)", (lemma, pos, index))
-#        self.dbcon.execute("INSERT OR IGNORE INTO words VALUES (?, ?, ?)", (word, pos, index))
 
     def add_form(self, form, pos, index):
         # TODO: index should be spa_id
         self.dbcon.execute("INSERT OR IGNORE INTO forms VALUES (?, ?, ?)", (form, pos, index))
-
-#        word = "@" + word
-#        self.dbcon.execute("INSERT OR IGNORE INTO words VALUES (?, ?, ?)", (word, pos, index))
 
     def get_ids_from_phrase(self, phrase):
         term = re.sub('[^ a-záéíñóúü]+', '', phrase.strip().lower())
@@ -264,10 +260,6 @@ class SpanishSentences:
         rows = self.dbcon.execute("SELECT id, text FROM spanish_grep WHERE text LIKE ?", (f"%{phrase}%",))
         pattern = r"\b" + phrase.strip().lower() + r"\b"
         return [i for i, item in rows if re.search(pattern, item)]
-
-#        return [i for i, item in enumerate(self.grepdb) if term in item and re.search(pattern, item)]
-
-
 
 
     def get_ids_from_form(self, form):
@@ -298,7 +290,13 @@ class SpanishSentences:
     def get_spa_id(self, idx):
         return next(self.dbcon.execute("SELECT spa_id FROM sentences WHERE id = ?", (idx,)))["spa_id"]
 
-    def get_best_sentence_ids(self, items, count):
+    def get_forced_ids(self, word, pos):
+        wordtag = make_tag(word, pos)
+
+        source = self.forced_ids_source.get(wordtag)
+        return self.forced_ids.get(wordtag,[]), source
+
+    def get_best_sentences(self, items, count):
 
         sentences = {}
         source = None
@@ -313,18 +311,20 @@ class SpanishSentences:
 
             item_ids = []
 
-            wordtag = make_tag(word, pos)
-
-            forced_ids = [x for x in self.forced_ids.get(wordtag,[]) if
-                    self.get_spa_id(x) not in seen and
-                    self.get_eng_id(x) not in seen]
-
+            forced_ids, forced_source = self.get_forced_ids(word, pos)
             if len(forced_ids):
-                source = self.forced_ids_source[wordtag]
-                item_ids = forced_ids[:count]
-                for x in item_ids:
-                    seen.add(self.get_spa_id(x))
-                    seen.add(self.get_eng_id(x))
+                for x in forced_ids:
+                    spa_id = self.get_spa_id(x)
+                    eng_id = self.get_eng_id(x)
+                    if spa_id not in seen and eng_id not in seen:
+                        item_ids.append(x)
+                    seen.add(spa_id)
+                    seen.add(eng_id)
+                    if len(item_ids) == count:
+                        break
+
+            if item_ids:
+                source = forced_source
 
             else:
                 res = self.get_all_sentence_ids(word, pos)
@@ -352,7 +352,17 @@ class SpanishSentences:
                 if len(pos_ids)>idx:
                     res.append( { 'id': pos_ids[idx], 'pos': pos, 'source': source } )
 
-        return res
+
+        source = res[0]['source'] if res else None
+
+        sentences = []
+        for i in res:
+            sentence = self.get_sentence_by_index(i['id'])
+            sentences.append(sentence)
+
+        return sentences, source
+
+
 
     def select_best_ids(self, all_ids, count, seen):
 
@@ -432,15 +442,9 @@ class SpanishSentences:
 
     def get_sentences(self, items, count, forced_items=[]):
 
-        sentence_ids = self.get_best_sentence_ids(items, count)
-        source = sentence_ids[0]['source'] if sentence_ids else None
-
-        sentences = []
-        for i in sentence_ids:
-            sentence = self.get_sentence_by_index(i['id'])
-            sentences.append(sentence)
-
+        sentences, source = self.get_best_sentences(items, count)
         return { "sentences": sentences, "matched": source }
+
 
     def get_sentence_by_index(self, idx):
         row = next(self.dbcon.execute(f"SELECT * from sentences WHERE id = ?", (idx,)))
