@@ -15,22 +15,36 @@ def make_tag(word, pos):
 
 class SpanishSentences:
 
-    def __init__(self, sentences="sentences.tsv", preferred=[], forced=[], ignored=[], tagfixes=[], dbfilename=None):
+    def __init__(self, sentences, preferred, forced, ignored, tagfixes):
 
-#        if dbfilename:
-#            existing = os.path.exists(dbfilename)
-#
-#            self.dbcon = sqlite3.connect(dbfilename)
-#            self.dbcon.execute('PRAGMA synchronous=OFF;')
-#
-#            if existing:
-#                return
-#
-#        else:
-#            self.dbcon = sqlite3.connect(":memory:")
-#
-        self.dbcon = sqlite3.connect(":memory:")
+        self.forced_ids = {}
+        self.forced_ids_source = {}
+
+        dbfilename = self.get_database_filename(sentences, ignored, tagfixes)
+        if os.path.exists(dbfilename) and not self.is_database_valid(dbfilename, sentences, ignored, tagfixes):
+            os.remove(dbfilename)
+
+        init_db = not os.path.exists(dbfilename)
+
+        self.dbcon = sqlite3.connect(dbfilename)
+        self.dbcon.execute('PRAGMA synchronous=OFF;')
         self.dbcon.row_factory = sqlite3.Row
+
+        if init_db:
+            self._init_db(sentences, ignored, tagfixes)
+
+        # Forced/preferred items must be processed last
+        for datafile in preferred:
+            self.load_overrides(datafile, "preferred")
+
+        for datafile in forced:
+            self.load_overrides(datafile, "forced")
+
+        print("sentences loaded")
+
+
+    def _init_db(self, sentences, ignored, tagfixes):
+        print("initalizing sentences database", file=sys.stderr)
 #        self.dbcon.execute('''CREATE TABLE english(id UNIQUE, sentence, user_id INT, user_score)''')
 #        self.dbcon.execute('''CREATE TABLE spanish(id UNIQUE, sentence, user_id INT, user_score, tag_str, verb_score INT)''')
 #        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
@@ -40,29 +54,9 @@ class SpanishSentences:
         self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, UNIQUE(lemma, pos, spa_id))''')
         self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, UNIQUE(form, pos, spa_id))''')
 
-        self.add_counter = 0
-
-        if not preferred:
-            preferred = []
-        if not forced:
-            forced = []
-        if not ignored:
-            ignored = []
-        if not tagfixes:
-            tagfixes = []
-
-#        if self.load_cache(sentences, preferred, forced, ignored, tagfixes):
-#            return
-
-#        self.sentencedb = []
-#        self.grepdb = []
-#        self.tagdb = defaultdict(lambda: defaultdict(list))
-#        self.id_index = {}
         self.tagfixes = {}
         self.tagfix_sentences = {}
         self.filter_ids = {}
-        self.forced_ids = {}
-        self.forced_ids_source = {}
 
         self.tagfix_count = defaultdict(int)
 
@@ -110,16 +104,7 @@ class SpanishSentences:
                 if fixid not in self.tagfix_count:
                     print(f"Tagfix: {fixid} {new} does not match any sentences", file=sys.stderr)
 
-        # Forced/preferred items must be processed last
-        for datafile in preferred:
-            self.load_overrides(datafile, "preferred")
-
-        for datafile in forced:
-            self.load_overrides(datafile, "forced")
-
-#        self.save_cache(sentences, preferred, forced, ignored, tagfixes)
-
-        print("sentences loaded")
+        self.dbcon.commit()
 
     def process_line(self, index, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
 
@@ -198,63 +183,24 @@ class SpanishSentences:
                     self.forced_ids_source[wordtag] = source
 
 
-    def save_cache(self, sentences, preferred, forced, ignored, tagfixes):
-
-        print(preferred, forced, ignored, tagfixes, file=sys.stderr)
-        modfiles = preferred + forced + ignored + tagfixes
-        cached = self.get_cache_filename(sentences, modfiles)
-
-        print("saving cache", cached, file=sys.stderr)
-
-        with open(cached, "wb") as outfile:
-            pickle.dump([
-                self.sentencedb,
-                self.grepdb,
-                self.tagdb,
-                self.id_index,
-                self.tagfixes,
-                self.tagfix_sentences,
-                self.filter_ids,
-                self.forced_ids,
-                self.forced_ids_source,
-                ], outfile)
-
-
     @classmethod
-    def get_cache_filename(cls, sentences, modfiles):
-        files = sentences + "::" + "::".join(sorted(modfiles))
+    def get_database_filename(cls, sentences, *modfiles):
+        allfiles = [f for files in modfiles for f in files]
+        print(allfiles)
+        files = sentences + "::" + "::".join(sorted(allfiles))
         hash_obj = hashlib.sha1(bytes(files, "utf-8"))
         cid = str(base64.b32encode(hash_obj.digest()), "utf-8")
 
         return sentences + ".~" + cid
 
-    def load_cache(self, sentences, preferred, forced, ignored, tagfixes):
+    @staticmethod
+    def is_database_valid(database, sentences, *modfiles):
+        allfiles = [sentences] + [f for files in modfiles for f in files]
 
-        modfiles = preferred + forced + ignored + tagfixes
-        cached = self.get_cache_filename(sentences, modfiles)
+        if not os.path.exists(database):
+            return False
 
-        if not os.path.exists(cached):
-            return
-
-        if any(os.path.getctime(f) > os.path.getctime(cached) for f in modfiles):
-            return
-
-        # check for cached version
-        with open(cached, "rb") as infile:
-            res = pickle.load(infile)
-
-            self.sentencedb, \
-            self.grepdb, \
-            self.tagdb, \
-            self.id_index, \
-            self.tagfixes, \
-            self.tagfix_sentences, \
-            self.filter_ids, \
-            self.forced_ids, \
-            self.forced_ids_source = res
-
-        return True
-
+        return all(os.path.getctime(database) > os.path.getctime(f) for f in allfiles)
 
     @staticmethod
     def str_to_tags(tag_str):
