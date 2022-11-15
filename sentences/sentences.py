@@ -50,7 +50,7 @@ class SpanishSentences:
 #        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
 
         self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, english, spanish, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT, UNIQUE(spa_id, eng_id))''')
-        self.dbcon.execute('''CREATE TABLE spanish_grep(id UNIQUE, text TEXT)''')
+        self.dbcon.execute('''CREATE TABLE spanish_grep(spa_id UNIQUE, text TEXT)''')
         self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, UNIQUE(lemma, pos, spa_id))''')
         self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, UNIQUE(form, pos, spa_id))''')
 
@@ -113,7 +113,8 @@ class SpanishSentences:
             return
 
         self.add_sentence(index, english, spanish, credits, eng_score, spa_score, tag_str)
-        self.add_spanish_grep(index, spanish)
+        self.add_spanish_grep(spa_id, spanish)
+        #self.add_tags_to_db(tag_str, spa_id)
         self.add_tags_to_db(tag_str, index, spa_id)
 
         return True
@@ -212,8 +213,7 @@ class SpanishSentences:
             tags[tag] = items
         return tags
 
-    def add_tags_to_db(self, tag_str, index, sid):
-
+    def add_tags_to_db(self, tag_str, index, spa_id):
         for tagpos,words in self.str_to_tags(tag_str).items():
 
             # Each past participle has both a part-verb and a part-adj tag
@@ -225,10 +225,10 @@ class SpanishSentences:
 
                 fixid = f"{word}:{pos}"
                 newword,newpos = None,None
-                if sid in self.tagfix_sentences:
-                    newword,newpos = self.tagfix_sentences[sid].get(fixid,[None,None])
+                if spa_id in self.tagfix_sentences:
+                    newword,newpos = self.tagfix_sentences[spa_id].get(fixid,[None,None])
                 if newword:
-                    fixid = f"{word}:{pos}@{sid}"
+                    fixid = f"{word}:{pos}@{spa_id}"
                 else:
                     newword,newpos = self.tagfixes.get(fixid,[None,None])
 
@@ -242,24 +242,24 @@ class SpanishSentences:
                 if not xlemmas:
                     xlemmas = [xword]
 
+                #self.add_form(xword, pos, spa_id)
                 self.add_form(xword, pos, index)
                 for xlemma in xlemmas:
+                    #self.add_lemma(xlemma, pos, spa_id)
                     self.add_lemma(xlemma, pos, index)
 
-    def add_lemma(self, lemma, pos, index):
-        # TODO: index should be spa_id
-        self.dbcon.execute("INSERT OR IGNORE INTO lemmas VALUES (?, ?, ?)", (lemma, pos, index))
+    def add_lemma(self, lemma, pos, spa_id):
+        self.dbcon.execute("INSERT OR IGNORE INTO lemmas VALUES (?, ?, ?)", (lemma, pos, spa_id))
 
-    def add_form(self, form, pos, index):
-        # TODO: index should be spa_id
-        self.dbcon.execute("INSERT OR IGNORE INTO forms VALUES (?, ?, ?)", (form, pos, index))
+    def add_form(self, form, pos, spa_id):
+        self.dbcon.execute("INSERT OR IGNORE INTO forms VALUES (?, ?, ?)", (form, pos, spa_id))
 
     def get_ids_from_phrase(self, phrase):
         term = re.sub('[^ a-záéíñóúü]+', '', phrase.strip().lower())
 
-        rows = self.dbcon.execute("SELECT id, text FROM spanish_grep WHERE text LIKE ?", (f"%{phrase}%",))
+        rows = self.dbcon.execute("SELECT spa_id, text FROM spanish_grep WHERE text LIKE ?", (f"%{phrase}%",))
         pattern = r"\b" + phrase.strip().lower() + r"\b"
-        return [i for i, item in rows if re.search(pattern, item)]
+        return [spa_id for spa_id, item in rows if re.search(pattern, item)]
 
 
     def get_ids_from_form(self, form):
@@ -349,7 +349,7 @@ class SpanishSentences:
 
         else:
             res = self.get_all_sentence_ids(word, pos)
-            available_ids = [ x for x in res['ids'] if x not in item_ids ]
+            available_ids = [ x for x in res['ids'] ]
             if allow_literal:
                 source = res['source']
                 best_sentences = self.select_best_sentences(available_ids, limit, seen)
@@ -367,6 +367,7 @@ class SpanishSentences:
 
         source = ""
 
+        #all_sentences = [self.get_sentence_by_spa_id(idx) for idx in all_ids]
         all_sentences = [self.get_sentence_by_index(idx) for idx in all_ids]
 
         # Find the highest scoring sentences without repeating the english or spanish ids
@@ -435,6 +436,7 @@ class SpanishSentences:
 
                 if pos == "phrase":
                     ids = self.get_ids_from_phrase(lookup)
+                    ids = [self.get_sentence_by_spa_id(spa_id).id for spa_id in ids]
 
                 elif pos != "INTERJ":
                     ids = self.get_ids_from_form(lookup)
@@ -446,6 +448,9 @@ class SpanishSentences:
         sentences, source = self.get_best_sentences(items, count)
         return { "sentences": sentences, "matched": source }
 
+    def get_sentence_by_spa_id(self, idx):
+        row = next(self.dbcon.execute(f"SELECT * from sentences WHERE spa_id = ?", (idx,)))
+        return Sentence(row)
 
     def get_sentence_by_index(self, idx):
         row = next(self.dbcon.execute(f"SELECT * from sentences WHERE id = ?", (idx,)))
