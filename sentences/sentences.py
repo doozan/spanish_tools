@@ -313,27 +313,17 @@ class SpanishSentences:
                 if not source:
                     source = pos_source
 
-        res = []
+        # Take the first sentence from each pos, then the second, etc
+        # until 'count' sentences have been selected
+        best_ids = []
         for idx in range(count):
-            if len(res)>=count:
-                break
-
-            # try to take a sentence from each pos and each form of each pos
-            for pos,pos_ids in sentences.items():
-                if len(res)>=count:
+            for pos, pos_ids in sentences.items():
+                if len(best_ids)==count:
                     break
-
                 if len(pos_ids)>idx:
-                    res.append( { 'id': pos_ids[idx], 'pos': pos, 'source': source } )
+                    best_ids.append(pos_ids[idx])
 
-
-        source = res[0]['source'] if res else None
-
-        sentences = []
-        for i in res:
-            sentence = self.get_sentence_by_index(i['id'])
-            sentences.append(sentence)
-
+        sentences = [self.get_sentence_by_index(index) for index in best_ids]
         return sentences, source
 
 
