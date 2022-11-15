@@ -296,9 +296,11 @@ class SpanishSentences:
         seen = set()
 
         for word, pos in items:
+            allowed_sources = ["exact", "phrase"]
             # Only allow literal matches for the primary pos
-            allow_literal = not all_sentences
-            pos_sentences, pos_source = self.get_pos_sentences(word, pos, count, seen, allow_literal)
+            if not all_sentences:
+                allowed_sources.append("literal")
+            pos_sentences, pos_source = self.get_pos_sentences(word, pos, count, seen, allowed_sources)
             if pos_sentences:
                 all_sentences[pos] = pos_sentences
                 if not source:
@@ -309,15 +311,17 @@ class SpanishSentences:
         best_sentences = []
         for idx in range(count):
             for pos, sentences in all_sentences.items():
-                if len(best_sentences)==count:
-                    break
                 if len(sentences)>idx:
                     best_sentences.append(sentences[idx])
+                if len(best_sentences)==count:
+                    break
+            if len(best_sentences)==count:
+                  break
 
         return best_sentences, source
 
 
-    def get_pos_sentences(self, word, pos, limit, seen, allow_literal):
+    def get_pos_sentences(self, word, pos, limit, seen, allowed_sources):
 
         # if there are multiple word/pos pairs specified, ideally use results from each equally
         # However, if one item doesn't have enough results we will use more results from this item
@@ -339,19 +343,12 @@ class SpanishSentences:
             if sentences:
                 return sentences, forced_source
 
-        best_sentences = []
-        source = None
-        sentences, _source = self.get_all_sentences(word, pos)
-        if allow_literal:
-            source = _source
-            best_sentences = self.select_best_sentences(sentences, limit, seen)
+        sentences, source = self.get_all_sentences(word, pos)
+        if source not in allowed_sources:
+            return [], None
 
-        # Only accept 'literal' matches for the first pos
-        elif _source != 'literal':
-            best_sentences = self.select_best_sentences(sentences, limit, seen)
-
+        best_sentences = self.select_best_sentences(sentences, limit, seen)
         return best_sentences, source
-
 
     def select_best_sentences(self, all_sentences, limit, seen):
 
