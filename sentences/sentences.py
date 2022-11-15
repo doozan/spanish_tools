@@ -353,27 +353,28 @@ class SpanishSentences:
         return best_sentences, source
 
 
-    def select_best_sentences(self, all_sentences, count, seen):
-
-        source = ""
+    def select_best_sentences(self, all_sentences, limit, seen):
 
         # Find the highest scoring sentences without repeating the english or spanish ids
         # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
-        scored = defaultdict(set)
+        scored = defaultdict(list)
         for sentence in all_sentences:
             score = sentence.score
-            scored[score].add(sentence)
+            scored[score].append(sentence)
 
-        available = []
         selected = []
-        needed = count
 
         # for each group of scored sentences:
         # if the group offers less than we need, add them all to ids
         # if it has more, add them all to available and let the selector choose
         for score in sorted( scored.keys(), reverse=True ):
 
-            for sentence in sorted(scored[score], key=lambda x: x.id):
+            needed = limit-len(selected)
+            if needed < 1:
+                break
+
+            available = []
+            for sentence in scored[score]:
                 eng_id = sentence.eng_id
                 spa_id = sentence.spa_id
                 if eng_id not in seen and spa_id not in seen:
@@ -381,23 +382,14 @@ class SpanishSentences:
                     seen.add(spa_id)
                     available.append(sentence)
 
-            if len(available) >= needed:
-                break
-            elif len(available):
-                needed -= len(available)
+            if len(available) <= needed:
                 selected += available
-                available = []
+            else:
+                step = len(available)/(needed+1.0)
 
-        available = sorted(available, key=lambda x: x.id)
+                # select sentences over an even distribution of the range
+                selected += [ available[math.ceil(i*step)] for i in range(needed) ]
 
-        if len(available) <= needed:
-            selected += available
-
-        else:
-            step = len(available)/(needed+1.0)
-
-            # select sentences over an even distribution of the range
-            selected += [ available[math.ceil(i*step)] for i in range(needed) ]
 
         return selected
 
