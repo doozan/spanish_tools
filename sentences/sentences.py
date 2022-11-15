@@ -252,27 +252,24 @@ class SpanishSentences:
     def add_form(self, form, pos, spa_id):
         self.dbcon.execute("INSERT OR IGNORE INTO forms VALUES (?, ?, ?)", (form, pos, spa_id))
 
-    def get_ids_from_phrase(self, phrase):
+    def get_sentences_with_phrase(self, phrase):
         term = re.sub('[^ a-záéíñóúü]+', '', phrase.strip().lower())
 
         rows = self.dbcon.execute("SELECT spa_id, text FROM spanish_grep WHERE text LIKE ?", (f"%{phrase}%",))
         pattern = r"\b" + phrase.strip().lower() + r"\b"
-        return [spa_id for spa_id, item in rows if re.search(pattern, item)]
+        return [self.get_sentence(spa_id) for spa_id, item in rows if re.search(pattern, item)]
 
-
-    def get_ids_from_form(self, form):
+    def get_sentences_with_form(self, form):
         rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM forms WHERE form=?", (form,))
-        return [x[0] for x in rows]
+        return [self.get_sentence(x[0]) for x in rows]
 
-    # if pos is set it return only results matching that word,pos
-    # if it's not set, return all results matching the keyword
-    def get_ids_from_lemma(self, lemma, pos):
-
+    def get_sentences_with_lemma(self, lemma, pos=None):
         if not pos:
             rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM lemmas WHERE lemma=?", (lemma,))
         else:
             rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM lemmas WHERE lemma=? AND POS=?", (lemma,pos))
-        return [x[0] for x in rows]
+
+        return [self.get_sentence(x[0]) for x in rows]
 
     def has_lemma(self, lemma, pos, spa_id):
         return any(self.dbcon.execute("SELECT * FROM lemmas WHERE lemma=? AND POS=? and spa_id=? LIMIT 1", (lemma,pos,spa_id)))
@@ -390,7 +387,7 @@ class SpanishSentences:
     def get_all_sentences(self, lookup, pos, allowed_sources):
         """Returns [sentences], "source" """
 
-        ids = []
+        sentences = []
 
         # TODO: lookup should not always be lower
         lookup = lookup.strip().lower()
@@ -401,26 +398,26 @@ class SpanishSentences:
 
         if "exact" in allowed_sources:
             source = "exact"
-            ids = self.get_ids_from_lemma(lookup, pos)
+            sentences = self.get_sentences_with_lemma(lookup, pos)
 
-        if not ids and pos != "phrase" and "phrase" in allowed_sources:
+        if not sentences and pos != "phrase" and "phrase" in allowed_sources:
             source = "phrase"
             phrase_pos = "phrase-" + pos
-            ids = self.get_ids_from_lemma(lookup, phrase_pos)
+            sentences = self.get_sentences_with_lemma(lookup, phrase_pos)
 
-        if not ids and "literal" in allowed_sources:
+        if not sentences and "literal" in allowed_sources:
             source = "literal"
 
             if pos == "phrase":
-                ids = self.get_ids_from_phrase(lookup)
+                sentences = self.get_sentences_with_phrase(lookup)
 
             else:
-                ids = self.get_ids_from_form(lookup)
+                sentences = self.get_sentences_with_form(lookup)
 
-        if not ids:
+        if not sentences:
             return [], None
 
-        sentences = [self.get_sentence(spa_id) for spa_id in ids]
+        # TODO: Sort by sentence length instead of .id
         sentences.sort(key=lambda x: x.id)
         return sentences, source
 
