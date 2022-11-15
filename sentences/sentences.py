@@ -51,8 +51,8 @@ class SpanishSentences:
 
         self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, english, spanish, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT, UNIQUE(spa_id, eng_id))''')
         self.dbcon.execute('''CREATE TABLE spanish_grep(spa_id UNIQUE, text TEXT)''')
-        self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, id INT, UNIQUE(lemma, pos, spa_id))''')
-        self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, id INT, UNIQUE(form, pos, spa_id))''')
+        self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, UNIQUE(lemma, pos, spa_id))''')
+        self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, UNIQUE(form, pos, spa_id))''')
 
         self.tagfixes = {}
         self.tagfix_sentences = {}
@@ -242,15 +242,15 @@ class SpanishSentences:
                 if not xlemmas:
                     xlemmas = [xword]
 
-                self.add_form(xword, pos, spa_id, index)
+                self.add_form(xword, pos, spa_id)
                 for xlemma in xlemmas:
-                    self.add_lemma(xlemma, pos, spa_id, index)
+                    self.add_lemma(xlemma, pos, spa_id)
 
-    def add_lemma(self, lemma, pos, spa_id, index):
-        self.dbcon.execute("INSERT OR IGNORE INTO lemmas VALUES (?, ?, ?, ?)", (lemma, pos, spa_id, index))
+    def add_lemma(self, lemma, pos, spa_id):
+        self.dbcon.execute("INSERT OR IGNORE INTO lemmas VALUES (?, ?, ?)", (lemma, pos, spa_id))
 
-    def add_form(self, form, pos, spa_id, index):
-        self.dbcon.execute("INSERT OR IGNORE INTO forms VALUES (?, ?, ?, ?)", (form, pos, spa_id, index))
+    def add_form(self, form, pos, spa_id):
+        self.dbcon.execute("INSERT OR IGNORE INTO forms VALUES (?, ?, ?)", (form, pos, spa_id))
 
     def get_ids_from_phrase(self, phrase):
         term = re.sub('[^ a-záéíñóúü]+', '', phrase.strip().lower())
