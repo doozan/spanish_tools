@@ -300,44 +300,18 @@ class SpanishSentences:
 
         sentences = {}
         source = None
-
         seen = set()
 
         for word, pos in items:
-
-            # if there are multiple word/pos pairs specified, ideally use results from each equally
-            # However, if one item doesn't have enough results we will use more results from this item
-            # Thus, we need to retrieve "count" items, as we could be using them all if the other has none
-
             item_ids = []
 
-            forced_ids, forced_source = self.get_forced_ids(word, pos)
-            if len(forced_ids):
-                for x in forced_ids:
-                    spa_id = self.get_spa_id(x)
-                    eng_id = self.get_eng_id(x)
-                    if spa_id not in seen and eng_id not in seen:
-                        item_ids.append(x)
-                    seen.add(spa_id)
-                    seen.add(eng_id)
-                    if len(item_ids) == count:
-                        break
-
-            if item_ids:
-                source = forced_source
-
-            else:
-                res = self.get_all_sentence_ids(word, pos)
-                available_ids = [ x for x in res['ids'] if x not in item_ids ]
+            # Only allow literal matches for the primary pos
+            allow_literal = not sentences
+            pos_sentences, pos_source = self.get_pos_sentences(word, pos, count, seen, allow_literal)
+            if pos_sentences:
+                sentences[pos] = pos_sentences
                 if not source:
-                    source = res['source']
-                    item_ids = self.select_best_ids(available_ids, count, seen)
-
-                # Only accept 'literal' matches for the first pos
-                elif res['source'] not in [ 'literal' ]:
-                    item_ids = self.select_best_ids(available_ids, count, seen)
-
-            sentences[pos] = item_ids
+                    source = pos_source
 
         res = []
         for idx in range(count):
@@ -362,6 +336,43 @@ class SpanishSentences:
 
         return sentences, source
 
+
+    def get_pos_sentences(self, word, pos, limit, seen, allow_literal):
+
+        # if there are multiple word/pos pairs specified, ideally use results from each equally
+        # However, if one item doesn't have enough results we will use more results from this item
+        # Thus, we need to retrieve "limit" items, as we could be using them all if the other has none
+
+        item_ids = []
+        source = None
+
+        forced_ids, forced_source = self.get_forced_ids(word, pos)
+        if len(forced_ids):
+            for x in forced_ids:
+                spa_id = self.get_spa_id(x)
+                eng_id = self.get_eng_id(x)
+                if spa_id not in seen and eng_id not in seen:
+                    item_ids.append(x)
+                seen.add(spa_id)
+                seen.add(eng_id)
+                if len(item_ids) == limit:
+                    break
+
+        if item_ids:
+            source = forced_source
+
+        else:
+            res = self.get_all_sentence_ids(word, pos)
+            available_ids = [ x for x in res['ids'] if x not in item_ids ]
+            if allow_literal:
+                source = res['source']
+                item_ids = self.select_best_ids(available_ids, limit, seen)
+
+            # Only accept 'literal' matches for the first pos
+            elif res['source'] not in [ 'literal' ]:
+                item_ids = self.select_best_ids(available_ids, limit, seen)
+
+        return item_ids, source
 
 
     def select_best_ids(self, all_ids, count, seen):
