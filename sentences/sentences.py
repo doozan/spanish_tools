@@ -343,10 +343,7 @@ class SpanishSentences:
             if sentences:
                 return sentences, forced_source
 
-        sentences, source = self.get_all_sentences(word, pos)
-        if source not in allowed_sources:
-            return [], None
-
+        sentences, source = self.get_all_sentences(word, pos, allowed_sources)
         best_sentences = self.select_best_sentences(sentences, limit, seen)
         return best_sentences, source
 
@@ -390,33 +387,38 @@ class SpanishSentences:
 
         return selected
 
-    def get_all_sentences(self, lookup, pos):
+    def get_all_sentences(self, lookup, pos, allowed_sources):
         """Returns [sentences], "source" """
 
         ids = []
+
+        # TODO: lookup should not always be lower
         lookup = lookup.strip().lower()
         pos = pos.lower()
-        source = "exact"
 
         if " " in lookup:
             pos = "phrase"
 
-        ids = self.get_ids_from_lemma(lookup, pos)
+        if "exact" in allowed_sources:
+            source = "exact"
+            ids = self.get_ids_from_lemma(lookup, pos)
+
+        if not ids and pos != "phrase" and "phrase" in allowed_sources:
+            source = "phrase"
+            phrase_pos = "phrase-" + pos
+            ids = self.get_ids_from_lemma(lookup, phrase_pos)
+
+        if not ids and "literal" in allowed_sources:
+            source = "literal"
+
+            if pos == "phrase":
+                ids = self.get_ids_from_phrase(lookup)
+
+            else:
+                ids = self.get_ids_from_form(lookup)
 
         if not ids:
-            if pos != "phrase":
-                source = "phrase"
-                phrase_pos = "phrase-" + pos
-                ids = self.get_ids_from_lemma(lookup, phrase_pos)
-
-            if not ids:
-                source = "literal"
-
-                if pos == "phrase":
-                    ids = self.get_ids_from_phrase(lookup)
-
-                elif pos != "INTERJ":
-                    ids = self.get_ids_from_form(lookup)
+            return [], None
 
         sentences = [self.get_sentence(spa_id) for spa_id in ids]
         sentences.sort(key=lambda x: x.id)
