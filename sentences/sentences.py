@@ -150,7 +150,7 @@ class SpanishSentences:
                 for pair in forced_pairs:
                     spa_id, eng_id = pair.split(":")
 
-                    sentence = self.get_sentence(spa_id, eng_id)
+                    sentence = self.get_sentence(spa_id)
                     if not sentence:
                         print(f"{source} sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
                         valid = False
@@ -329,7 +329,7 @@ class SpanishSentences:
             for forced_id in forced_ids:
                 spa_id, eng_id = forced_id
                 if spa_id not in seen and eng_id not in seen:
-                    sentence = self.get_sentence_by_spa_id(spa_id)
+                    sentence = self.get_sentence(spa_id)
                     sentences.append(sentence)
                 seen.add(spa_id)
                 seen.add(eng_id)
@@ -429,7 +429,7 @@ class SpanishSentences:
                 elif pos != "INTERJ":
                     ids = self.get_ids_from_form(lookup)
 
-        sentences = [self.get_sentence_by_spa_id(spa_id) for spa_id in ids]
+        sentences = [self.get_sentence(spa_id) for spa_id in ids]
         sentences.sort(key=lambda x: x.id)
         return sentences, source
 
@@ -438,16 +438,8 @@ class SpanishSentences:
         sentences, source = self.get_best_sentences(items, count)
         return { "sentences": sentences, "matched": source }
 
-    def get_sentence_by_spa_id(self, idx):
-        row = next(self.dbcon.execute(f"SELECT * from sentences WHERE spa_id = ?", (idx,)))
-        return Sentence(row)
-
-    def get_sentence_by_index(self, idx):
-        row = next(self.dbcon.execute(f"SELECT * from sentences WHERE id = ?", (idx,)))
-        return Sentence(row)
-
-    def get_sentence(self, spa_id, eng_id):
-        row = next(self.dbcon.execute(f"SELECT * from sentences WHERE spa_id = ? AND eng_id = ?", (spa_id,eng_id)), None)
+    def get_sentence(self, spa_id):
+        row = next(self.dbcon.execute(f"SELECT * from sentences WHERE spa_id = ?", (spa_id,)), None)
         if row:
             return Sentence(row)
 
