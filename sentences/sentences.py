@@ -165,8 +165,8 @@ class SpanishSentences:
                             valid = False
                             break
 
-                        if not self.has_lemma(word, pos, sentence.id):
-                            if self.has_lemma(word, "phrase-" + pos, sentence.id):
+                        if not self.has_lemma(word, pos, sentence.spa_id):
+                            if self.has_lemma(word, "phrase-" + pos, sentence.spa_id):
                                 print(f"{source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
                                 valid = False
                                 break
@@ -261,22 +261,21 @@ class SpanishSentences:
 
 
     def get_ids_from_form(self, form):
-        rows = self.dbcon.execute("SELECT DISTINCT id FROM forms WHERE form=?", (form,))
-        return sorted([x[0] for x in rows])
+        rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM forms WHERE form=?", (form,))
+        return [x[0] for x in rows]
 
     # if pos is set it return only results matching that word,pos
     # if it's not set, return all results matching the keyword
     def get_ids_from_lemma(self, lemma, pos):
 
         if not pos:
-            rows = self.dbcon.execute("SELECT DISTINCT id FROM lemmas WHERE lemma=?", (lemma,))
+            rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM lemmas WHERE lemma=?", (lemma,))
         else:
-            rows = self.dbcon.execute("SELECT DISTINCT id FROM lemmas WHERE lemma=? AND POS=?", (lemma,pos))
-
-        return sorted([x[0] for x in rows])
+            rows = self.dbcon.execute("SELECT DISTINCT spa_id FROM lemmas WHERE lemma=? AND POS=?", (lemma,pos))
+        return [x[0] for x in rows]
 
     def has_lemma(self, lemma, pos, spa_id):
-        return any(self.dbcon.execute("SELECT * FROM lemmas WHERE lemma=? AND POS=? and id=? LIMIT 1", (lemma,pos,spa_id)))
+        return any(self.dbcon.execute("SELECT * FROM lemmas WHERE lemma=? AND POS=? and spa_id=? LIMIT 1", (lemma,pos,spa_id)))
 
     def get_eng_id(self, idx):
         return next(self.dbcon.execute("SELECT eng_id FROM sentences WHERE id = ?", (idx,)))["eng_id"]
@@ -346,27 +345,23 @@ class SpanishSentences:
             source = forced_source
 
         else:
-            res = self.get_all_sentence_ids(word, pos)
-            available_ids = [ x for x in res['ids'] ]
+            sentences, _source = self.get_all_sentences(word, pos)
             if allow_literal:
-                source = res['source']
-                best_sentences = self.select_best_sentences(available_ids, limit, seen)
+                source = _source
+                best_sentences = self.select_best_sentences(sentences, limit, seen)
                 item_ids = [s.id for s in best_sentences]
 
             # Only accept 'literal' matches for the first pos
-            elif res['source'] not in [ 'literal' ]:
-                best_sentences = self.select_best_sentences(available_ids, limit, seen)
+            elif _source != 'literal':
+                best_sentences = self.select_best_sentences(sentences, limit, seen)
                 item_ids = [s.id for s in best_sentences]
 
         return item_ids, source
 
 
-    def select_best_sentences(self, all_ids, count, seen):
+    def select_best_sentences(self, all_sentences, count, seen):
 
         source = ""
-
-        #all_sentences = [self.get_sentence_by_spa_id(idx) for idx in all_ids]
-        all_sentences = [self.get_sentence_by_index(idx) for idx in all_ids]
 
         # Find the highest scoring sentences without repeating the english or spanish ids
         # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
@@ -412,7 +407,9 @@ class SpanishSentences:
 
         return selected
 
-    def get_all_sentence_ids(self, lookup, pos):
+    def get_all_sentences(self, lookup, pos):
+        """Returns [sentences], "source" """
+
         ids = []
         lookup = lookup.strip().lower()
         pos = pos.lower()
@@ -434,12 +431,13 @@ class SpanishSentences:
 
                 if pos == "phrase":
                     ids = self.get_ids_from_phrase(lookup)
-                    ids = [self.get_sentence_by_spa_id(spa_id).id for spa_id in ids]
 
                 elif pos != "INTERJ":
                     ids = self.get_ids_from_form(lookup)
 
-        return { "ids": ids, "source": source }
+        sentences = [self.get_sentence_by_spa_id(spa_id) for spa_id in ids]
+        sentences.sort(key=lambda x: x.id)
+        return sentences, source
 
     def get_sentences(self, items, count, forced_items=[]):
 
