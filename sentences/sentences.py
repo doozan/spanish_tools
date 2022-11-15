@@ -291,33 +291,30 @@ class SpanishSentences:
 
     def get_best_sentences(self, items, count):
 
-        sentences = {}
+        all_sentences = {}
         source = None
         seen = set()
 
         for word, pos in items:
-            item_ids = []
-
             # Only allow literal matches for the primary pos
-            allow_literal = not sentences
+            allow_literal = not all_sentences
             pos_sentences, pos_source = self.get_pos_sentences(word, pos, count, seen, allow_literal)
             if pos_sentences:
-                sentences[pos] = pos_sentences
+                all_sentences[pos] = pos_sentences
                 if not source:
                     source = pos_source
 
         # Take the first sentence from each pos, then the second, etc
         # until 'count' sentences have been selected
-        best_ids = []
+        best_sentences = []
         for idx in range(count):
-            for pos, pos_ids in sentences.items():
-                if len(best_ids)==count:
+            for pos, sentences in all_sentences.items():
+                if len(best_sentences)==count:
                     break
-                if len(pos_ids)>idx:
-                    best_ids.append(pos_ids[idx])
+                if len(sentences)>idx:
+                    best_sentences.append(sentences[idx])
 
-        sentences = [self.get_sentence_by_index(index) for index in best_ids]
-        return sentences, source
+        return best_sentences, source
 
 
     def get_pos_sentences(self, word, pos, limit, seen, allow_literal):
@@ -326,37 +323,35 @@ class SpanishSentences:
         # However, if one item doesn't have enough results we will use more results from this item
         # Thus, we need to retrieve "limit" items, as we could be using them all if the other has none
 
-        item_ids = []
-        source = None
-
         forced_ids, forced_source = self.get_forced_ids(word, pos)
-        if len(forced_ids):
-            for x in forced_ids:
-                spa_id = self.get_spa_id(x)
-                eng_id = self.get_eng_id(x)
+        if forced_ids:
+            sentences = []
+            for forced_id in forced_ids:
+                sentence = self.get_sentence_by_index(forced_id)
+                spa_id = sentence.spa_id
+                eng_id = sentence.eng_id
                 if spa_id not in seen and eng_id not in seen:
-                    item_ids.append(x)
+                    sentences.append(sentence)
                 seen.add(spa_id)
                 seen.add(eng_id)
-                if len(item_ids) == limit:
+                if len(sentences) == limit:
                     break
 
-        if item_ids:
-            source = forced_source
+            if sentences:
+                return sentences, forced_source
 
-        else:
-            sentences, _source = self.get_all_sentences(word, pos)
-            if allow_literal:
-                source = _source
-                best_sentences = self.select_best_sentences(sentences, limit, seen)
-                item_ids = [s.id for s in best_sentences]
+        best_sentences = []
+        source = None
+        sentences, _source = self.get_all_sentences(word, pos)
+        if allow_literal:
+            source = _source
+            best_sentences = self.select_best_sentences(sentences, limit, seen)
 
-            # Only accept 'literal' matches for the first pos
-            elif _source != 'literal':
-                best_sentences = self.select_best_sentences(sentences, limit, seen)
-                item_ids = [s.id for s in best_sentences]
+        # Only accept 'literal' matches for the first pos
+        elif _source != 'literal':
+            best_sentences = self.select_best_sentences(sentences, limit, seen)
 
-        return item_ids, source
+        return best_sentences, source
 
 
     def select_best_sentences(self, all_sentences, count, seen):
