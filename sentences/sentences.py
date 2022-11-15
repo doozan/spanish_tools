@@ -156,7 +156,7 @@ class SpanishSentences:
                         valid = False
                         break
 
-                    ids.append(sentence.id)
+                    ids.append((sentence.spa_id, sentence.eng_id))
 
                     if source == "preferred":
 
@@ -327,10 +327,9 @@ class SpanishSentences:
         if forced_ids:
             sentences = []
             for forced_id in forced_ids:
-                sentence = self.get_sentence_by_index(forced_id)
-                spa_id = sentence.spa_id
-                eng_id = sentence.eng_id
+                spa_id, eng_id = forced_id
                 if spa_id not in seen and eng_id not in seen:
+                    sentence = self.get_sentence_by_spa_id(spa_id)
                     sentences.append(sentence)
                 seen.add(spa_id)
                 seen.add(eng_id)
