@@ -280,10 +280,6 @@ class SpanishSentences:
     def has_lemma(self, lemma, pos, spa_id):
         return any(self.dbcon.execute("SELECT * FROM lemmas WHERE lemma=? AND POS=? and spa_id=? LIMIT 1", (lemma,pos,spa_id)))
 
-    def get_score(self, idx):
-        row = next(self.dbcon.execute("SELECT spa_score, eng_score FROM sentences WHERE id = ?", (idx,)))
-        return row["spa_score"]*10 + row["eng_score"]
-
     def get_eng_id(self, idx):
         return next(self.dbcon.execute("SELECT eng_id FROM sentences WHERE id = ?", (idx,)))["eng_id"]
 
@@ -356,25 +352,29 @@ class SpanishSentences:
             available_ids = [ x for x in res['ids'] if x not in item_ids ]
             if allow_literal:
                 source = res['source']
-                item_ids = self.select_best_ids(available_ids, limit, seen)
+                best_sentences = self.select_best_sentences(available_ids, limit, seen)
+                item_ids = [s.id for s in best_sentences]
 
             # Only accept 'literal' matches for the first pos
             elif res['source'] not in [ 'literal' ]:
-                item_ids = self.select_best_ids(available_ids, limit, seen)
+                best_sentences = self.select_best_sentences(available_ids, limit, seen)
+                item_ids = [s.id for s in best_sentences]
 
         return item_ids, source
 
 
-    def select_best_ids(self, all_ids, count, seen):
+    def select_best_sentences(self, all_ids, count, seen):
 
         source = ""
+
+        all_sentences = [self.get_sentence_by_index(idx) for idx in all_ids]
 
         # Find the highest scoring sentences without repeating the english or spanish ids
         # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
         scored = defaultdict(set)
-        for i in all_ids:
-            score = self.get_score(i)
-            scored[score].add(i)
+        for sentence in all_sentences:
+            score = sentence.score
+            scored[score].add(sentence)
 
         available = []
         selected = []
@@ -385,13 +385,13 @@ class SpanishSentences:
         # if it has more, add them all to available and let the selector choose
         for score in sorted( scored.keys(), reverse=True ):
 
-            for i in sorted(scored[score]):
-                eng_id = self.get_eng_id(i)
-                spa_id = self.get_spa_id(i)
+            for sentence in sorted(scored[score], key=lambda x: x.id):
+                eng_id = sentence.eng_id
+                spa_id = sentence.spa_id
                 if eng_id not in seen and spa_id not in seen:
                     seen.add(eng_id)
                     seen.add(spa_id)
-                    available.append(i)
+                    available.append(sentence)
 
             if len(available) >= needed:
                 break
@@ -400,7 +400,7 @@ class SpanishSentences:
                 selected += available
                 available = []
 
-        available = sorted(available)
+        available = sorted(available, key=lambda x: x.id)
 
         if len(available) <= needed:
             selected += available
