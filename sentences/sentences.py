@@ -48,12 +48,11 @@ class SpanishSentences:
 
     def _init_db(self, sentences, ignored, tagfixes):
         print("initalizing sentences database", file=sys.stderr)
-#        self.dbcon.execute('''CREATE TABLE english(id UNIQUE, sentence, user_id INT, user_score)''')
-#        self.dbcon.execute('''CREATE TABLE spanish(id UNIQUE, sentence, user_id INT, user_score, tag_str, verb_score INT)''')
 
+        self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, sentence, user, score INT)''')
         self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
-        self.dbcon.execute('''CREATE TABLE sentences(english, spanish, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT, UNIQUE(spa_id, eng_id))''')
-        self.dbcon.execute('''CREATE TABLE spanish_grep(spa_id UNIQUE, text TEXT)''')
+
+        self.dbcon.execute('''CREATE TABLE spanish_grep(spa_id INT UNIQUE, text TEXT)''')
         self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, UNIQUE(lemma, pos, spa_id))''')
         self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, UNIQUE(form, pos, spa_id))''')
 
@@ -113,10 +112,11 @@ class SpanishSentences:
         if eng_id in self.filter_ids or spa_id in self.filter_ids:
             return
 
+        self.add_sentence(spa_id, spanish, spa_user, spa_score)
+        self.add_sentence(eng_id, english, eng_user, eng_score)
         self.add_pair(spa_id, eng_id)
-        self.add_sentence(english, spanish, credits, eng_score, spa_score, tag_str)
+
         self.add_spanish_grep(spa_id, spanish)
-        #self.add_tags_to_db(tag_str, spa_id)
         self.add_tags_to_db(tag_str, spa_id)
 
         return True
@@ -124,16 +124,8 @@ class SpanishSentences:
     def add_pair(self, spa_id, eng_id):
         self.dbcon.execute("INSERT INTO spanish_english VALUES(?, ?)", (spa_id, eng_id))
 
-    def add_sentence(self, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
-
-        if verb_score is None:
-            verb_score = 0
-
-        eng_id, eng_user, spa_id, spa_user = SentenceBuilder.parse_credits(credits)
-
-        self.dbcon.execute("INSERT INTO sentences VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", \
-            (english, spanish, eng_score, spa_score, tag_str, eng_id, eng_user, spa_id, spa_user, verb_score))
-
+    def add_sentence(self, sid, sentence, user, score):
+        self.dbcon.execute("INSERT OR IGNORE INTO sentences VALUES(?, ?, ?, ?)", (sid, sentence, user, score))
 
     def add_spanish_grep(self, spa_id, sentence):
         stripped = re.sub('[^ a-záéíñóúü]+', '', sentence.strip().lower())
@@ -425,7 +417,22 @@ class SpanishSentences:
         return { "sentences": best_sentences, "matched": source }
 
     def get_sentence(self, spa_id):
-        row = next(self.dbcon.execute(f"SELECT * from sentences WHERE spa_id = ?", (spa_id,)), None)
+        query = """
+        SELECT
+            spa.id as spa_id,
+            spa.sentence as spanish,
+            spa.score as spa_score,
+            spa.user as spa_user,
+            eng.id as eng_id,
+            eng.sentence as english,
+            eng.score as eng_score,
+            eng.user as eng_user
+        FROM spanish_english AS se
+        JOIN sentences AS spa ON se.spa_id = spa.id
+        JOIN sentences AS eng ON se.eng_id = eng.id
+            WHERE spa_id = ?;
+        """
+        row = next(self.dbcon.execute(query, (spa_id,)), None)
         if row:
             return Sentence(row)
 
@@ -439,6 +446,10 @@ class Sentence():
     @property
     def score(self):
         return self.spa_score*10 + self.eng_score
+
+    @property
+    def verb_score(self):
+        return 0
 
     @property
     def credits(self):
