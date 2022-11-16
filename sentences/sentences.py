@@ -280,44 +280,45 @@ class SpanishSentences:
         source = self.forced_ids_source.get(wordtag)
         return self.forced_ids.get(wordtag,[]), source
 
-    def get_best_sentences(self, items, count):
+    def get_all_sentences(self, lookup, pos, allowed_sources):
+        """Returns [sentences], "source" """
 
-        all_sentences = {}
-        source = None
-        seen = set()
+        sentences = []
 
-        for word, pos in items:
-            allowed_sources = ["exact", "phrase"]
-            # Only allow literal matches for the primary pos
-            if not all_sentences:
-                allowed_sources.append("literal")
-            pos_sentences, pos_source = self.get_pos_sentences(word, pos, count, seen, allowed_sources)
-            if pos_sentences:
-                all_sentences[pos] = pos_sentences
-                if not source:
-                    source = pos_source
+        # TODO: lookup should not always be lower
+        lookup = lookup.strip().lower()
+        pos = pos.lower()
 
-        # Take the first sentence from each pos, then the second, etc
-        # until 'count' sentences have been selected
-        best_sentences = []
-        for idx in range(count):
-            for pos, sentences in all_sentences.items():
-                if len(sentences)>idx:
-                    best_sentences.append(sentences[idx])
-                if len(best_sentences)==count:
-                    break
-            if len(best_sentences)==count:
-                  break
+        if " " in lookup:
+            pos = "phrase"
 
-        return best_sentences, source
+        if "exact" in allowed_sources:
+            source = "exact"
+            sentences = self.get_sentences_with_lemma(lookup, pos)
+
+        if not sentences and pos != "phrase" and "phrase" in allowed_sources:
+            source = "phrase"
+            phrase_pos = "phrase-" + pos
+            sentences = self.get_sentences_with_lemma(lookup, phrase_pos)
+
+        if not sentences and "literal" in allowed_sources:
+            source = "literal"
+
+            if pos == "phrase":
+                sentences = self.get_sentences_with_phrase(lookup)
+
+            else:
+                sentences = self.get_sentences_with_form(lookup)
+
+        if not sentences:
+            return [], None
+
+        # TODO: Sort by sentence length instead of .id
+        sentences.sort(key=lambda x: x.id)
+        return sentences, source
 
 
-    def get_pos_sentences(self, word, pos, limit, seen, allowed_sources):
-
-        # if there are multiple word/pos pairs specified, ideally use results from each equally
-        # However, if one item doesn't have enough results we will use more results from this item
-        # Thus, we need to retrieve "limit" items, as we could be using them all if the other has none
-
+    def get_forced_sentences(self, word, pos, seen):
         forced_ids, forced_source = self.get_forced_ids(word, pos)
         if forced_ids:
             sentences = []
@@ -333,6 +334,12 @@ class SpanishSentences:
 
             if sentences:
                 return sentences, forced_source
+
+    def get_pos_sentences(self, word, pos, limit, seen, allowed_sources):
+
+        forced_sentences, forced_source = get_forced_sentences(word, pos)
+        if forced_sentences:
+            return forced_sentences, forced_source
 
         sentences, source = self.get_all_sentences(word, pos, allowed_sources)
         best_sentences = self.select_best_sentences(sentences, limit, seen)
@@ -378,47 +385,40 @@ class SpanishSentences:
 
         return selected
 
-    def get_all_sentences(self, lookup, pos, allowed_sources):
-        """Returns [sentences], "source" """
+    def get_sentences(self, items, limit):
 
-        sentences = []
+        all_sentences = {}
+        source = None
+        seen = set()
 
-        # TODO: lookup should not always be lower
-        lookup = lookup.strip().lower()
-        pos = pos.lower()
+        for word, pos in items:
+            allowed_sources = ["exact", "phrase"]
+            # Only allow literal matches for the primary pos
+            if not all_sentences:
+                allowed_sources.append("literal")
 
-        if " " in lookup:
-            pos = "phrase"
+            # if there are multiple word/pos pairs specified, ideally use results from each equally
+            # However, if one item doesn't have enough results we will use more results from this item
+            # Thus, we need to retrieve "limit" items, as we could be using them all if the other has none
+            pos_sentences, pos_source = self.get_pos_sentences(word, pos, limit, seen, allowed_sources)
+            if pos_sentences:
+                all_sentences[pos] = pos_sentences
+                if not source:
+                    source = pos_source
 
-        if "exact" in allowed_sources:
-            source = "exact"
-            sentences = self.get_sentences_with_lemma(lookup, pos)
+        # Take the first sentence from each pos, then the second, etc
+        # until 'limit' sentences have been selected
+        best_sentences = []
+        for idx in range(limit):
+            for pos, sentences in all_sentences.items():
+                if len(sentences)>idx:
+                    best_sentences.append(sentences[idx])
+                if len(best_sentences) == limit:
+                    break
+            if len(best_sentences) == limit:
+                  break
 
-        if not sentences and pos != "phrase" and "phrase" in allowed_sources:
-            source = "phrase"
-            phrase_pos = "phrase-" + pos
-            sentences = self.get_sentences_with_lemma(lookup, phrase_pos)
-
-        if not sentences and "literal" in allowed_sources:
-            source = "literal"
-
-            if pos == "phrase":
-                sentences = self.get_sentences_with_phrase(lookup)
-
-            else:
-                sentences = self.get_sentences_with_form(lookup)
-
-        if not sentences:
-            return [], None
-
-        # TODO: Sort by sentence length instead of .id
-        sentences.sort(key=lambda x: x.id)
-        return sentences, source
-
-    def get_sentences(self, items, count, forced_items=[]):
-
-        sentences, source = self.get_best_sentences(items, count)
-        return { "sentences": sentences, "matched": source }
+        return { "sentences": best_sentences, "matched": source }
 
     def get_sentence(self, spa_id):
         row = next(self.dbcon.execute(f"SELECT * from sentences WHERE spa_id = ?", (spa_id,)), None)
