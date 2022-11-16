@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import locale
 import math
 import os
 import pickle
@@ -9,6 +10,8 @@ import sqlite3
 
 from collections import defaultdict, namedtuple
 from .sentence_builder import SentenceBuilder
+
+locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
 
 def make_tag(word, pos):
     return pos.lower() + ":" + word.lower()
@@ -47,9 +50,9 @@ class SpanishSentences:
         print("initalizing sentences database", file=sys.stderr)
 #        self.dbcon.execute('''CREATE TABLE english(id UNIQUE, sentence, user_id INT, user_score)''')
 #        self.dbcon.execute('''CREATE TABLE spanish(id UNIQUE, sentence, user_id INT, user_score, tag_str, verb_score INT)''')
-#        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
 
-        self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, english, spanish, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT, UNIQUE(spa_id, eng_id))''')
+        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
+        self.dbcon.execute('''CREATE TABLE sentences(english, spanish, eng_score INT, spa_score INT, tag_str, eng_id INT, eng_user, spa_id INT, spa_user, verb_score INT, UNIQUE(spa_id, eng_id))''')
         self.dbcon.execute('''CREATE TABLE spanish_grep(spa_id UNIQUE, text TEXT)''')
         self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, UNIQUE(lemma, pos, spa_id))''')
         self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, UNIQUE(form, pos, spa_id))''')
@@ -83,7 +86,6 @@ class SpanishSentences:
             with open(datafile) as infile:
                 self.filter_ids = set( int(line.strip().split(" ",1)[0]) for line in infile if not line.startswith("#") )
 
-        index=0
         with open(sentences) as infile:
             for line in infile:
                 row = line.rstrip().split("\t")
@@ -91,8 +93,7 @@ class SpanishSentences:
                 if len(row) < 6:
                     continue
 
-                if self.process_line(index, *row):
-                    index+=1
+                self.process_line(*row)
 
         for old,new in self.tagfixes.items():
             if old not in self.tagfix_count:
@@ -106,29 +107,32 @@ class SpanishSentences:
 
         self.dbcon.commit()
 
-    def process_line(self, index, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
+    def process_line(self, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
 
         eng_id, eng_user, spa_id, spa_user = SentenceBuilder.parse_credits(credits)
         if eng_id in self.filter_ids or spa_id in self.filter_ids:
             return
 
-        self.add_sentence(index, english, spanish, credits, eng_score, spa_score, tag_str)
+        self.add_pair(spa_id, eng_id)
+        self.add_sentence(english, spanish, credits, eng_score, spa_score, tag_str)
         self.add_spanish_grep(spa_id, spanish)
         #self.add_tags_to_db(tag_str, spa_id)
-        self.add_tags_to_db(tag_str, index, spa_id)
+        self.add_tags_to_db(tag_str, spa_id)
 
         return True
 
+    def add_pair(self, spa_id, eng_id):
+        self.dbcon.execute("INSERT INTO spanish_english VALUES(?, ?)", (spa_id, eng_id))
 
-    def add_sentence(self, index, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
+    def add_sentence(self, english, spanish, credits, eng_score, spa_score, tag_str, verb_score=None):
 
         if verb_score is None:
             verb_score = 0
 
         eng_id, eng_user, spa_id, spa_user = SentenceBuilder.parse_credits(credits)
 
-        self.dbcon.execute("INSERT INTO sentences VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", \
-            (index, english, spanish, eng_score, spa_score, tag_str, eng_id, eng_user, spa_id, spa_user, verb_score))
+        self.dbcon.execute("INSERT INTO sentences VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", \
+            (english, spanish, eng_score, spa_score, tag_str, eng_id, eng_user, spa_id, spa_user, verb_score))
 
 
     def add_spanish_grep(self, spa_id, sentence):
@@ -179,7 +183,6 @@ class SpanishSentences:
                 if valid:
                     wordtag = make_tag(word, pos)
 
-                    # TODO: instead of sentence ids, use (spa_id, eng_id)
                     self.forced_ids[wordtag] = ids
                     self.forced_ids_source[wordtag] = source
 
@@ -213,7 +216,7 @@ class SpanishSentences:
             tags[tag] = items
         return tags
 
-    def add_tags_to_db(self, tag_str, index, spa_id):
+    def add_tags_to_db(self, tag_str, spa_id):
         for tagpos,words in self.str_to_tags(tag_str).items():
 
             # Each past participle has both a part-verb and a part-adj tag
@@ -314,30 +317,31 @@ class SpanishSentences:
             return [], None
 
         # TODO: Sort by sentence length instead of .id
-        sentences.sort(key=lambda x: x.id)
+        #sentences.sort(key=lambda x: (len(x.spanish.split()), x.spa_id))
+
+        sentences.sort(key=lambda x: (x.english.count(" "), locale.strxfrm(x.english), locale.strxfrm(x.spanish)))
         return sentences, source
 
 
-    def get_forced_sentences(self, word, pos, seen):
+    def get_forced_sentences(self, word, pos, limit, seen):
         forced_ids, forced_source = self.get_forced_ids(word, pos)
-        if forced_ids:
-            sentences = []
-            for forced_id in forced_ids:
-                spa_id, eng_id = forced_id
-                if spa_id not in seen and eng_id not in seen:
-                    sentence = self.get_sentence(spa_id)
-                    sentences.append(sentence)
-                seen.add(spa_id)
-                seen.add(eng_id)
-                if len(sentences) == limit:
-                    break
 
-            if sentences:
-                return sentences, forced_source
+        sentences = []
+        for forced_id in forced_ids:
+            spa_id, eng_id = forced_id
+            if spa_id not in seen and eng_id not in seen:
+                sentence = self.get_sentence(spa_id)
+                sentences.append(sentence)
+            seen.add(spa_id)
+            seen.add(eng_id)
+            if len(sentences) == limit:
+                break
+
+        return sentences, forced_source
 
     def get_pos_sentences(self, word, pos, limit, seen, allowed_sources):
 
-        forced_sentences, forced_source = get_forced_sentences(word, pos)
+        forced_sentences, forced_source = self.get_forced_sentences(word, pos, limit, seen)
         if forced_sentences:
             return forced_sentences, forced_source
 

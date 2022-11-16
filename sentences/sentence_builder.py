@@ -349,11 +349,10 @@ class SentenceBuilder():
                     continue
 
                 # ignore duplicates
-                uniqueid = hash(sentence.spanish)
-                if uniqueid in seen:
+                if sentence.spa_id in seen:
                     continue
                 else:
-                    seen.add(uniqueid)
+                    seen.add(sentence.spa_id)
 
                 yield sentence
 
