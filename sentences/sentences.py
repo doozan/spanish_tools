@@ -56,6 +56,8 @@ class SpanishSentences:
         self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, UNIQUE(lemma, pos, spa_id))''')
         self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, UNIQUE(form, pos, spa_id))''')
 
+        self.dbcon.execute('''CREATE TABLE spanish_extra(spa_id INT UNIQUE, verb_score INT)''')
+
         self.tagfixes = {}
         self.tagfix_sentences = {}
         self.filter_ids = {}
@@ -119,6 +121,8 @@ class SpanishSentences:
         self.add_spanish_grep(spa_id, spanish)
         self.add_tags_to_db(tag_str, spa_id)
 
+        self.add_spanish_extra(spa_id, verb_score)
+
         return True
 
     def add_pair(self, spa_id, eng_id):
@@ -130,6 +134,9 @@ class SpanishSentences:
     def add_spanish_grep(self, spa_id, sentence):
         stripped = re.sub('[^ a-záéíñóúü]+', '', sentence.strip().lower())
         self.dbcon.execute("INSERT OR IGNORE INTO spanish_grep VALUES (?, ?)", (spa_id, stripped))
+
+    def add_spanish_extra(self, spanish_id, verb_score):
+        self.dbcon.execute("INSERT OR IGNORE INTO spanish_extra VALUES(?, ?)", (spanish_id, verb_score))
 
     def load_overrides(self, datafile, source):
         with open(datafile) as infile:
@@ -426,11 +433,13 @@ class SpanishSentences:
             eng.id as eng_id,
             eng.sentence as english,
             eng.score as eng_score,
-            eng.user as eng_user
+            eng.user as eng_user,
+            x.*
         FROM spanish_english AS se
         JOIN sentences AS spa ON se.spa_id = spa.id
         JOIN sentences AS eng ON se.eng_id = eng.id
-            WHERE spa_id = ?;
+        JOIN spanish_extra AS x ON se.spa_id = x.spa_id
+            WHERE se.spa_id = ?;
         """
         row = next(self.dbcon.execute(query, (spa_id,)), None)
         if row:
@@ -446,10 +455,6 @@ class Sentence():
     @property
     def score(self):
         return self.spa_score*10 + self.eng_score
-
-    @property
-    def verb_score(self):
-        return 0
 
     @property
     def credits(self):
