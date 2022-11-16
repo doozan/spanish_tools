@@ -274,12 +274,6 @@ class SpanishSentences:
     def has_lemma(self, lemma, pos, spa_id):
         return any(self.dbcon.execute("SELECT * FROM lemmas WHERE lemma=? AND POS=? and spa_id=? LIMIT 1", (lemma,pos,spa_id)))
 
-    def get_eng_id(self, idx):
-        return next(self.dbcon.execute("SELECT eng_id FROM sentences WHERE id = ?", (idx,)))["eng_id"]
-
-    def get_spa_id(self, idx):
-        return next(self.dbcon.execute("SELECT spa_id FROM sentences WHERE id = ?", (idx,)))["spa_id"]
-
     def get_forced_ids(self, word, pos):
         wordtag = make_tag(word, pos)
 
