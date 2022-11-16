@@ -24,17 +24,17 @@ class SpanishSentences:
         self.forced_ids_source = {}
 
         dbfilename = self.get_database_filename(sentences, ignored, tagfixes)
-        if os.path.exists(dbfilename) and not self.is_database_valid(dbfilename, sentences, ignored, tagfixes):
+        if os.path.exists(dbfilename) and self.is_database_expired(dbfilename, sentences, ignored, tagfixes):
             os.remove(dbfilename)
 
-        init_db = not os.path.exists(dbfilename)
+        must_init_db = not os.path.exists(dbfilename)
 
         self.dbcon = sqlite3.connect(dbfilename)
         self.dbcon.execute('PRAGMA synchronous = OFF;')
         self.dbcon.execute('PRAGMA foreign_keys = ON;')
         self.dbcon.row_factory = sqlite3.Row
 
-        if init_db:
+        if must_init_db:
             self._init_db(sentences, ignored, tagfixes)
 
         # Forced/preferred items must be processed last
@@ -50,12 +50,12 @@ class SpanishSentences:
     def _init_db(self, sentences, ignored, tagfixes):
         print("initalizing sentences database", file=sys.stderr)
 
-        self.dbcon.execute('''CREATE TABLE sentences(id INTEGER NOT NULL PRIMARY KEY, sentence, user, score INT)''')
+        self.dbcon.execute('''CREATE TABLE sentences(id INTEGER NOT NULL PRIMARY KEY, sentence TEXT, user TEXT, score INT)''')
         self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INTEGER PRIMARY KEY REFERENCES sentences, eng_id INT REFERENCES sentences)''')
 
         self.dbcon.execute('''CREATE TABLE spanish_grep(spa_id INTEGER PRIMARY KEY REFERENCES sentences, text TEXT)''')
-        self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INTEGER REFERENCES sentences, UNIQUE(lemma, pos, spa_id))''')
-        self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INTEGER REFERENCES sentences, UNIQUE(form, pos, spa_id))''')
+        self.dbcon.execute('''CREATE TABLE lemmas(lemma TEXT, pos TEXT, spa_id INTEGER REFERENCES sentences, UNIQUE(lemma, pos, spa_id))''')
+        self.dbcon.execute('''CREATE TABLE forms(form TEXT, pos TEXT, spa_id INTEGER REFERENCES sentences, UNIQUE(form, pos, spa_id))''')
 
         self.dbcon.execute('''CREATE TABLE spanish_extra(spa_id INTEGER PRIMARY KEY REFERENCES sentences, verb_score INT)''')
 
@@ -198,13 +198,13 @@ class SpanishSentences:
         return sentences + ".~" + cid
 
     @staticmethod
-    def is_database_valid(database, sentences, *modfiles):
+    def is_database_expired(database, sentences, *modfiles):
         allfiles = [sentences] + [f for files in modfiles for f in files]
 
         if not os.path.exists(database):
-            return False
+            return True
 
-        return all(os.path.getctime(database) > os.path.getctime(f) for f in allfiles)
+        return any(os.path.getctime(f) > os.path.getctime(database) for f in allfiles)
 
     @staticmethod
     def str_to_tags(tag_str):
@@ -288,9 +288,7 @@ class SpanishSentences:
 
         sentences = []
 
-        # TODO: lookup should not always be lower
         lookup = lookup.strip().lower()
-        pos = pos.lower()
 
         if " " in lookup:
             pos = "phrase"
@@ -315,9 +313,6 @@ class SpanishSentences:
 
         if not sentences:
             return [], None
-
-        # TODO: Sort by sentence length instead of .id
-        #sentences.sort(key=lambda x: (len(x.spanish.split()), x.spa_id))
 
         sentences.sort(key=lambda x: (x.english.count(" "), locale.strxfrm(x.english), locale.strxfrm(x.spanish)))
         return sentences, source
