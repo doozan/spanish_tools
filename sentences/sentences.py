@@ -288,7 +288,7 @@ class SpanishSentences:
 
         sentences = []
 
-        lookup = lookup.strip().lower()
+        lookup = lookup.strip()
 
         if " " in lookup:
             pos = "phrase"
