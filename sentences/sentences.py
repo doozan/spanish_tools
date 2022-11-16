@@ -30,7 +30,8 @@ class SpanishSentences:
         init_db = not os.path.exists(dbfilename)
 
         self.dbcon = sqlite3.connect(dbfilename)
-        self.dbcon.execute('PRAGMA synchronous=OFF;')
+        self.dbcon.execute('PRAGMA synchronous = OFF;')
+        self.dbcon.execute('PRAGMA foreign_keys = ON;')
         self.dbcon.row_factory = sqlite3.Row
 
         if init_db:
@@ -49,14 +50,14 @@ class SpanishSentences:
     def _init_db(self, sentences, ignored, tagfixes):
         print("initalizing sentences database", file=sys.stderr)
 
-        self.dbcon.execute('''CREATE TABLE sentences(id INT UNIQUE, sentence, user, score INT)''')
-        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INT, eng_id INT, UNIQUE(spa_id, eng_id))''')
+        self.dbcon.execute('''CREATE TABLE sentences(id INTEGER NOT NULL PRIMARY KEY, sentence, user, score INT)''')
+        self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INTEGER PRIMARY KEY REFERENCES sentences, eng_id INT REFERENCES sentences)''')
 
-        self.dbcon.execute('''CREATE TABLE spanish_grep(spa_id INT UNIQUE, text TEXT)''')
-        self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INT, UNIQUE(lemma, pos, spa_id))''')
-        self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INT, UNIQUE(form, pos, spa_id))''')
+        self.dbcon.execute('''CREATE TABLE spanish_grep(spa_id INTEGER PRIMARY KEY REFERENCES sentences, text TEXT)''')
+        self.dbcon.execute('''CREATE TABLE lemmas(lemma, pos, spa_id INTEGER REFERENCES sentences, UNIQUE(lemma, pos, spa_id))''')
+        self.dbcon.execute('''CREATE TABLE forms(form, pos, spa_id INTEGER REFERENCES sentences, UNIQUE(form, pos, spa_id))''')
 
-        self.dbcon.execute('''CREATE TABLE spanish_extra(spa_id INT UNIQUE, verb_score INT)''')
+        self.dbcon.execute('''CREATE TABLE spanish_extra(spa_id INTEGER PRIMARY KEY REFERENCES sentences, verb_score INT)''')
 
         self.tagfixes = {}
         self.tagfix_sentences = {}
@@ -436,10 +437,10 @@ class SpanishSentences:
             eng.user as eng_user,
             x.*
         FROM spanish_english AS se
-        JOIN sentences AS spa ON se.spa_id = spa.id
-        JOIN sentences AS eng ON se.eng_id = eng.id
-        JOIN spanish_extra AS x ON se.spa_id = x.spa_id
-            WHERE se.spa_id = ?;
+            JOIN sentences AS spa ON se.spa_id = spa.id
+            JOIN sentences AS eng ON se.eng_id = eng.id
+            JOIN spanish_extra AS x ON se.spa_id = x.spa_id
+        WHERE se.spa_id = ?;
         """
         row = next(self.dbcon.execute(query, (spa_id,)), None)
         if row:
