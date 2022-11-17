@@ -1,27 +1,19 @@
 import base64
 import hashlib
 import locale
-import math
 import os
-import pickle
 import re
 import sys
 import sqlite3
 
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from .sentence_builder import SentenceBuilder
 
 locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
 
-def make_tag(word, pos):
-    return pos.lower() + ":" + word.lower()
-
 class SpanishSentences:
 
-    def __init__(self, sentences, preferred, forced, ignored, tagfixes):
-
-        self.forced_ids = {}
-        self.forced_ids_source = {}
+    def __init__(self, sentences, ignored, tagfixes):
 
         dbfilename = self.get_database_filename(sentences, ignored, tagfixes)
         if os.path.exists(dbfilename) and self.is_database_expired(dbfilename, sentences, ignored, tagfixes):
@@ -36,13 +28,6 @@ class SpanishSentences:
 
         if must_init_db:
             self._init_db(sentences, ignored, tagfixes)
-
-        # Forced/preferred items must be processed last
-        for datafile in preferred:
-            self.load_overrides(datafile, "preferred")
-
-        for datafile in forced:
-            self.load_overrides(datafile, "forced")
 
         print("sentences loaded")
 
@@ -139,54 +124,6 @@ class SpanishSentences:
     def add_spanish_extra(self, spanish_id, verb_score):
         self.dbcon.execute("INSERT OR IGNORE INTO spanish_extra VALUES(?, ?)", (spanish_id, verb_score))
 
-    def load_overrides(self, datafile, source):
-        with open(datafile) as infile:
-
-            for line in infile:
-
-                line = line.strip()
-                if line.startswith("#"):
-                    continue
-                word,pos,*forced_pairs = line.split(",")
-
-                ids = []
-                valid = True
-                for pair in forced_pairs:
-                    spa_id, eng_id = pair.split(":")
-
-                    sentence = self.get_sentence(spa_id)
-                    if not sentence:
-                        print(f"{source} sentences no longer exist for {word},{pos}, ignoring...", file=sys.stderr)
-                        valid = False
-                        break
-
-                    ids.append((sentence.spa_id, sentence.eng_id))
-
-                    if source == "preferred":
-
-                        if sentence.score < 55:
-                            print(f"{source} score for {word},{pos} has dropped below 55, ignoring...", file=sys.stderr)
-                            valid = False
-                            break
-
-                        if not self.has_lemma(word, pos, sentence.spa_id):
-                            if self.has_lemma(word, "phrase-" + pos, sentence.spa_id):
-                                print(f"{source} sentences for {word},{pos} contain phrases, ignoring...", file=sys.stderr)
-                                valid = False
-                                break
-
-                            elif pos == "interj":
-                                print(f"! {source} sentences no longer has {word},{pos}, ignoring...", file=sys.stderr)
-                                valid = False
-                                break
-
-                if valid:
-                    wordtag = make_tag(word, pos)
-
-                    self.forced_ids[wordtag] = ids
-                    self.forced_ids_source[wordtag] = source
-
-
     @classmethod
     def get_database_filename(cls, sentences, *modfiles):
         allfiles = [f for files in modfiles for f in files]
@@ -277,12 +214,6 @@ class SpanishSentences:
     def has_lemma(self, lemma, pos, spa_id):
         return any(self.dbcon.execute("SELECT * FROM lemmas WHERE lemma=? AND POS=? and spa_id=? LIMIT 1", (lemma,pos,spa_id)))
 
-    def get_forced_ids(self, word, pos):
-        wordtag = make_tag(word, pos)
-
-        source = self.forced_ids_source.get(wordtag)
-        return self.forced_ids.get(wordtag,[]), source
-
     def get_all_sentences(self, lookup, pos, allowed_sources):
         """Returns [sentences], "source" """
 
@@ -317,108 +248,6 @@ class SpanishSentences:
         sentences.sort(key=lambda x: (x.english.count(" "), locale.strxfrm(x.english), locale.strxfrm(x.spanish)))
         return sentences, source
 
-
-    def get_forced_sentences(self, word, pos, limit, seen):
-        forced_ids, forced_source = self.get_forced_ids(word, pos)
-
-        sentences = []
-        for forced_id in forced_ids:
-            spa_id, eng_id = forced_id
-            if spa_id not in seen and eng_id not in seen:
-                sentence = self.get_sentence(spa_id)
-                sentences.append(sentence)
-            seen.add(spa_id)
-            seen.add(eng_id)
-            if len(sentences) == limit:
-                break
-
-        return sentences, forced_source
-
-    def get_pos_sentences(self, word, pos, limit, seen, allowed_sources):
-
-        forced_sentences, forced_source = self.get_forced_sentences(word, pos, limit, seen)
-        if forced_sentences:
-            return forced_sentences, forced_source
-
-        sentences, source = self.get_all_sentences(word, pos, allowed_sources)
-        best_sentences = self.select_best_sentences(sentences, limit, seen)
-        return best_sentences, source
-
-    def select_best_sentences(self, all_sentences, limit, seen):
-
-        # Find the highest scoring sentences without repeating the english or spanish ids
-        # prefer curated list (5/6) or sentences flagged as 5/5 (native spanish/native english)
-        scored = defaultdict(list)
-        for sentence in all_sentences:
-            score = sentence.score
-            scored[score].append(sentence)
-
-        selected = []
-
-        # for each group of scored sentences:
-        # if the group offers less than we need, add them all to ids
-        # if it has more, add them all to available and let the selector choose
-        for score in sorted( scored.keys(), reverse=True ):
-
-            needed = limit-len(selected)
-            if needed < 1:
-                break
-
-            available = []
-            for sentence in scored[score]:
-                eng_id = sentence.eng_id
-                spa_id = sentence.spa_id
-                if eng_id not in seen and spa_id not in seen:
-                    seen.add(eng_id)
-                    seen.add(spa_id)
-                    available.append(sentence)
-
-            if len(available) <= needed:
-                selected += available
-            else:
-                step = len(available)/(needed+1.0)
-
-                # select sentences over an even distribution of the range
-                selected += [ available[math.ceil(i*step)] for i in range(needed) ]
-
-
-        return selected
-
-    def get_sentences(self, items, limit):
-
-        all_sentences = {}
-        source = None
-        seen = set()
-
-        for word, pos in items:
-            allowed_sources = ["exact", "phrase"]
-            # Only allow literal matches for the primary pos
-            if not all_sentences:
-                allowed_sources.append("literal")
-
-            # if there are multiple word/pos pairs specified, ideally use results from each equally
-            # However, if one item doesn't have enough results we will use more results from this item
-            # Thus, we need to retrieve "limit" items, as we could be using them all if the other has none
-            pos_sentences, pos_source = self.get_pos_sentences(word, pos, limit, seen, allowed_sources)
-            if pos_sentences:
-                all_sentences[pos] = pos_sentences
-                if not source:
-                    source = pos_source
-
-        # Take the first sentence from each pos, then the second, etc
-        # until 'limit' sentences have been selected
-        best_sentences = []
-        for idx in range(limit):
-            for pos, sentences in all_sentences.items():
-                if len(sentences)>idx:
-                    best_sentences.append(sentences[idx])
-                if len(best_sentences) == limit:
-                    break
-            if len(best_sentences) == limit:
-                  break
-
-        return { "sentences": best_sentences, "matched": source }
-
     def get_sentence(self, spa_id):
         query = """
         SELECT
@@ -440,6 +269,8 @@ class SpanishSentences:
         row = next(self.dbcon.execute(query, (spa_id,)), None)
         if row:
             return Sentence(row)
+
+
 
 class Sentence():
     def __init__(self, row):

@@ -13,7 +13,6 @@ import sqlite3
 import sys
 from Levenshtein import distance as fuzzy_distance
 
-from spanish_tools.sentences import SpanishSentences
 from spanish_tools.deckbuilder import DeckBuilder
 from spanish_tools.freq import NgramPosProbability
 from enwiktionary_wordlist.wordlist import Wordlist
@@ -134,8 +133,7 @@ def build_deck(params=None):
         allforms = AllForms.from_wordlist(wordlist)
 
     ignore = DeckBuilder.load_ignore(args.dictionary_custom)
-
-    sentences = SpanishSentences(
+    sentences = DeckBuilder.load_sentence_selector(
         sentences=args.sentences,
         preferred=args.sentences_preferred,
         forced=args.sentences_forced,

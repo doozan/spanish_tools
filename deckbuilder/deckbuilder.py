@@ -13,6 +13,9 @@ import sys
 
 from .hider import Hider
 from .tts import get_speech
+from .sentences import SentenceSelector
+from spanish_tools.sentences import SpanishSentences
+
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 from enwiktionary_wordlist.word import Word
@@ -74,7 +77,6 @@ class DeckBuilder():
 
         self._words = None
         self._ignore = {}
-        self._sentences = None
 
         self.db_notes = {}
         self.db_timestamps = {}
@@ -88,8 +90,6 @@ class DeckBuilder():
 
         self.rows = []
 
-        self.credits = {}
-        self.dumpable_sentences = {}
         self.notes = {}
         self.seen_guids = {}
         self.seen_hints = {}
@@ -204,115 +204,6 @@ class DeckBuilder():
 
         hashval = self.get_note_hash(guid, flds, tags)
         return self.db_timestamps.get(hashval)
-
-    @staticmethod
-    def format_sentences(sentences):
-        return "\n".join(
-            f'<span class="spa">{html.escape(item.spanish)}</span>\n' \
-            f'<span class="eng">{html.escape(item.english)}</span>'
-            for item in sentences
-        )
-
-    def get_sentences(self, items, count):
-
-        results = self._sentences.get_sentences(items, count)
-        self.store_credits(results)
-
-        if len(results["sentences"]):
-            return self.format_sentences(results["sentences"])
-
-        return ""
-
-
-    def store_credits(self, results):
-        for sentence in results["sentences"]:
-            spa_user = sentence.spa_user
-            eng_user = sentence.eng_user
-            spa_id = sentence.spa_id
-            eng_id = sentence.eng_id
-
-            for user in [spa_user, eng_user]:
-                if user not in self.credits:
-                    self.credits[user] = []
-            self.credits[spa_user].append(str(spa_id))
-            self.credits[eng_user].append(str(eng_id))
-
-
-    def dump_credits(self, filename):
-        with open(filename, "w") as outfile:
-            outfile.write(
-                f"The definitions in this deck come from wiktionary.org and are used in accordance with the with the CC-BY-SA license.\n\n"
-            )
-            outfile.write(
-                f"The sentences in this deck were contributed to tatoeba.org by the following users and are used in accordance with the CC-BY 2.0 license:\n\n"
-            )
-            for user, sentences in sorted(
-                self.credits.items(), key=lambda item: (len(item[1]) * -1, item[0])
-            ):
-                count = len(sentences)
-                if count > 1:
-                    if count > 5:
-                        outfile.write(
-                            f"{user} ({len(sentences)}) #{', #'.join(sorted(sentences[:3]))} and {len(sentences)-3} others\n"
-                        )
-                    else:
-                        outfile.write(
-                            f"{user} ({len(sentences)}) #{', #'.join(sorted(sentences))}\n"
-                        )
-                else:
-                    outfile.write(f"{user} #{', #'.join(sorted(sentences))}\n")
-
-
-
-
-    def store_sentences(self, lookups):
-
-        for word, pos in lookups:
-            tag = make_tag(word, pos)
-            if tag in self.dumpable_sentences:
-                continue
-
-            results = self._sentences.get_sentences([[word, pos]], 3)
-            if not results:
-                continue
-
-            if results["matched"] not in ("preferred", "exact") and " " not in word:
-                continue
-
-            if len(results["sentences"]) != 3:
-                continue
-
-            if all(sentence.score >= 55 for sentence in results["sentences"]):
-                ids = [ f"{sentence.spa_id}:{sentence.eng_id}" for sentence in results["sentences"] ]
-                self.dumpable_sentences[tag] = ids
-
-
-    # (spanish, english, score, spa_id, eng_id)
-    def dump_sentences(self, filename):
-
-        try:
-            with open(filename, "r") as dumpfile:
-                dumpfile.seek(0)
-                for line in dumpfile:
-                    line = line.strip()
-                    word,pos,*forced_itemtags = line.split(",")
-                    wordtag = make_tag(word, pos)
-                    if wordtag not in self.dumpable_sentences:
-                        self.dumpable_sentences[wordtag] = forced_itemtags
-        except IOError:
-            pass
-
-        print(f"dumping {len(self.dumpable_sentences)} sentences to {filename}")
-        with open(filename, "w") as dumpfile:
-            dumpfile.seek(0)
-            dumpfile.truncate()
-            for tag, ids in sorted(self.dumpable_sentences.items()):
-                word, pos = split_tag(tag)
-                row = [word, pos] + ids
-
-                dumpfile.write(",".join(row))
-                dumpfile.write("\n")
-
 
     @staticmethod
     def format_sound(filename):
@@ -1283,9 +1174,9 @@ class DeckBuilder():
         [all_usage_pos.append(w["pos"]) for ety in usage for w in ety["words"] if w["pos"] not in all_usage_pos]
 
         lookups = [[spanish, pos] for pos in all_usage_pos]
-        sentences = self.get_sentences(lookups, 3)
+        sentences = self._sentences.get_sentences(lookups, 3)
 
-        self.store_sentences(lookups)
+        self._sentences.store_sentences(lookups)
 
         display_pos = self.get_noun_type(usage) if pos == "n" else pos
 
@@ -1461,7 +1352,7 @@ class DeckBuilder():
                 continue
 
             # Unless items without sentences are explicitly allowed, make sure word has sentences
-            if "NOSENT" not in allowed_flags and not self._sentences.get_sentences([(row["spanish"], row["pos"])], 1).get("sentences"):
+            if "NOSENT" not in allowed_flags and not self._sentences._get_sentences([(row["spanish"], row["pos"])], 1).get("sentences"):
                 #                print("skipping", row["spanish"], row["pos"])
                 continue
 
@@ -1660,4 +1551,17 @@ class DeckBuilder():
                     ignore[word][pos][note].append(gloss)
 
         return ignore
+
+    @staticmethod
+    def load_sentence_selector(sentences, preferred, forced, ignored, tagfixes):
+        sentences = SpanishSentences(
+            sentences=sentences,
+            ignored=ignored,
+            tagfixes=tagfixes,
+        )
+
+        return SentenceSelector(sentences, preferred, forced)
+
+    def dump_sentences(self, filename):
+        self._sentences.dump_sentences(filename)
 
