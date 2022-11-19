@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 # -*- python-mode -*-
 
+OLD=True
+#OLD=False
+
 import csv
 import genanki
 import html
@@ -74,9 +77,6 @@ class DeckBuilder():
             'ave', 'haba', 'habla', 'hacha', 'hada', 'hambre', 'haya' ]
 
     def __init__(self, wordlist, sentences, ignore, allforms, shortdefs, ngprobs):
-
-        self._words = None
-        self._ignore = {}
 
         self.db_notes = {}
         self.db_timestamps = {}
@@ -1176,8 +1176,6 @@ class DeckBuilder():
         lookups = [[spanish, pos] for pos in all_usage_pos]
         sentences = self._sentences.get_sentences(lookups, 3)
 
-        self._sentences.store_sentences(lookups)
-
         display_pos = self.get_noun_type(usage) if pos == "n" else pos
 
         item = {
@@ -1337,33 +1335,36 @@ class DeckBuilder():
             if not row:
                 continue
 
-            if row["pos"] == "none":
+            pos = row["pos"]
+            if pos == "none":
                 continue
 
-            item_tag = make_tag(row["spanish"], row["pos"])
+            lemma = row["spanish"]
+
+            item_tag = make_tag(lemma, pos)
 
             position = row.get("position", None)
+
             # Negative position indicates that all previous instances of this word should be removed
             if position and position.startswith("-"):
                 self.wordlist_remove(item_tag)
                 continue
 
-            if not self.is_allowed(row["spanish"], row["pos"]):
+            if not self.is_allowed(lemma, pos):
                 continue
 
             # Unless items without sentences are explicitly allowed, make sure word has sentences
-            if "NOSENT" not in allowed_flags and not self._sentences._get_sentences([(row["spanish"], row["pos"])], 1).get("sentences"):
-                #                print("skipping", row["spanish"], row["pos"])
-                continue
-
-#            if row["spanish"] == "huelga general":
-#                print(bool("NOSENT" not in allowed_flags), (not self._sentences.get_sentences([(row["spanish"], row["pos"])], 1)))
-#                print(row)
-#                print("flags", allowed_flags)
-#                print("sent", self._sentences.get_sentences([(row["spanish"], row["pos"])], 1))
-#
-#                exit(1)
-
+            if "NOSENT" not in allowed_flags:
+                if OLD:
+                    sentences, source = self._sentences.get_pos_sentences(lemma, pos, 1)
+                    #sentences, source = self._sentences.sentences.get_sentences(lemma, pos)
+                    if not sentences:
+                    #    #print("skipping", row["spanish"], row["pos"])
+                        continue
+                else:
+                    sentences, source = self._sentences.sentences.get_sentences(lemma, pos)
+                    if not sentences:
+                        continue
 
             if "flags" in row and row["flags"]:
                 flags = set(row["flags"].split("; "))

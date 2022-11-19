@@ -3,6 +3,9 @@ import math
 import sys
 from collections import defaultdict
 
+OLD=True
+#OLD=False
+
 class SentenceSelector():
 
     def __init__(self, sentences, preferred, forced):
@@ -21,7 +24,36 @@ class SentenceSelector():
         for datafile in forced:
             self.load_overrides(datafile, "forced")
 
-    def load_overrides(self, datafile, source):
+    def load_overrides(self, *args):
+        if OLD:
+            self.old_load_overrides(*args)
+        else:
+            self.new_load_overrides(*args)
+
+
+    def new_load_overrides(self, datafile, source):
+        print("loading", datafile, file=sys.stderr)
+        with open(datafile) as infile:
+
+            for line in infile:
+
+                line = line.strip()
+                if line.startswith("#"):
+                    continue
+                word,pos,*forced_pairs = line.split(",")
+
+                ids = []
+                for pair in forced_pairs:
+                    spa_id, eng_id = pair.split(":")
+                    ids.append((spa_id, eng_id))
+
+                self.forced_ids[(word,pos)] = ids
+                self.forced_ids_source[(word,pos)] = source
+                continue
+
+
+    def old_load_overrides(self, datafile, source):
+        print("loading", datafile, file=sys.stderr)
         with open(datafile) as infile:
 
             for line in infile:
@@ -90,13 +122,15 @@ class SentenceSelector():
 
         return sentences, forced_source
 
-    def get_pos_sentences(self, word, pos, limit, seen, allowed_sources):
+    def get_pos_sentences(self, word, pos, limit, seen=None, allowed_sources=[]):
+        if seen is None:
+            seen = set()
 
         forced_sentences, forced_source = self.get_forced_sentences(word, pos, limit, seen)
         if forced_sentences:
             return forced_sentences, forced_source
 
-        sentences, source = self.sentences.get_all_sentences(word, pos, allowed_sources)
+        sentences, source = self.sentences.get_sentences(word, pos, allowed_sources)
         best_sentences = self.select_best_sentences(sentences, limit, seen)
         return best_sentences, source
 
@@ -140,7 +174,30 @@ class SentenceSelector():
 
         return selected
 
-    def _get_sentences(self, items, limit):
+
+    def get_sentences(self, *args):
+        if OLD:
+            return self.old_get_sentences(*args)
+        else:
+            return self.new_get_sentences(*args)
+
+
+    def new_get_sentences(self, items, limit):
+        word, pos = items[0]
+        seen = set()
+        sentences, source = self.get_forced_sentences(word, pos, limit, seen)
+
+#        print(len(self.forced_ids), self.forced_ids.get((word, pos)))
+#        print(word, pos, [(s.spa_id, s.spanish) for s in sentences])
+#        exit(1)
+
+        if not sentences:
+            return ""
+        return self.format_sentences(sentences)
+
+
+    def old_get_sentences(self, items, limit):
+
 
         all_sentences = {}
         source = None
@@ -161,6 +218,13 @@ class SentenceSelector():
                 if not source:
                     source = pos_source
 
+#            # If the first item doesn't match any sentences, return nothing
+#            if not all_sentences:
+#                return ""
+
+            self.store_sentences(word, pos, pos_sentences, pos_source)
+
+
         # Take the first sentence from each pos, then the second, etc
         # until 'limit' sentences have been selected
         best_sentences = []
@@ -173,32 +237,25 @@ class SentenceSelector():
             if len(best_sentences) == limit:
                   break
 
-        return { "sentences": best_sentences, "matched": source }
+        if not best_sentences:
+            return ""
 
+#        if len(items) > 1:
+#            if len(set([x for x,y in items])) > 1:
+#                with open("get_sentences", "a") as outfile:
+#                    print(items, file=outfile)
 
+        if OLD:
+            word, pos = items[0]
+            with open("sentences.selected", "a") as outfile:
+                ids = [ f"{s.spa_id}:{s.eng_id}" for s in best_sentences ]
+                print(",".join([word,pos] + ids), file=outfile)
 
+#        print(items, [(s.spa_id, s.spanish) for s in best_sentences])
+#        exit(1)
 
-
-
-
-
-
-
-
-
-
-
-
-
-    def get_sentences(self, items, count):
-
-        results = self._get_sentences(items, count)
-        self.store_credits(results)
-
-        if len(results["sentences"]):
-            return self.format_sentences(results["sentences"])
-
-        return ""
+        self.store_credits(best_sentences)
+        return self.format_sentences(best_sentences)
 
     @staticmethod
     def format_sentences(sentences):
@@ -208,8 +265,8 @@ class SentenceSelector():
             for item in sentences
         )
 
-    def store_credits(self, results):
-        for sentence in results["sentences"]:
+    def store_credits(self, sentences):
+        for sentence in sentences:
             spa_user = sentence.spa_user
             eng_user = sentence.eng_user
             spa_id = sentence.spa_id
@@ -247,28 +304,23 @@ class SentenceSelector():
                     outfile.write(f"{user} #{', #'.join(sorted(sentences))}\n")
 
 
+    def store_sentences(self, word, pos, sentences, source):
 
+        if source not in ("preferred", "exact") and " " not in word:
+            return
 
-    def store_sentences(self, lookups):
+        if not sentences or len(sentences) != 3:
+            return
 
-        for word, pos in lookups:
-            tag = (word, pos)
-            if tag in self.dumpable_sentences:
-                continue
+        if not all(sentence.score >= 55 for sentence in sentences):
+            return
 
-            results = self._get_sentences([[word, pos]], 3)
-            if not results:
-                continue
+        tag = (word, pos)
+        if tag in self.dumpable_sentences:
+            return
 
-            if results["matched"] not in ("preferred", "exact") and " " not in word:
-                continue
-
-            if len(results["sentences"]) != 3:
-                continue
-
-            if all(sentence.score >= 55 for sentence in results["sentences"]):
-                ids = [ f"{sentence.spa_id}:{sentence.eng_id}" for sentence in results["sentences"] ]
-                self.dumpable_sentences[tag] = ids
+        ids = [ f"{s.spa_id}:{s.eng_id}" for s in sentences ]
+        self.dumpable_sentences[tag] = ids
 
 
     # (spanish, english, score, spa_id, eng_id)
@@ -276,6 +328,7 @@ class SentenceSelector():
 
         try:
             with open(filename, "r") as dumpfile:
+                # TODO: this seek probably does nothing
                 dumpfile.seek(0)
                 for line in dumpfile:
                     line = line.strip()

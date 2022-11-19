@@ -214,7 +214,7 @@ class SpanishSentences:
     def has_lemma(self, lemma, pos, spa_id):
         return any(self.dbcon.execute("SELECT * FROM lemmas WHERE lemma=? AND POS=? and spa_id=? LIMIT 1", (lemma,pos,spa_id)))
 
-    def get_all_sentences(self, lookup, pos, allowed_sources):
+    def get_sentences(self, lookup, pos, allowed_sources=[]):
         """Returns [sentences], "source" """
 
         sentences = []
@@ -224,16 +224,16 @@ class SpanishSentences:
         if " " in lookup:
             pos = "phrase"
 
-        if "exact" in allowed_sources:
+        if not allowed_sources or "exact" in allowed_sources:
             source = "exact"
             sentences = self.get_sentences_with_lemma(lookup, pos)
 
-        if not sentences and pos != "phrase" and "phrase" in allowed_sources:
+        if not sentences and pos != "phrase" and (not allowed_sources or "phrase" in allowed_sources):
             source = "phrase"
             phrase_pos = "phrase-" + pos
             sentences = self.get_sentences_with_lemma(lookup, phrase_pos)
 
-        if not sentences and "literal" in allowed_sources:
+        if not sentences and (not allowed_sources or "literal" in allowed_sources):
             source = "literal"
 
             if pos == "phrase":
@@ -269,8 +269,6 @@ class SpanishSentences:
         row = next(self.dbcon.execute(query, (spa_id,)), None)
         if row:
             return Sentence(row)
-
-
 
 class Sentence():
     def __init__(self, row):
