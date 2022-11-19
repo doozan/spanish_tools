@@ -218,7 +218,14 @@ class SentenceBuilder():
 
         # fix for freeling not generating lemmas for verbs with a pronoun suffix
         elif pos == "v":
-            if not lemma.endswith("r"):
+            if lemma.endswith("r"):
+                # Prefer our verbs unless it adds ambiguity
+                # Fixes cases where wiktionary has lemma at arrepentirse but freeling
+                # uses arrpepentir
+                new_lemma = self.get_lemmas(word, pos)
+                if "|" not in new_lemma:
+                    lemma = new_lemma
+            else:
                 lemma = self.get_lemmas(word, pos)
 
 
