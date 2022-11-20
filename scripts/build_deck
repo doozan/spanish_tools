@@ -84,6 +84,7 @@ def build_deck(params=None):
         "--custom-dir",
         help="Directory containing dictionary customizations (DEFAULT: SPANISH_CUSTOM_DIR environment variable or 'spanish_custom')",
     )
+    parser.add_argument("--allowlist", help="Restrict to only the word,pos combinations in the given file")
     parser.add_argument("--low-mem", help="Use less memory", action='store_true', default=False)
     args = parser.parse_args(params)
 
@@ -144,7 +145,9 @@ def build_deck(params=None):
 
     ngprobs = NgramPosProbability(args.ngprobs, args.ngcase)
 
-    deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs, ngprobs)
+    allow = DeckBuilder.load_allow(args.allowlist) if args.allowlist else None
+
+    deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs, ngprobs, allow)
     deck.load_wordlists(args.wordlist, args.allow_flag)
     deck.compile(args.model, args.deckfile, args.deck_name, args.deck_guid, args.deck_desc, args.mediadir, args.limit, args.anki, args.tag)
 

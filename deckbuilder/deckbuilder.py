@@ -76,7 +76,7 @@ class DeckBuilder():
             'app', 'arca', 'área', 'arma', 'arpa', 'asa', 'asma', 'aspa', 'asta', 'aula',
             'ave', 'haba', 'habla', 'hacha', 'hada', 'hambre', 'haya' ]
 
-    def __init__(self, wordlist, sentences, ignore, allforms, shortdefs, ngprobs):
+    def __init__(self, wordlist, sentences, ignore, allforms, shortdefs, ngprobs, allow=None):
 
         self.db_notes = {}
         self.db_timestamps = {}
@@ -100,6 +100,7 @@ class DeckBuilder():
         self._shortdefs = shortdefs
         self.all_forms = allforms
         self.ngprobs = ngprobs
+        self.allow = allow
 
     def filter_gloss(self, wordobj, sense, filter_gloss=None):
         word = wordobj.word
@@ -1161,7 +1162,7 @@ class DeckBuilder():
 
         seen_tag = "|".join(sorted([d for d in deck_syns if d != "..."]) + sorted([d for d in defs if d != "..."]))
         if seen_tag in self.seen_hints:
-            eprint(f"Warning: {seen_tag} is used by {item_tag} and {self.seen_hints[seen_tag]}, adding syn")
+            eprint(f"Auto-syn: {seen_tag} is used by {item_tag} and {self.seen_hints[seen_tag]}, adding syn")
             deck_syns.insert(0, self.seen_hints[seen_tag].split(":")[1])
         else:
             self.seen_hints[seen_tag] = item_tag
@@ -1322,6 +1323,30 @@ class DeckBuilder():
 
         return word in self.allowed_proper_nouns
 
+    @staticmethod
+    def load_allow(filename):
+        with open(filename) as data:
+            allowed = set()
+            csvreader = csv.DictReader(data)
+            for reqfield in ["pos", "spanish"]:
+                if reqfield not in csvreader.fieldnames:
+                    raise ValueError(f"No '{reqfield}' field specified in wordlist")
+
+            for row in csvreader:
+                if not row:
+                    continue
+
+                pos = row["pos"]
+                if pos == "none":
+                    continue
+
+                lemma = row["spanish"]
+
+                allowed.add((lemma,pos))
+
+        return allowed
+
+
     def load_wordlist(self, data, allowed_flags, limit=0, metadata=None):
         # data is an iterator that provides csv formatted data
 
@@ -1351,6 +1376,9 @@ class DeckBuilder():
                 continue
 
             if not self.is_allowed(lemma, pos):
+                continue
+
+            if "USELIST" in allowed_flags and (lemma, pos) not in self.allow:
                 continue
 
             # Unless items without sentences are explicitly allowed, make sure word has sentences
