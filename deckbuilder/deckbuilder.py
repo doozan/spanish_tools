@@ -1,9 +1,6 @@
 #!/usr/bin/python3
 # -*- python-mode -*-
 
-OLD=True
-#OLD=False
-
 import csv
 import genanki
 import html
@@ -1171,11 +1168,7 @@ class DeckBuilder():
 
         sound = get_speech(tts_data["voice"], tts_data["phrase"], mediadir)
 
-        all_usage_pos = []
-        [all_usage_pos.append(w["pos"]) for ety in usage for w in ety["words"] if w["pos"] not in all_usage_pos]
-
-        lookups = [[spanish, pos] for pos in all_usage_pos]
-        sentences = self._sentences.get_sentences(lookups, 3)
+        sentences = self._sentences.get_sentences(spanish, pos, 3)
 
         display_pos = self.get_noun_type(usage) if pos == "n" else pos
 
@@ -1383,16 +1376,9 @@ class DeckBuilder():
 
             # Unless items without sentences are explicitly allowed, make sure word has sentences
             if "NOSENT" not in allowed_flags:
-                if OLD:
-                    sentences, source = self._sentences.get_pos_sentences(lemma, pos, 1)
-                    #sentences, source = self._sentences.sentences.get_sentences(lemma, pos)
-                    if not sentences:
-                    #    #print("skipping", row["spanish"], row["pos"])
-                        continue
-                else:
-                    sentences, source = self._sentences.sentences.get_sentences(lemma, pos)
-                    if not sentences:
-                        continue
+                sentences, source = self._sentences.sentences.get_sentences(lemma, pos)
+                if not sentences:
+                    continue
 
             if "flags" in row and row["flags"]:
                 flags = set(row["flags"].split("; "))

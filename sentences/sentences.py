@@ -29,8 +29,7 @@ class SpanishSentences:
         if must_init_db:
             self._init_db(sentences, ignored, tagfixes)
 
-        print("sentences loaded")
-
+        print("sentences loaded", file=sys.stderr)
 
     def _init_db(self, sentences, ignored, tagfixes):
         print("initalizing sentences database", file=sys.stderr)
@@ -127,7 +126,6 @@ class SpanishSentences:
     @classmethod
     def get_database_filename(cls, sentences, *modfiles):
         allfiles = [f for files in modfiles for f in files]
-        print(allfiles)
         files = sentences + "::" + "::".join(sorted(allfiles))
         hash_obj = hashlib.sha1(bytes(files, "utf-8"))
         cid = str(base64.b32encode(hash_obj.digest()), "utf-8")

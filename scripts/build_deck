@@ -151,9 +151,6 @@ def build_deck(params=None):
     deck.load_wordlists(args.wordlist, args.allow_flag)
     deck.compile(args.model, args.deckfile, args.deck_name, args.deck_guid, args.deck_desc, args.mediadir, args.limit, args.anki, args.tag)
 
-    if args.dump_sentence_ids:
-        deck.dump_sentences(args.dump_sentence_ids)
-
     if args.dump_notes:
         with open(args.dump_notes, "w", newline="") as outfile:
             csvwriter = csv.writer(outfile)
@@ -181,7 +178,6 @@ def build_deck(params=None):
 
             if len(changes):
                 print(f'{len(changes)} words added/subtracted, {len(deck.db_notes)} items in db, {len(deck.notes)} items in deck')
-
 
     if args.dump_credits:
         deck.dump_credits(args.dump_credits)
