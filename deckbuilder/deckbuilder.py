@@ -71,7 +71,7 @@ class DeckBuilder():
     el_f_nouns = [ 'abra', 'acta', 'afta', 'ágora', 'agua', 'águila', 'ala', 'alba', 'alca',
             'álgebra', 'alma', 'alta', 'alza', 'ama', 'ancla', 'áncora', 'ánima', 'ansia',
             'app', 'arca', 'área', 'arma', 'arpa', 'asa', 'asma', 'aspa', 'asta', 'aula',
-            'ave', 'haba', 'habla', 'hacha', 'hada', 'hambre', 'haya' ]
+            'aura', 'ave', 'haba', 'habla', 'hacha', 'hada', 'hambre', 'haya' ]
 
     def __init__(self, wordlist, sentences, ignore, allforms, shortdefs, ngprobs, allow=None):
 
