@@ -431,18 +431,18 @@ class FrequencyList():
         Return a list of lemma objects
         """
 
+        # workaround for "part"/"v" splits
+        # "abierto" is "part", but its lemma "abrir" is "v"
+        # Use "part" above to get the list of lemmas, then use "v" below to filter the lemmas
+        if filter_pos == "part":
+            filter_pos = "v"
+
         unresolved = self.get_unresolved_items(form, filter_pos)
         self.debug(form, "get_preferred_lemmas", filter_word, filter_pos)
         self.debug(form, "  unresolved items", [(l.word, l.pos, formtypes) for l, formtypes in unresolved])
         if not unresolved:
             self.debug("  no unresolved items, using get_all_lemmas instead")
             unresolved = [(item, None) for item in self.get_all_lemmas(form, filter_pos)]
-
-        # workaround for "part"/"v" splits
-        # "abierto" is "part", but its lemma "abrir" is "v"
-        # Use "part" above to get the list of lemmas, then use "v" below to filter the lemmas
-        if filter_pos == "part":
-            filter_pos = "v"
 
         if not unresolved and self.allforms.get_lemmas(form, filter_pos):
             print("No matching lemmas", form, filter_pos, self.allforms.get_lemmas(form, filter_pos), file=sys.stderr)
