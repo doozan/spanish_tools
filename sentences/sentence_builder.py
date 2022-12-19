@@ -13,10 +13,12 @@ Sentence = namedtuple("Sentence", [ "english", "spanish", "credits", "eng_id", "
 
 class SentenceBuilder():
 
-    def __init__(self, allforms, freq, ngramdb, ignored_phrases=[]):
+    def __init__(self, allforms, freq, ngramdb, word_min=5, word_max=15, ignored_phrases=[]):
         self.allforms = allforms
         self.freq = freq
         self.ngramdb = ngramdb
+        self.min = word_min
+        self.max = word_max
 
         self.ignored_phrases = ignored_phrases
 
@@ -120,7 +122,7 @@ class SentenceBuilder():
                 end = start+size
                 sentence_phrase = " ".join(words[start:end])
 
-                lemma = self.all_phrases[size].get(sentence_phrase)
+                lemma = self.all_phrases.get(size, {}).get(sentence_phrase)
                 if lemma:
                     if self.matches_c12n(sentence_phrase, case_words[start:end]):
                         phrases.append(Phrase(sentence_phrase,lemma,start,end))
@@ -341,19 +343,19 @@ class SentenceBuilder():
         eng_id, eng_user, spa_id, spa_user = cls.parse_credits(credits)
         return Sentence(english, spanish, credits, int(eng_id), eng_user, int(eng_score), int(spa_id), spa_user, int(spa_score))
 
-    @classmethod
-    def iter_sentences(cls, filename):
+    def iter_sentences(self, filename):
 
         seen = set()
         with open(filename) as infile:
             for line in infile:
-                sentence = cls.get_sentence(line.strip())
+                sentence = self.get_sentence(line.strip())
 
-                wordcount = len(sentence.spanish.split())
+                if self.max or self.min:
+                    wordcount = len(sentence.spanish.split())
 
-                # ignore sentences with less than 6 or more than 15 spanish words
-                if wordcount < 5 or wordcount > 15:
-                    continue
+                    # ignore sentences with less than 6 or more than 15 spanish words
+                    if wordcount < self.min or wordcount > self.max:
+                         continue
 
                 # ignore duplicates
                 if sentence.spa_id in seen:
@@ -457,7 +459,7 @@ class SentenceBuilder():
             if not count % 1000 and verbose:
                 print(count, end="\r", file=sys.stderr)
 
-            sentence_tags = self.get_sentence_tags(sentence, tag_data)
+            sentence_tags = self.get_sentence_tags(sentence.spanish, tag_data)
 #            uniqueid = self.get_fingerprint(sentence_tags)
 #            if uniqueid in seen:
 #                continue
@@ -541,6 +543,7 @@ class SentenceBuilder():
         "VAP0": 0, # 119
         "VASI": 0, # 488
         "VASP": 0, # 434
+        "VASF": 0, # 0
 
         "VSG0": 0, # 174
         "VSIC": 0, # 313
@@ -582,23 +585,23 @@ class SentenceBuilder():
                         max_rank = rank
         return max_rank
 
-    def get_sentence_tags(self, sentence, tags):
+    def get_sentence_tags(self, spanish, tags):
 
         # Get phrases in sentences
         # Get phrase offsets
-        phrases = self.get_phrases(sentence.spanish)
+        phrases = self.get_phrases(spanish)
 
         # Discard interjection phrases that don't look like interjections
         phrases = [p for p in phrases if
             any(pos != "interj" for pos in self.allforms.get_form_pos(p.lemma))
-            or self.has_interjection(p.form, sentence.spanish)]
+            or self.has_interjection(p.form, spanish)]
 
-        all_tags = self.get_all_tags(sentence.spanish, tags, phrases)
-        all_tags += self.get_phrase_tags(all_tags, sentence.spanish, phrases)
-        all_tags = self.tag_interjections(all_tags, sentence.spanish)
+        all_tags = self.get_all_tags(spanish, tags, phrases)
+        all_tags += self.get_phrase_tags(all_tags, spanish, phrases)
+        all_tags = self.tag_interjections(all_tags, spanish)
 
         grouped_tags = self.group_tags(all_tags)
-#        interj = self.get_interjections(sentence.spanish)
+#        interj = self.get_interjections(spanish)
 #        if interj:
 #            grouped_tags["interj"] = list(map(str.lower, interj))
 

@@ -14,6 +14,7 @@ locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
 class SpanishSentences:
 
     def __init__(self, sentences, ignored, tagfixes):
+        self._all_spanish = None
 
         dbfilename = self.get_database_filename(sentences, ignored, tagfixes)
         if os.path.exists(dbfilename) and self.is_database_expired(dbfilename, sentences, ignored, tagfixes):
@@ -38,8 +39,12 @@ class SpanishSentences:
         self.dbcon.execute('''CREATE TABLE spanish_english(spa_id INTEGER PRIMARY KEY REFERENCES sentences, eng_id INT REFERENCES sentences)''')
 
         self.dbcon.execute('''CREATE TABLE spanish_grep(spa_id INTEGER PRIMARY KEY REFERENCES sentences, text TEXT)''')
+
         self.dbcon.execute('''CREATE TABLE lemmas(lemma TEXT, pos TEXT, spa_id INTEGER REFERENCES sentences, UNIQUE(lemma, pos, spa_id))''')
+        self.dbcon.execute('''CREATE INDEX idx__lemmas__spa_id ON lemmas(spa_id)''')
+
         self.dbcon.execute('''CREATE TABLE forms(form TEXT, pos TEXT, spa_id INTEGER REFERENCES sentences, UNIQUE(form, pos, spa_id))''')
+        self.dbcon.execute('''CREATE INDEX idx__forms__spa_id ON forms(spa_id)''')
 
         self.dbcon.execute('''CREATE TABLE spanish_extra(spa_id INTEGER PRIMARY KEY REFERENCES sentences, verb_score INT)''')
 
@@ -267,6 +272,38 @@ class SpanishSentences:
         row = next(self.dbcon.execute(query, (spa_id,)), None)
         if row:
             return Sentence(row)
+
+    def all_sentences(self):
+        query = """
+        SELECT
+            spa.id as spa_id,
+            spa.sentence as spanish,
+            spa.score as spa_score,
+            spa.user as spa_user,
+            eng.id as eng_id,
+            eng.sentence as english,
+            eng.score as eng_score,
+            eng.user as eng_user,
+            x.*
+        FROM spanish_english AS se
+            JOIN sentences AS spa ON se.spa_id = spa.id
+            JOIN sentences AS eng ON se.eng_id = eng.id
+            JOIN spanish_extra AS x ON se.spa_id = x.spa_id
+        """
+        for row in self.dbcon.execute(query):
+            yield Sentence(row)
+
+    def get_lemmas(self, spa_id):
+        yield from self.dbcon.execute("SELECT lemma, pos FROM lemmas WHERE spa_id = ?", (spa_id,))
+
+    def get_forms(self, spa_id):
+        yield from self.dbcon.execute("SELECT form, pos FROM forms WHERE spa_id = ?", (spa_id,))
+
+    @property
+    def all_spanish(self):
+        if not self._all_spanish:
+            self._all_spanish = set(row[0] for row in self.dbcon.execute("SELECT spa_id FROM spanish_english"))
+        return self._all_spanish
 
 class Sentence():
     def __init__(self, row):
