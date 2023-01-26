@@ -7,52 +7,44 @@ class Hider():
     def obscure(cls, gloss, hide_word):
 
         res = []
-        hidden = []
-        all_hidden = True
+        hidden = False
         for separator, chunk in cls.get_chunks(gloss):
+
             if separator:
                 res.append(separator)
+
             if not chunk:
                 continue
-            if any(cls.should_obscure(word, hide_word) for word in chunk.split()):
-                hidden.append(len(res))
+
+            if cls.should_obscure(chunk, hide_word):
+                hidden = True
+                res.append("...")
             else:
-                all_hidden = False
-            res.append(chunk)
+                res.append(chunk)
 
-        if all_hidden:
+        if not hidden:
+            return gloss
+
+        obscured = "".join(res) + "..."
+
+        if cls.is_fully_hidden(obscured):
             return "..."
 
-        for x in hidden:
-            res[x] = "..."
+        obscured = re.sub(r"\s*\(\.\.\.\)", "", obscured)
 
-        obscured = "".join(res)
-
-        if cls.only_qualifiers(obscured, gloss):
-            return "..."
+        obscured = re.sub(rf"((\.\.\.)[ ,;/]*)*", "", obscured).rstrip(" ,;") + ", ..."
 
         return obscured
 
-    qualifiers = {"US", "UK", "Australia", "person", "place"}
+    # Qualifiers that don't help define a word
+    qualifiers = {"AUS", "US", "UK", "Australia", "person", "place", "language", "material", "currency", "all senses", "tuber", "of", "from"}
+    re_qualifiers = "|".join(qualifiers)
 
     @classmethod
-    def only_qualifiers(cls, text, gloss):
-        # Returns True if text consists of only obscured items, separating characters,
-        # and qualifiers within parenthesis
-
-        stripped = re.sub(r"([,;:/])", " ", text).replace("...", "").strip()
-
-        m = re.match("\([^)]*\)+$", stripped)
-        if not m:
-            return False
-
-        #print("checking", stripped, ":", gloss)
-
-        text_only = re.sub(r"[,;:()/]", "", stripped)
-        for word in text_only.split():
-            if word not in cls.qualifiers:
-                return False
-        return True
+    def is_fully_hidden(cls, text):
+        return bool(re.match(rf"^(\[.*?\])?({cls.re_qualifiers}|[ .,;:/()])*$", text))
+        #stripped = re.sub(r"(\[.*?\]|[(),;:/])*", "", text).replace("...", "").strip()
+        #return not stripped
 
     @staticmethod
     def get_chunks(text):
@@ -70,7 +62,7 @@ class Hider():
         if m:
             if m.group("form") in ["ellipsis", "clipping"]:
                 return True
-            text = group("word")
+            text = m.group("word")
 
         hide_words = set(cls.get_hide_words(hide_word))
         for text_word in text.split():

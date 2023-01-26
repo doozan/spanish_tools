@@ -236,11 +236,11 @@ class DeckBuilder():
 
         if obscured_deck != deck:
             has_obscured = True
-            obscured_deck = [x for x in obscured_deck if x != "..."] + ["..."]
+            obscured_deck = [x for x in obscured_deck if "..." not in x] + ["..."]
 
         if obscured_extra != extra:
             has_obscured = True
-            obscured_extra = [x for x in obscured_extra if x != "..."] + ["..."]
+            obscured_extra = [x for x in obscured_extra if "..." not in x] + ["..."]
 
         if has_obscured:
             return cls.format_syns_html(deck,extra, 'unobscured') \
@@ -593,12 +593,13 @@ class DeckBuilder():
                 hint = sense["gloss"]
             else:
                 hint = Hider.obscure(sense["gloss"], hide_word)
-                if hint == "...":
-                    if first:
-                        hint = sense["gloss"]
-                        skip_hiding = True
 
             hint = cls.shorten_gloss(hint, max_length)
+            if Hider.is_fully_hidden(hint):
+                if first:
+                    hint = cls.shorten_gloss(sense["gloss"], max_length)
+                    skip_hiding = True
+
             sense["hint"] = hint if hint != sense["gloss"] else ""
             first=False
 
