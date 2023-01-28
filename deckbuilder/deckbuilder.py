@@ -1281,6 +1281,7 @@ class DeckBuilder():
 
             all_allowed_flags = allowed_flags.copy()
             limit = 0
+            minuse = 0
             metadata = {}
 
             filename, *options = wordlist.split(";")
@@ -1291,6 +1292,8 @@ class DeckBuilder():
                     all_allowed_flags.append(v)
                 elif k == "limit":
                     limit = int(v)
+                elif k == "minuse":
+                    minuse = int(v)
                 elif k == "tag":
                     if "tags" not in metadata:
                         metadata["tags"] = [v]
@@ -1300,8 +1303,8 @@ class DeckBuilder():
                     raise ValueError(f'Unknown option "{option}" specified in wordlist {wordlist}')
 
             with open(filename, newline="") as csvfile:
-                print("loading", filename, all_allowed_flags, limit, metadata)
-                self.load_wordlist(csvfile, all_allowed_flags, limit, metadata)
+                print("loading", filename, all_allowed_flags, limit, metadata, minuse)
+                self.load_wordlist(csvfile, all_allowed_flags, limit, metadata, minuse)
 
 
 
@@ -1341,7 +1344,7 @@ class DeckBuilder():
         return allowed
 
 
-    def load_wordlist(self, data, allowed_flags, limit=0, metadata=None):
+    def load_wordlist(self, data, allowed_flags, limit=0, metadata=None, minuse=0):
         # data is an iterator that provides csv formatted data
 
         csvreader = csv.DictReader(data)
@@ -1356,6 +1359,9 @@ class DeckBuilder():
 
             pos = row["pos"]
             if pos == "none":
+                continue
+
+            if minuse and minuse > int(row.get("count", 0)):
                 continue
 
             lemma = row["spanish"]
