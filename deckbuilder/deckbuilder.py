@@ -211,22 +211,11 @@ class DeckBuilder():
             return ""
         return f"[sound:{filename}]"
 
-    @staticmethod
-    def format_syns_html(deck, extra, css_class=''):
+    @classmethod
+    def format_syns_html(cls, deck, extra, css_class=''):
 
-        seen_syns = set()
-        valid_deck_syns = []
-        for syn in deck:
-            clean_syn = re.sub("\s*\(.*\)\s*", "", syn)
-            if clean_syn not in seen_syns:
-                valid_deck_syns.append(syn)
-
-        valid_extra_syns = []
-        for syn in extra:
-            clean_syn = re.sub("\s*\(.*\)\s*", "", syn)
-            if clean_syn not in seen_syns:
-                valid_extra_syns.append(syn)
-
+        valid_deck_syns = cls.get_valid_syns(deck, [])
+        valid_extra_syns = cls.get_valid_syns(extra, deck)
 
         if css_class and not css_class.endswith(' '):
             css_class += ' '
@@ -939,7 +928,6 @@ class DeckBuilder():
                     raise ValueError("dup item in auto syns", item_tag, defs, items)
 
                 self.auto_syns[item_tag] = [x for x in items if x != item_tag]
-                print("auto syn", items, pos_defs)
 
 
     def get_synonyms(self, word, pos, limit=5, only_in_deck=True):
@@ -1196,8 +1184,23 @@ class DeckBuilder():
 
         return [item.replace(" ", "-") for item in regions | places | meta_classes]
 
+    @staticmethod
+    def get_valid_syns(syns, existing_syns):
+        valid_syns = []
+        seen_syns = set()
 
+        for syn in existing_syns:
+            clean_syn = re.sub(r"\s*\(.*\)\s*", "", syn)
+            seen_syns.add(clean_syn)
 
+        for syn in syns:
+            clean_syn = re.sub(r"\s*\(.*\)\s*", "", syn)
+
+            if clean_syn not in seen_syns:
+                valid_syns.append(syn)
+                seen_syns.add(clean_syn)
+
+        return valid_syns
 
     def build_item(self, word, pos, mediadir):
         spanish = word.strip()
@@ -1218,10 +1221,10 @@ class DeckBuilder():
             ] if len(deck_syns) < self.MAX_SYNONYMS else []
 
 
-        auto_syns = self.auto_syns.get(item_tag, [])
+        auto_syns = self.get_valid_syns([x.partition(":")[2] for x in self.auto_syns.get(item_tag,[])], deck_syns + extra_syns)
         if auto_syns:
             eprint(f"Auto-syn: {item_tag} display defs match other items, adding auto synonyms: {auto_syns}")
-            deck_syns = [x.split(":")[1] for x in auto_syns] + deck_syns
+            deck_syns = auto_syns + deck_syns
 
         tts_data = self.get_phrase(spanish, usage)
 

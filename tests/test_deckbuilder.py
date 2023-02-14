@@ -1351,3 +1351,6 @@ pos: n
             ], 'noun_type': 'm'} ]}]
 
 
+def test_get_valid_syns():
+    f = DeckBuilder.get_valid_syns
+    assert f(['a', 'a', 'b', 'c'], ['(test) c', 'd']) == ['a', 'b']
