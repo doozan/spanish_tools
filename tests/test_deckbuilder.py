@@ -111,23 +111,19 @@ def test_filters2(ngprobs):
 
     wordlist_data = """\
 test {n-meta} :: x
-test {n-forms} :: pl=tests
 test {m} :: masculine
 test {n-meta} :: x
-test {n-forms} :: pl=tests
 test {f} :: feminine
 """
 
     xwordlist_data = """\
 _____
 test
-  forms: pl=tests
   pos: n
   form: m
   gloss: masculine
 ____
 test
-  forms: pl=tests
   pos: n
   form: f
   gloss: feminine
@@ -149,8 +145,8 @@ test
                 'words': [{
                     'pos': 'n',
                     'senses': [
-                        {'type': 'm', 'gloss': 'masculine', 'hint': ''},
-                        {'type': 'f', 'gloss': 'feminine', 'hint': ''}],
+                        {'can_hide_all': False, 'type': 'm', 'gloss': 'masculine', 'hint': ''},
+                        {'can_hide_all': True, 'type': 'f', 'gloss': 'feminine', 'hint': ''}],
                     'noun_type': 'm-f'
                 }]
             }]
@@ -167,7 +163,7 @@ test
                 'words': [{
                     'pos': 'n',
                     'senses': [
-                        {'gloss': 'masculine', 'hint': ''}],
+                        {'can_hide_all': False, 'gloss': 'masculine', 'hint': ''}],
                     'noun_type': 'm'
                 }]
             }]
@@ -232,12 +228,12 @@ pos: v
         'words': [{
             'pos': 'v',
             'senses': [
-                {'type': 't', 'gloss': 'to conquer', 'hint': ''},
+                {'can_hide_all': False, 'type': 't', 'gloss': 'to conquer', 'hint': ''},
                 {'type': 't', 'gloss': 'to tire, exhaust'},
                 {'tag': 'ditransitive', 'gloss': 'to yield, pay, submit, pass down'},
                 {'type': 'i', 'gloss': 'to vomit'},
                 {'type': 'i', 'gloss': 'to make headway'},
-                {'type': 'r', 'gloss': 'to surrender, give in, give up', 'hint': ''},
+                {'can_hide_all': False, 'type': 'r', 'gloss': 'to surrender, give in, give up', 'hint': ''},
                 {'type': 'r', 'gloss': 'to be paid (homage or tribute)'}]}]}]
 
 '''
@@ -303,7 +299,7 @@ pos: v
             'noun_type': 'mf',
             'note': 'The noun guía is like several other Spanish nouns with a human referent and ending in a.\\nThe masculine articles and adjectives are used when the referent is male or unknown.',
             'senses': [
-                {'gloss': 'guide (person)', 'hint': ''}],
+                {'can_hide_all': False, 'gloss': 'guide (person)', 'hint': ''}],
             }, {
             'pos': 'n',
             'noun_type': 'f',
@@ -378,8 +374,8 @@ pos: n
         'words': [{
             'pos': 'n',
             'senses': [
-                {'gloss': 'defendant (as in a trial)', 'hint': ''},
-                {'gloss': 'delinquent', 'hint': ''}
+                {'can_hide_all': False, 'gloss': 'defendant (as in a trial)', 'hint': ''},
+                {'can_hide_all': True, 'gloss': 'delinquent', 'hint': ''}
                 ],
             'noun_type': 'm/f'
             }, {
@@ -839,13 +835,13 @@ pos: v
         'words': [{
             'pos': 'v',
             'senses': [
-                {'type': 't', 'gloss': 'to return', 'hint': '', 'syns': ['devolver']},
+                {'can_hide_all': False, 'type': 't', 'gloss': 'to return', 'hint': '', 'syns': ['devolver']},
                 {'type': 'i', 'gloss': 'to come back', 'syns': ['regresar', 'retornar', 'volver']},
                 {'type': 't', 'gloss': 'to put back'},
                 {'type': 't', 'gloss': 'to change'},
                 {'type': 'i', 'gloss': 'to do again (+ a + infinitive)'},
                 {'type': 'i', 'gloss': 'to revive (to recover from a state of unconsciousness)'},
-                {'type': 'r', 'gloss': 'to become (e.g. change in a characteristic, nature of something or status)', 'hint': 'to become'}
+                {'can_hide_all': False, 'type': 'r', 'gloss': 'to become (e.g. change in a characteristic, nature of something or status)', 'hint': 'to become'}
                 ]
             }]
         }]
@@ -883,9 +879,10 @@ pos: n
         'words': [{
             'pos': 'n',
             'noun_type': 'm-f',
-            'senses': [{
-                'type': 'f', 'gloss': 'anger', 'hint': '', 'syns': ['rabia']},{
-                'type': 'm', 'gloss': 'cholera', 'hint': '...'}],
+            'senses': [
+                { 'can_hide_all': False, 'type': 'f', 'gloss': 'anger', 'hint': '', 'syns': ['rabia']},
+                { 'can_hide_all': True, 'type': 'm', 'gloss': 'cholera', 'hint': '...'}
+                ],
              }]
         }]
 
@@ -958,7 +955,9 @@ pos: n
             'pos': 'n',
             'noun_type': 'm/f',
             'senses': [{
+                'can_hide_all': False,
                 'gloss': 'a dark-skinned or tan person', 'hint': ''}, {
+                'can_hide_all': True,
                 'gloss': 'a person with dark-hair', 'hint': ''}],
             }, {
             'pos': 'adj',
@@ -999,8 +998,8 @@ pos: n
             'pos': 'n',
             'noun_type': 'm',
             'senses': [
-                {'tag': 'Latin America', 'gloss': 'deer, stag', 'hint': '', 'syns': ['ciervo'] },
-                {'gloss': 'venison', 'hint': ''},
+                {'can_hide_all': False, 'tag': 'Latin America', 'gloss': 'deer, stag', 'hint': '', 'syns': ['ciervo'] },
+                {'can_hide_all': True, 'gloss': 'venison', 'hint': ''},
                 {'tag': 'colloquial', 'gloss': 'cuckold, deceived husband or partner', 'syns': ['cornudo'] }],
             }]
         }]
@@ -1038,10 +1037,12 @@ pos: v
         'words': [{
             'pos': 'v',
             'senses': [{
+                'can_hide_all': False,
                 'type': 'tr',
                 'gloss': 'to wrap up (to put on abundant clothing)',
                 'hint': '',
                 },{
+                'can_hide_all': True,
                 'gloss': 'to cover',
                 'hint': '',
                 }, {
@@ -1120,9 +1121,9 @@ pos: n
             'pos': 'n',
             'noun_type': 'm/f',
             'senses': [
-                {'type': 'm', 'gloss': 'crybaby, whiner', 'hint': ''},
-                {'type': 'f', 'tag': 'folklore', 'gloss': 'weeping woman (from the Latin American folkloric legend La Llorona)', 'hint': 'weeping woman (...)'},
-                {'type': 'f', 'tag': 'informal', 'gloss': 'banshee (in general, by extension of the legend)'}],
+                { 'can_hide_all': False, 'type': 'm', 'gloss': 'crybaby, whiner', 'hint': ''},
+                { 'can_hide_all': True, 'type': 'f', 'tag': 'folklore', 'gloss': 'weeping woman (from the Latin American folkloric legend La Llorona)', 'hint': 'weeping woman, ...'},
+                { 'type': 'f', 'tag': 'informal', 'gloss': 'banshee (in general, by extension of the legend)'}],
             }, {
             'pos': 'adj',
             'senses': [
@@ -1136,7 +1137,7 @@ pos: n
 <span class="pos n m"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">m</span><span class="gloss">crybaby, whiner</span></span>
 <span class="pos n hint m"><span class="pos_tag pos_tag_primary">m/f</span><span class="gloss">crybaby, whiner</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">f, folklore</span><span class="gloss">weeping woman (from the Latin American folkloric legend La Llorona)</span></span>
-<span class="pos n hint f"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">folklore</span><span class="gloss">weeping woman (...)</span></span>
+<span class="pos n hint f"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">folklore</span><span class="gloss">weeping woman, ...</span></span>
 <span class="pos n f"><span class="pos_tag pos_tag_primary">m/f</span><span class="qualifier">f, informal</span><span class="gloss">banshee (in general, by extension of the legend)</span></span>
 <span class="pos adj"><span class="pos_tag">adj</span><span class="gloss">sniveling, weeping, whiny</span></span>
 </div>
@@ -1186,8 +1187,8 @@ pos: n
             'pos': 'n',
             'noun_type': 'm',
             'senses': [
-                {'gloss': 'flow', 'hint': ''},
-                {'gloss': 'volume', 'hint': ''},
+                {'can_hide_all': False, 'gloss': 'flow', 'hint': ''},
+                {'can_hide_all': True, 'gloss': 'volume', 'hint': ''},
                 {'gloss': 'funds'}],
             }]
             }, {
@@ -1238,7 +1239,7 @@ pos: n
         'ety': 'From Latin "similitūdō" (“likeness, similarity”).',
         'words': [{
             'pos': 'n', 'senses': [
-                {'gloss': 'similarity, similitude', 'hint': '', 'syns': ['test1', 'Thesaurus:test2']}],
+                {'can_hide_all': False, 'gloss': 'similarity, similitude', 'hint': '', 'syns': ['test1', 'Thesaurus:test2']}],
             'noun_type': 'f'}]}]
 
     print("\n\n")
@@ -1278,8 +1279,8 @@ pos: adj
         'words': [{
             'pos': 'adj',
             'senses': [
-                {'gloss': 'crazy, insane', 'syns': ['loco', 'trastornado'], 'hint': ''},
-                {'gloss': 'demented', 'hint': '...'}]}]}]
+                {'can_hide_all': False, 'gloss': 'crazy, insane', 'syns': ['loco', 'trastornado'], 'hint': ''},
+                {'can_hide_all': True, 'gloss': 'demented', 'hint': '...'}]}]}]
 
 
 def test_partidario(ngprobs):
@@ -1313,7 +1314,40 @@ pos: n
         'words': [{
             'pos': 'n',
             'senses': [
-                {'gloss': 'supporter, partisan', 'hint': 'supporter, ...'}],
+                {'can_hide_all': False, 'gloss': 'supporter, partisan', 'hint': 'supporter, ...'}],
             'noun_type': 'm/f'},
             ]}]
+
+
+def test_estrago(ngprobs):
+
+    wordlist_data = """\
+_____
+estrago
+pos: n
+  meta: {{es-noun|m}}
+  g: m
+  etymology: Deverbal of "estragar".
+  gloss: damage, destruction
+  gloss: corruption
+  gloss: havoc
+    q: in the plural
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = None
+    ignore = []
+    allforms = AllForms.from_wordlist(wordlist)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
+
+    usage = deck.get_usage("estrago", "n")
+    print(usage)
+    assert usage == [{
+        'ety': 'Deverbal of "estragar".', 
+        'words': [{'pos': 'n', 'senses': [
+            {'can_hide_all': False, 'gloss': 'damage, destruction', 'hint': ''},
+            {'gloss': 'corruption'},
+            {'can_hide_all': False, 'tag': 'in the plural', 'gloss': 'havoc', 'hint': ''}
+            ], 'noun_type': 'm'} ]}]
+
 

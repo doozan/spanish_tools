@@ -30,14 +30,16 @@ class Hider():
         if cls.is_fully_hidden(obscured):
             return "..."
 
+        # remove " (...)"
         obscured = re.sub(r"\s*\(\.\.\.\)", "", obscured)
 
+        # remove "...[separator] "
         obscured = re.sub(rf"((\.\.\.)[ ,;/]*)*", "", obscured).rstrip(" ,;") + ", ..."
 
         return obscured
 
     # Qualifiers that don't help define a word
-    qualifiers = {"AUS", "US", "UK", "Australia", "person", "place", "language", "material", "currency", "all senses", "tuber", "of", "from"}
+    qualifiers = {"AUS", "US", "UK", "Australia", "person", "place", "language", "material", "currency", "all senses", "tuber", "of .*?", "from .*?"}
     re_qualifiers = "|".join(qualifiers)
 
     @classmethod

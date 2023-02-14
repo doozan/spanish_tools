@@ -555,6 +555,9 @@ class DeckBuilder():
         def is_reflexive(sense_data):
             return any(x in sense_data.get("type","") for x in ["r","p"])
 
+        def is_plural(sense_data):
+            return "plural" in sense_data.get("tag","")
+
         if not usage:
             return
 
@@ -562,32 +565,47 @@ class DeckBuilder():
 
         pos_data = usage[0]["words"][0]
 
-        short_senses = [ pos_data["senses"][0] ]
+        sense = pos_data["senses"][0]
+        sense["can_hide_all"] = False
+        short_senses = [ sense ]
 
         # If a noun has male/female words, try to take a gloss from each
         if pos_data["pos"] == "n" and pos_data.get("noun_type") in ["m-f","m/f"]:
             for sense in pos_data["senses"][1:]:
                 if sense.get("type") != short_senses[0].get("type"):
+                    sense["can_hide_all"] = True
+                    short_senses.append(sense)
+                    break
+
+        elif pos_data["pos"] == "n" and not is_plural(short_senses[0]):
+            for sense in pos_data["senses"][1:]:
+                if is_plural(sense):
+                    sense["can_hide_all"] = False
                     short_senses.append(sense)
                     break
 
         # If it's a verb and the first sense is not reflexive, search for a sense that is reflexive
-        if pos_data["pos"] == "v" and not is_reflexive(short_senses[0]):
+        elif pos_data["pos"] == "v" and not is_reflexive(short_senses[0]):
             for sense in pos_data["senses"][1:]:
                 if is_reflexive(sense):
+                    sense["can_hide_all"] = False
                     short_senses.append(sense)
                     break
 
         if len(short_senses) == 1 and len(pos_data["senses"]) > 1:
-            short_senses.append(pos_data["senses"][1])
+            sense = pos_data["senses"][1]
+            sense["can_hide_all"] = True
+            short_senses.append(sense)
+
+        # TODO: Include all POS for multi-word lemmas
 
         self.add_sense_hints(short_senses, hide_word, max_length)
 
     @classmethod
     def add_sense_hints(cls, senses, hide_word, max_length):
-        first = True
         skip_hiding = False
         for sense in senses:
+            can_hide_all = sense["can_hide_all"]
 
             if skip_hiding:
                 hint = sense["gloss"]
@@ -596,12 +614,11 @@ class DeckBuilder():
 
             hint = cls.shorten_gloss(hint, max_length)
             if Hider.is_fully_hidden(hint):
-                if first:
+                if not can_hide_all:
                     hint = cls.shorten_gloss(sense["gloss"], max_length)
                     skip_hiding = True
 
             sense["hint"] = hint if hint != sense["gloss"] else ""
-            first=False
 
     @staticmethod
     def get_verb_type_and_tag(qualifier):
@@ -942,54 +959,44 @@ class DeckBuilder():
             if self.ngprobs.get_usage_count(plural, "n") > self.ngprobs.get_usage_count(word, "n"):
                 return plural
 
-    def has_plural_gloss(self, usage):
+    def has_any_plural_gloss(self, usage):
         for word in usage[0]["words"]:
             if word["pos"] != "n":
                 continue
-            if any("plural" in sense.get("tag", "") for sense in word["senses"]):
-                return True
+            return any("plural" in sense.get("tag", "") for sense in word["senses"])
 
-    def has_primary_plural_gloss(self, usage):
-        return usage[0]["words"][0]["pos"] == "n" and "plural" in usage[0]["words"][0]["senses"][0].get("tag","")
+    def has_all_plural_gloss(self, usage):
+        for word in usage[0]["words"]:
+            if word["pos"] != "n":
+                continue
+            return all("plural" in sense.get("tag", "") for sense in word["senses"])
 
     def include_plural_form(self, word, gender, usage):
         # formats a noun with an article, includes the plural form if usually plural
 
         if gender == "f":
-            s = f"el {word}" if word in self.el_f_nouns else f"la {word}"
-            plural = self.get_usually_plural(word)
-            if plural:
-#                print(["WWWWW", "las " + plural, s])
-                return ["las " + plural, s]
-            if self.has_primary_plural_gloss(usage):
-                plural = self.get_plurals(word)[0]
-                print(["XXXXXX", "las " + plural, s])
-                return ["las " + plural, s]
-            if self.has_plural_gloss(usage):
-                plurals = self.get_plurals(word)
-                if not plurals:
-                    return [s]
-                print(["HHHHHH", s, "las " + plurals[0]])
-                return [s, "las " + plurals[0]]
-
-            return [s]
+            art = "el" if word.split()[0] in self.el_f_nouns else "la"
+            pl_art = "las"
         else:
-            s = f"el {word}"
-            plural = self.get_usually_plural(word)
-            if plural:
-#                print(["WWWWW", "los " + plural, s])
-                return ["los " + plural, s]
-            if self.has_primary_plural_gloss(usage):
-                plural = self.get_plurals(word)[0]
-                print(["XXXXXX", "los " + plural, s])
-                return ["los " + plural, s]
-            if self.has_plural_gloss(usage):
-                plurals = self.get_plurals(word)
-                if not plurals:
-                    return [s]
-                print(["HHHHHH", s, "los " + plurals[0]])
-                return [s, "los " + plurals[0]]
-            return [s]
+            art = "el"
+            pl_art = "los"
+
+        # If it's usually plural, put the plural first
+        pl_word = self.get_usually_plural(word)
+        if pl_word:
+            if self.has_all_plural_gloss(usage):
+                return [f"{pl_art} {pl_word}"]
+            else:
+                return [f"{pl_art} {pl_word}", f"{art} {word}"]
+
+        # If it has a plural-only sense, include the plural
+        if self.has_any_plural_gloss(usage):
+            plurals = self.get_plurals(word)
+            if plurals:
+                pl_word = plurals[0]
+                return [f"{art} {word}", f"{pl_art} {pl_word}"]
+
+        return [f"{art} {word}"]
 
     def get_noun_phrase(self, word, usage):
         voice = ""
@@ -1004,7 +1011,7 @@ class DeckBuilder():
         if femforms:
             voice = self._MALE1
 
-            items = [f"el {f}" if f in self.el_f_nouns else f"la {f}" for f in femforms]
+            items = [f"el {f}" if f.split()[0] in self.el_f_nouns else f"la {f}" for f in femforms]
             items.append(f"el {word}")
             phrase = ". ".join(items)
             display = "/".join(items)

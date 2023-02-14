@@ -18,6 +18,7 @@ def test_obscured():
 
     assert o('test (a better def)', "test") == '(a better def), ...'
     assert o('blah (test), blah', "test") == 'blah, blah, ...'
+    assert o('test (of a thing)', "test") == '...'
 
     assert o('test, test', "test") == '...'
     assert o('blah, plural of "test"', "test") == 'blah, ...'
