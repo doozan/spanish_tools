@@ -4,7 +4,7 @@ from Levenshtein import distance as fuzzy_distance
 class Hider():
 
     @classmethod
-    def obscure(cls, gloss, hide_word):
+    def obscure(cls, gloss, hide_words):
 
         res = []
         hidden = False
@@ -16,7 +16,7 @@ class Hider():
             if not chunk:
                 continue
 
-            if cls.should_obscure(chunk, hide_word):
+            if cls.should_obscure(chunk, hide_words):
                 hidden = True
                 res.append("...")
             else:
@@ -59,16 +59,16 @@ class Hider():
                 separator = chunk
 
     @classmethod
-    def should_obscure(cls, text, hide_word):
+    def should_obscure(cls, text, hide_words):
         m = re.match(r'\w*(?P<form>apocopic form|diminutive|ellipsis|clipping|superlative|plural) of "(?P<word>.*?)"', text)
         if m:
             if m.group("form") in ["ellipsis", "clipping"]:
                 return True
             text = m.group("word")
 
-        hide_words = set(cls.get_hide_words(hide_word))
+        all_hide_words = set(cls.get_hide_words(hide_words))
         for text_word in text.split():
-            if any(cls.words_match(text_word, word) for word in hide_words):
+            if any(cls.words_match(text_word, word) for word in all_hide_words):
                 return True
 
         return False
@@ -118,19 +118,20 @@ class Hider():
             "como", "que", "una", "uno", "con"]
 
     @classmethod
-    def get_hide_words(cls, hide_word):
-        hide_word = hide_word.replace("-", " ")
-        for word in hide_word.split():
-            if word in cls.ignore_spanish_words:
-                continue
-            yield word
-
-            norm_word = cls.normalize(word)
-            if norm_word != word:
-                yield norm_word
-
-            for word in cls.anglicise(norm_word):
+    def get_hide_words(cls, hide_words):
+        for hide_word in hide_words:
+            hide_word = hide_word.replace("-", " ")
+            for word in hide_word.split():
+                if word in cls.ignore_spanish_words:
+                    continue
                 yield word
+
+                norm_word = cls.normalize(word)
+                if norm_word != word:
+                    yield norm_word
+
+                for word in cls.anglicise(norm_word):
+                    yield word
 
     three_letter_english = ["ago","all","and","any","are","bad","bed","big","bit","boy","but","buy","bye",
             "can","car","cut","dad","day","did","die","eat","far","for","fun","get","got","had","has",

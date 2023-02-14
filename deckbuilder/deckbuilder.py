@@ -243,9 +243,9 @@ class DeckBuilder():
         return deck_str + extra_str
 
     @classmethod
-    def format_syns(cls, deck, extra, hide_word=None):
-        obscured_deck = [Hider.obscure(syn, hide_word) for syn in deck]
-        obscured_extra = [Hider.obscure(syn, hide_word) for syn in extra]
+    def format_syns(cls, deck, extra, hide_words=[]):
+        obscured_deck = [Hider.obscure(syn, hide_words) for syn in deck]
+        obscured_extra = [Hider.obscure(syn, hide_words) for syn in extra]
 
         has_obscured = False
 
@@ -614,10 +614,16 @@ class DeckBuilder():
 
         # TODO: Include all POS for multi-word lemmas
 
-        self.add_sense_hints(short_senses, hide_word, max_length)
+        # use feminine forms for hiding for m/f nouns
+        if pos_data["pos"] == "n" and pos_data.get("noun_type") == "m/f":
+            hide_words = [hide_word] + self.get_feminine_forms(hide_word)
+        else:
+            hide_words = [hide_word]
+
+        self.add_sense_hints(short_senses, hide_words, max_length)
 
     @classmethod
-    def add_sense_hints(cls, senses, hide_word, max_length):
+    def add_sense_hints(cls, senses, hide_words, max_length):
         skip_hiding = False
         for sense in senses:
             can_hide_all = sense["can_hide_all"]
@@ -625,7 +631,7 @@ class DeckBuilder():
             if skip_hiding:
                 hint = sense["gloss"]
             else:
-                hint = Hider.obscure(sense["gloss"], hide_word)
+                hint = Hider.obscure(sense["gloss"], hide_words)
 
             hint = cls.shorten_gloss(hint, max_length)
             if Hider.is_fully_hidden(hint):
@@ -1228,7 +1234,7 @@ class DeckBuilder():
         item = {
             "Spanish": spanish,
             "Part of Speech": display_pos,
-            "Synonyms": self.format_syns(deck_syns, extra_syns, hide_word=spanish),
+            "Synonyms": self.format_syns(deck_syns, extra_syns, hide_words=[spanish]),
             "Data": self.format_usage(usage),
             "Sentences": sentences,
             "Display": tts_data["display"],
