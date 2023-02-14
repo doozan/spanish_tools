@@ -16,6 +16,8 @@ from .tts import get_speech
 from .sentences import SentenceSelector
 from spanish_tools.sentences import SpanishSentences
 
+from collections import defaultdict
+
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 from enwiktionary_wordlist.word import Word
@@ -89,7 +91,7 @@ class DeckBuilder():
 
         self.notes = {}
         self.seen_guids = {}
-        self.seen_hints = {}
+        self.seen_hints = defaultdict(list)
 
         self._words = wordlist
         self._ignore = ignore
@@ -212,18 +214,31 @@ class DeckBuilder():
     @staticmethod
     def format_syns_html(deck, extra, css_class=''):
 
+        seen_syns = set()
+        valid_deck_syns = []
+        for syn in deck:
+            clean_syn = re.sub("\s*\(.*\)\s*", "", syn)
+            if clean_syn not in seen_syns:
+                valid_deck_syns.append(syn)
+
+        valid_extra_syns = []
+        for syn in extra:
+            clean_syn = re.sub("\s*\(.*\)\s*", "", syn)
+            if clean_syn not in seen_syns:
+                valid_extra_syns.append(syn)
+
+
         if css_class and not css_class.endswith(' '):
             css_class += ' '
 
         deck_str = (
-            f"""<span class="{css_class}syn deck">{", ".join(deck)}</span>""" if len(deck) else ""
+            f"""<span class="{css_class}syn deck">{", ".join(valid_deck_syns)}</span>""" if valid_deck_syns else ""
         )
+        if not valid_extra_syns:
+            return deck_str
+
         separator = ", " if len(deck_str) else ""
-        extra_str = (
-            f"""<span class="{css_class}syn extra">{separator}{", ".join(extra)}</span>"""
-            if len(extra)
-            else ""
-        )
+        extra_str = f"""<span class="{css_class}syn extra">{separator}{", ".join(valid_extra_syns)}</span>"""
 
         return deck_str + extra_str
 
@@ -856,31 +871,69 @@ class DeckBuilder():
 #        return sorted(good_lemmas)
 
 
-    def add_synonyms(self, word, pos, synonyms, reciprocal=True):
+    def add_synonyms(self, word, pos, synonyms):
         key = (word,pos)
-        if key not in self.synonyms:
-            self.synonyms[key] = list(synonyms) # Copy the list, since it will be modified
-        else:
-            for syn in synonyms:
-                if syn not in self.synonyms[key]:
-                    self.synonyms[key].append(syn)
 
-        if reciprocal:
-            for syn in synonyms:
-                if syn != word:
-                    self.add_synonyms(syn, pos, [word], False)
+        for syn in synonyms:
+            if syn == word:
+                continue
+
+            if syn not in self.synonyms[key]:
+                self.synonyms[key].append(syn)
+
+            # add reciprocal synonym
+            r_key = (syn,pos)
+            if word not in self.synonyms[r_key]:
+                self.synonyms[r_key].append(word)
+
 
     def build_synonyms(self):
-        self.synonyms = {}
+        self.synonyms = defaultdict(list)
+        defs_to_syns = defaultdict(list)
 
         # Build synonyms
-        for k,usage in self.allwords.items():
-            word, pos = split_tag(k)
-            # Only take synonyms from the primary defs in the first etymology
-            for w in usage[0]["words"]:
-                for sense in w["senses"]:
-                    if "hint" in sense and "syns" in sense:
+        for item_tag,usage in self.allwords.items():
+            word, pos = split_tag(item_tag)
+
+            # Only the first word in the first entymology has senses with hints/synonyms
+            word_data = usage[0]["words"][0]
+            defs = set()
+            for sense in word_data["senses"]:
+                if "hint" in sense:
+                    print("scanning", sense)
+
+                    # Create list of words that list other words as a synonyms to create
+                    # the reciprocal synonym
+                    if "syns" in sense:
                         self.add_synonyms(word, pos, sense["syns"])
+
+
+                    # Build list of displayed glosses to generate auto synonyms for
+                    # words with identical glosses
+                    gloss = sense["hint"] if sense["hint"] else sense["gloss"]
+
+                    # Strip leading [lables]
+                    gloss = re.sub(r"^\[.+?\][:,; ]*", "", gloss)
+                    for item in re.split("[;,]", gloss):
+                        item = item.strip()
+                        if item != "...":
+                            defs.add(item)
+
+            if not defs:
+                raise ValueError("no defs", item_tag, usage)
+            defs_to_syns[tuple([pos] + sorted(defs))].append(item_tag)
+
+        self.auto_syns = {}
+        for pos_defs, items in defs_to_syns.items():
+            if len(items) < 2:
+                continue
+
+            for item_tag in items:
+                if item_tag in self.auto_syns:
+                    raise ValueError("dup item in auto syns", item_tag, defs, items)
+
+                self.auto_syns[item_tag] = [x for x in items if x != item_tag]
+                print("auto syn", items, pos_defs)
 
 
     def get_synonyms(self, word, pos, limit=5, only_in_deck=True):
@@ -1158,19 +1211,11 @@ class DeckBuilder():
                 if k not in deck_syns
             ] if len(deck_syns) < self.MAX_SYNONYMS else []
 
-        defs = []
-        for w in usage[0]["words"]:
-            for s in w["senses"]:
-                if "hint" in s:
-                    gloss = s["hint"] if s["hint"] else s["gloss"]
-                    defs += [z.strip() for x in gloss.split(";") for z in x.split(",")]
 
-        seen_tag = "|".join(sorted([d for d in deck_syns if d != "..."]) + sorted([d for d in defs if d != "..."]))
-        if seen_tag in self.seen_hints:
-            eprint(f"Auto-syn: {seen_tag} is used by {item_tag} and {self.seen_hints[seen_tag]}, adding syn")
-            deck_syns.insert(0, self.seen_hints[seen_tag].split(":")[1])
-        else:
-            self.seen_hints[seen_tag] = item_tag
+        auto_syns = self.auto_syns.get(item_tag, [])
+        if auto_syns:
+            eprint(f"Auto-syn: {item_tag} display defs match other items, adding auto synonyms: {auto_syns}")
+            deck_syns = [x.split(":")[1] for x in auto_syns] + deck_syns
 
         tts_data = self.get_phrase(spanish, usage)
 
