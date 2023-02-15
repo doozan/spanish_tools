@@ -880,18 +880,30 @@ class DeckBuilder():
 #        return sorted(good_lemmas)
 
 
+    @staticmethod
+    def clean_syn(syn):
+        # Strip any qualifiers from the synonyms
+        return re.sub(r"\s*\(.*\)\s*", " ", syn).strip()
+
     def add_synonyms(self, word, pos, synonyms):
         key = (word,pos)
 
         for syn in synonyms:
-            if syn == word:
+
+            clean_syn = self.clean_syn(syn)
+
+            if clean_syn == word:
                 continue
 
             if syn not in self.synonyms[key]:
                 self.synonyms[key].append(syn)
+                # Prefer the qualified synonyms that come from the senses
+                # over the unqualified reciprocal synonyms
+                if syn != clean_syn and clean_syn in self.synonyms[key]:
+                    self.synonyms[key].remove(clean_syn)
 
             # add reciprocal synonym
-            r_key = (syn,pos)
+            r_key = (clean_syn,pos)
             if word not in self.synonyms[r_key]:
                 self.synonyms[r_key].append(word)
 
@@ -956,7 +968,7 @@ class DeckBuilder():
             if syn not in items:
                 items.append(syn)
 
-        in_deck = [k for k in items if make_tag(k, pos) in self.allwords]
+        in_deck = [k for k in items if make_tag(self.clean_syn(k), pos) in self.allwords]
         if only_in_deck or len(in_deck) > limit:
             return in_deck[:limit]
 
@@ -1198,17 +1210,17 @@ class DeckBuilder():
 
         return [item.replace(" ", "-") for item in regions | places | meta_classes]
 
-    @staticmethod
-    def get_valid_syns(syns, existing_syns):
+    @classmethod
+    def get_valid_syns(cls, syns, existing_syns):
         valid_syns = []
         seen_syns = set()
 
         for syn in existing_syns:
-            clean_syn = re.sub(r"\s*\(.*\)\s*", "", syn)
+            clean_syn = cls.clean_syn(syn)
             seen_syns.add(clean_syn)
 
         for syn in syns:
-            clean_syn = re.sub(r"\s*\(.*\)\s*", "", syn)
+            clean_syn = cls.clean_syn(syn)
 
             if clean_syn not in seen_syns:
                 valid_syns.append(syn)
@@ -1228,12 +1240,10 @@ class DeckBuilder():
             raise ValueError("No usage data", spanish, pos)
 
         deck_syns = self.get_synonyms(spanish, pos, self.MAX_SYNONYMS, only_in_deck=True)
-        extra_syns = [
-                k
-                for k in self.get_synonyms(spanish, pos, self.MAX_SYNONYMS, only_in_deck=False)
-                if k not in deck_syns
-            ] if len(deck_syns) < self.MAX_SYNONYMS else []
-
+        if len(deck_syns) < self.MAX_SYNONYMS:
+            extra_syns = self.get_valid_syns(self.get_synonyms(spanish, pos, self.MAX_SYNONYMS, only_in_deck=False), deck_syns)
+        else:
+            extra_syns = []
 
         auto_syns = self.get_valid_syns([x.partition(":")[2] for x in self.auto_syns.get(item_tag,[])], deck_syns + extra_syns)
         if auto_syns:
