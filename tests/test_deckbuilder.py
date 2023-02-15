@@ -1354,3 +1354,39 @@ pos: n
 def test_get_valid_syns():
     f = DeckBuilder.get_valid_syns
     assert f(['a', 'a', 'b', 'c'], ['(test) c', 'd']) == ['a', 'b']
+
+
+def test_agarre(ngprobs):
+
+    wordlist_data = """\
+_____
+agarre
+pos: n
+  meta: {{es-noun|m}}
+  g: m
+  etymology: From the verb agarrar (“grasp, grab, grip”), from garra (“claw”).
+  gloss: grip, grasp
+    syn: apretón
+  gloss: synonym of "agarrada"
+    q: Andalusia
+"""
+
+    wordlist = Wordlist(wordlist_data.splitlines())
+    sentences = None
+    ignore = []
+    allforms = AllForms.from_wordlist(wordlist)
+    deck = DeckBuilder(wordlist, sentences, ignore, allforms, [], ngprobs)
+
+    usage = deck.get_usage("agarre", "n")
+    print(usage)
+    print(deck.format_usage(usage))
+
+    assert deck.format_usage(usage) == """\
+<div class="etymology etymology_0 solo_etymology">
+<span class="pos n m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">grip, grasp</span><span class="synonyms">apretón</span></span>
+<span class="pos n hint m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">grip, grasp</span><span class="synonyms">apretón</span></span>
+<span class="pos n m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">synonym of &quot;agarrada&quot;</span></span>
+<span class="pos n hint m"><span class="pos_tag pos_tag_primary">m</span><span class="gloss">...</span></span>
+</div>
+<span id="footnote_a" class="footnote ety_footnote general_footnote"><span class="footnote_id">a</span><span class="footnote_data">From the verb agarrar (“grasp, grab, grip”), from garra (“claw”).</span></span>
+"""

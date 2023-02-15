@@ -356,7 +356,7 @@ class DeckBuilder():
         c = "pos_tag pos_tag_primary" if pos == primary_pos else "pos_tag"
         res.append(f'<span class="{c}">{display_pos}</span>')
 
-        if tags:
+        if tags and sense.get("hint") != "...":
             res.append(f'<span class="qualifier">{", ".join(tags)}</span>')
 
 
