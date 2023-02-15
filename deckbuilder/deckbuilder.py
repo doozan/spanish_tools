@@ -556,11 +556,14 @@ class DeckBuilder():
 
     def add_shortdefs(self, usage, hide_word, max_length=60):
 
-        def is_reflexive(sense_data):
+        def sense_is_reflexive(sense_data):
             return any(x in sense_data.get("type","") for x in ["r","p"])
 
-        def is_plural(sense_data):
+        def sense_is_plural(sense_data):
             return "plural" in sense_data.get("tag","")
+
+        def sense_is_obsolete(sense_data):
+            return any(x in sense_data.get("tag","") for x in ["obsolete", "archaic"])
 
         if not usage:
             return
@@ -569,37 +572,48 @@ class DeckBuilder():
 
         pos_data = usage[0]["words"][0]
 
-        sense = pos_data["senses"][0]
+        # Skip obsolete or archaic senses
+        for first_sense, sense in enumerate(pos_data["senses"]):
+            if not sense_is_obsolete(sense):
+                break
+
+        # If all senses were obsolete, revert to the first sense
+        if sense_is_obsolete(pos_data["senses"][first_sense]):
+            first_sense = 0
+
+        sense = pos_data["senses"][first_sense]
         sense["can_hide_all"] = False
         short_senses = [ sense ]
 
         # If a noun has male/female words, try to take a gloss from each
         if pos_data["pos"] == "n" and pos_data.get("noun_type") in ["m-f","m/f"]:
-            for sense in pos_data["senses"][1:]:
-                if sense.get("type") != short_senses[0].get("type"):
+            for sense in pos_data["senses"][first_sense+1:]:
+                if sense.get("type") != short_senses[0].get("type") and not sense_is_obsolete(sense):
                     sense["can_hide_all"] = True
                     short_senses.append(sense)
                     break
 
-        elif pos_data["pos"] == "n" and not is_plural(short_senses[0]):
-            for sense in pos_data["senses"][1:]:
-                if is_plural(sense):
+        elif pos_data["pos"] == "n" and not sense_is_plural(short_senses[0]):
+            for sense in pos_data["senses"][first_sense+1:]:
+                if sense_is_plural(sense) and not sense_is_obsolete(sense):
                     sense["can_hide_all"] = False
                     short_senses.append(sense)
                     break
 
         # If it's a verb and the first sense is not reflexive, search for a sense that is reflexive
-        elif pos_data["pos"] == "v" and not is_reflexive(short_senses[0]):
-            for sense in pos_data["senses"][1:]:
-                if is_reflexive(sense):
+        elif pos_data["pos"] == "v" and not sense_is_reflexive(short_senses[0]):
+            for sense in pos_data["senses"][first_sense+1:]:
+                if sense_is_reflexive(sense) and not sense_is_obsolete(sense):
                     sense["can_hide_all"] = False
                     short_senses.append(sense)
                     break
 
-        if len(short_senses) == 1 and len(pos_data["senses"]) > 1:
-            sense = pos_data["senses"][1]
-            sense["can_hide_all"] = True
-            short_senses.append(sense)
+        if len(short_senses) == 1 and len(pos_data["senses"]) > first_sense+1:
+            for sense in pos_data["senses"][first_sense+1:]:
+                if not sense_is_obsolete(sense):
+                    sense["can_hide_all"] = True
+                    short_senses.append(sense)
+                    break
 
         # TODO: Include all POS for multi-word lemmas
 
