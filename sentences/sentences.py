@@ -273,8 +273,9 @@ class SpanishSentences:
         if row:
             return Sentence(row)
 
-    def all_sentences(self):
-        query = """
+    def all_sentences(self, randomize=False):
+        order = "ORDER BY RANDOM()" if randomize else ""
+        query = f"""
         SELECT
             spa.id as spa_id,
             spa.sentence as spanish,
@@ -289,6 +290,7 @@ class SpanishSentences:
             JOIN sentences AS spa ON se.spa_id = spa.id
             JOIN sentences AS eng ON se.eng_id = eng.id
             JOIN spanish_extra AS x ON se.spa_id = x.spa_id
+        {order}
         """
         for row in self.dbcon.execute(query):
             yield Sentence(row)
