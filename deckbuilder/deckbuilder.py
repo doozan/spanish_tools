@@ -10,6 +10,7 @@ import os
 import re
 import sqlite3
 import sys
+import urllib.request
 
 from .hider import Hider
 from .tts import get_speech
@@ -21,6 +22,22 @@ from collections import defaultdict
 from enwiktionary_wordlist.wordlist import Wordlist
 from enwiktionary_wordlist.all_forms import AllForms
 from enwiktionary_wordlist.word import Word
+
+def request(action, **params):
+    return {'action': action, 'params': params, 'version': 6}
+
+def invoke(action, **params):
+    requestJson = json.dumps(request(action, **params)).encode('utf-8')
+    response = json.load(urllib.request.urlopen(urllib.request.Request('http://localhost:8765', requestJson)))
+    if len(response) != 2:
+        raise Exception('response has an unexpected number of fields')
+    if 'error' not in response:
+        raise Exception('response is missing required error field')
+    if 'result' not in response:
+        raise Exception('response is missing required result field')
+    if response['error'] is not None:
+        raise Exception(response['error'])
+    return response['result']
 
 def make_tag(word, pos):
     if not pos:
@@ -75,7 +92,7 @@ class DeckBuilder():
             'app', 'arca', 'área', 'arma', 'arpa', 'asa', 'asma', 'aspa', 'asta', 'aula',
             'aura', 'ave', 'haba', 'habla', 'hacha', 'hada', 'hambre', 'haya' ]
 
-    def __init__(self, wordlist, sentences, ignore, allforms, shortdefs, ngprobs, allow=None):
+    def __init__(self, wordlist, sentences, ignore, allforms, shortdefs, ngprobs, allow=None, base_name=None):
 
         self.db_notes = {}
         self.db_timestamps = {}
@@ -100,6 +117,21 @@ class DeckBuilder():
         self.all_forms = allforms
         self.ngprobs = ngprobs
         self.allow = allow
+
+        self.all_notes = {}
+
+        if base_name:
+            notes = invoke('findNotes', query=f'"deck:{base_name}::*"')
+            for note in invoke('notesInfo', notes=notes):
+                word = note["fields"]["Spanish"]["value"]
+                pos = note["fields"]["Part of Speech"]["value"]
+                if pos in [ 'f', 'f-el', 'fp', 'm', 'm-f', 'm/f', 'mf', 'mfp', 'mp' ]:
+                    pos = "n"
+                item_tag = make_tag(word, pos)
+                self.all_notes[item_tag] = note["noteId"]
+
+            print(f'Loaded {len(self.all_notes)} existing notes from "{base_name}"')
+
 
     def filter_gloss(self, wordobj, sense, filter_gloss=None):
         word = wordobj.word
@@ -1393,7 +1425,6 @@ class DeckBuilder():
 
 
 
-
     allowed_proper_nouns = { "Fulano", "Sudáfrica", "Sudamérica", "Centroamérica", "Renacimiento", "URSS",
             "América Latina", "Mediterráneo", "Atlántico", "Caribe", "OTAN", "Pacífico", "Oriente",
             "Estados Unidos", "Biblia", "Latinoamérica", "Norteamérica", "Navidad", "ONU", "fulana",
@@ -1428,6 +1459,8 @@ class DeckBuilder():
 
         return allowed
 
+    def has_item(self, item_tag):
+        return item_tag in self.all_notes
 
     def load_wordlist(self, data, allowed_flags, limit=0, metadata=None, minuse=0):
         # data is an iterator that provides csv formatted data
@@ -1444,9 +1477,6 @@ class DeckBuilder():
 
             pos = row["pos"]
             if pos == "none":
-                continue
-
-            if minuse and minuse > int(row.get("count", 0)):
                 continue
 
             lemma = row["spanish"]
@@ -1489,6 +1519,13 @@ class DeckBuilder():
             if usage[0]["words"][0]["pos"] != row["pos"]:
                 continue
 
+            if (limit and count >= limit) or (minuse and minuse > int(row.get("count", 0))):
+                if self.has_item(item_tag):
+                    print("exceeding limit to allow existing record", item_tag)
+                else:
+                    break
+            count += 1
+
             if not position:
                 self.wordlist_append(item_tag, usage)
 
@@ -1504,9 +1541,6 @@ class DeckBuilder():
             else:
                 raise ValueError(f"Position {position} does not exist, ignoring")
 
-            count += 1
-            if limit and count>limit:
-                break
         print(f"  loaded {count} items")
 
 

@@ -62,6 +62,7 @@ def build_deck(params=None):
     parser.add_argument("--deck-guid", help="Deck GUID", required=True, type=int)
     parser.add_argument("--deck-desc", help="Deck Description", default="")
     parser.add_argument("--anki", help="Read/write data from specified anki profile")
+    parser.add_argument("--base-deck", help="Base deck name (used for reading existing notes)")
     parser.add_argument("--allforms", help="Load word forms from file")
     parser.add_argument("--ngprobs", help="NGprobs file", required=True)
     parser.add_argument("--ngcase", help="Ngram case probability data file", required=True)
@@ -147,7 +148,7 @@ def build_deck(params=None):
 
     allow = DeckBuilder.load_allow(args.allowlist) if args.allowlist else None
 
-    deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs, ngprobs, allow)
+    deck = DeckBuilder(dictionary, sentences, ignore, allforms, shortdefs, ngprobs, allow, args.base_deck)
     deck.load_wordlists(args.wordlist, args.allow_flag)
     deck.compile(args.model, args.deckfile, args.deck_name, args.deck_guid, args.deck_desc, args.mediadir, args.limit, args.anki, args.tag)
 
