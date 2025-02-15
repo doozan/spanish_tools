@@ -12,7 +12,6 @@ from spanish_tools.sentences import SentenceBuilder
 from ngram.ngramdb import NgramDB
 
 import enwiktionary_templates
-cachedb = enwiktionary_templates.cache.get_default_cachedb()
 
 def main():
     parser = argparse.ArgumentParser(description="Manage tagged sentences")
@@ -43,7 +42,7 @@ def main():
 
     cache_words = not args.low_mem
     with open(args.dictionary) as infile:
-        wordlist = Wordlist(infile, cache_words=cache_words, template_cachedb=cachedb)
+        wordlist = Wordlist(infile, cache_words=cache_words)
 
     if args.allforms:
         allforms = AllForms.from_file(args.allforms)
